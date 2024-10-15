@@ -1,8 +1,11 @@
+import { useNavigate } from 'react-router-dom';
 import DownButton from "../assets/DownButton.svg";
 import logoCenter from "../assets/logoCenter.webp";
 import backImg from "../assets/bg2.webp";
 
 const NavBar = ({ agendarRef, footerRef }) => {
+  const navigate = useNavigate();
+
   const scrollToAgendar = () => {
     if (agendarRef.current) {
       agendarRef.current.scrollIntoView({ behavior: 'smooth' });
@@ -15,22 +18,31 @@ const NavBar = ({ agendarRef, footerRef }) => {
     }
   };
 
+  const goToAdmin = () => {
+    navigate('/admin');
+  };
+
   return (
     <div
-      className="bg-cover  bg-no-repeat h-"
+      className="bg-cover bg-no-repeat h-"
       style={{ backgroundImage: `url(${backImg})` }}
     >
       <div className="navBar flex justify-evenly items-center" id="home">
         <div className="iconD ml-2">
           <ol className="flex items-center space-x-4">
             <li className="flex items-center">
-            <button onClick={scrollToFooter}>Contactame</button>
+              <button onClick={scrollToFooter}>Contactame</button>
               <img src={DownButton} alt="Down Button" className="ml-1 w-4 h-4" />
             </li>
           </ol>
         </div>
         <div className="flex">
-          <img src={logoCenter} alt="Logo Center" className="w-10 rounded-full " />
+          <img
+            src={logoCenter}
+            alt="Logo Center"
+            className="w-10 rounded-full cursor-pointer"
+            onClick={goToAdmin}
+          />
         </div>
         <div className="iconI mr-2">
           <ol className="flex items-center space-x-4">
