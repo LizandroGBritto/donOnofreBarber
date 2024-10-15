@@ -1,0 +1,10 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body{
+    font-family: "Playfair Display", serif;
+    background-color: black;
+    color: white;
+    overflow-x: hidden;
+}
