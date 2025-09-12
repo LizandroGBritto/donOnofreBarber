@@ -2,13 +2,12 @@ import axios from "axios";
 import { useState, useEffect } from "react";
 import { Button, Modal, Dropdown } from "flowbite-react";
 import FormAgendarAdmin from "./FormAgendarAdmin";
-import { getDebt, deleteDebt } from '../services/adamspayServices';
+import { getDebt } from '../services/adamspayServices';
 
 const AgendaAdmin = ({ horarios, setHorarios, getUserId, agendarRef }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [openModal, setOpenModal] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
-  const [mostrarManana, setMostrarManana] = useState(false);
   const [debtStatus, setDebtStatus] = useState({});
   const [debtPayUrl, setDebtPayUrl] = useState({});
   const [selectedDay, setSelectedDay] = useState(null); // Estado para el día seleccionado
@@ -28,7 +27,6 @@ const AgendaAdmin = ({ horarios, setHorarios, getUserId, agendarRef }) => {
 
   const manana = new Date(hoy);
   manana.setDate(hoy.getDate() + 1);
-  const diaManana = diasSemana[manana.getDay()];
 
   function onCloseModal() {
     setOpenModal(false);

@@ -1,7 +1,7 @@
 const axios = require('axios');
 const moment = require('moment');
 const crypto = require('crypto');
-const Agenda = require('../models/agenda.model'); // Asegúrate de importar tu modelo de Agenda
+const Agenda = require('../models/agenda.model'); 
 
 const apiKey = process.env.ADAM_API_KEY;
 const apiSecret = process.env.ADAM_API_SECRET;

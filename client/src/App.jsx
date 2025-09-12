@@ -5,6 +5,7 @@ import UserContext from './context/UserContext';
 import { useState } from 'react';
 import Admin from './views/Admin';
 import Login from './views/Login';
+import backgroundImage from "./assets/assets_template/AlonzoStylev2.png";
 
 
 const App = () =>{
@@ -25,17 +26,23 @@ const App = () =>{
         setUserKeyValue,
       };
 
-return(
-<>
-<UserContext.Provider value={objetContext}>
-    <Routes>
+return (
+  <div
+    className="min-h-screen bg-cover bg-center"
+    style={{
+      backgroundImage: `url(${backgroundImage})`,
+      backdropFilter: "blur(8px)",
+    }}
+  >
+    <UserContext.Provider value={objetContext}>
+      <Routes>
         <Route path='/' element={<Landing />} />
         <Route path="/admin" element={user ? <Navigate to="/admin/panel" /> : <Login />} />
         <Route path="/admin/panel" element={user ? <Admin user={user} setUser={setUser} /> : <Navigate to="/admin" />} />
-    </Routes>
-</UserContext.Provider>
-</>
-)
+      </Routes>
+    </UserContext.Provider>
+  </div>
+);
 }
 
 export default App

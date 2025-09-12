@@ -13,23 +13,17 @@ const Footer = ({ footerRef }) => {
           </h3>
           <div className="flex justify-center items-baseline ">
             <img src={Location} alt="Location" className="mr-1" />
-            <p className="flex justify-center ">
-              Asuncion - Paraguay
-            </p>
+            <p className="flex justify-center ">Asuncion - Paraguay</p>
           </div>
           <div className="flex justify-center items-baseline mt-2 mr-2">
-            <a
-            className="flex"
-            href="https://g.co/kgs/6UKZTmH"
-            >
-                <img src={Maps} alt="Location" className="mr-1 ml-5 mb-5" />
-                 <p className="flex justify-center text-[#FF7D00]">
-              Toca Aquí para ver en
-              <br />
-              Google Maps
-            </p>
+            <a className="flex" href="https://g.co/kgs/6UKZTmH">
+              <img src={Maps} alt="Location" className="mr-1 ml-5 mb-5" />
+              <p className="flex justify-center text-[#FF7D00]">
+                Toca Aquí para ver en
+                <br />
+                Google Maps
+              </p>
             </a>
-           
           </div>
         </div>
         <div className="">
@@ -44,27 +38,27 @@ const Footer = ({ footerRef }) => {
               className="flex"
             >
               <img src={Whatsapp} alt="Whatsapp" className="mr-1" />
-          
-            <p className="flex">+595 994 622 020</p>
+
+              <p className="flex">+595 994 622 020</p>
             </a>
           </div>
 
           <div className="flex justify-center items-baseline mt-10 mb-9">
             <a
-            className="flex"
+              className="flex"
               href="https://www.instagram.com/acapuedo/?hl=es"
               target="_blank"
               rel="noopener noreferrer"
             >
               <img src={Instagram} alt="Instagram" className="mr-1" />
-            <p className="flex justify mr-7">@acapuedo</p>
+              <p className="flex justify mr-7">@acapuedo</p>
             </a>
           </div>
         </div>
       </div>
       <div className="bg-white">
         <h6 className="text-black flex justify-center text-xs">
-          © 2024 Don Onofre. Todos los derechos reservados.
+          © 2024 Alonzo Style. Todos los derechos reservados.
         </h6>
       </div>
     </>
