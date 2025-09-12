@@ -204,17 +204,23 @@ const AdminDashboard = () => {
 
   // Funciones para filtros rápidos
   const filtrarHoy = () => {
-    const hoy = obtenerFechaHoy();
-    setFechaDesde(hoy);
-    setFechaHasta(hoy);
+    const manana = obtenerFechaManana();
+    setFechaDesde(manana);
+    setFechaHasta(manana);
     setFiltroEstado("");
     setBusqueda("");
   };
 
   const filtrarManana = () => {
-    const manana = obtenerFechaManana();
-    setFechaDesde(manana);
-    setFechaHasta(manana);
+    const hoy = new Date();
+    hoy.setDate(hoy.getDate() + 2); // Dos días después de hoy
+    const year = hoy.getFullYear();
+    const month = String(hoy.getMonth() + 1).padStart(2, "0");
+    const day = String(hoy.getDate()).padStart(2, "0");
+    const pasadoManana = `${year}-${month}-${day}`;
+
+    setFechaDesde(pasadoManana);
+    setFechaHasta(pasadoManana);
     setFiltroEstado("");
     setBusqueda("");
   };
@@ -435,7 +441,7 @@ const AdminDashboard = () => {
               </div>
 
               {/* Fila 3: Botones de filtrado rápido */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                 <Button
                   onClick={filtrarHoy}
                   style={{ backgroundColor: "var(--primary-color)" }}
@@ -456,9 +462,6 @@ const AdminDashboard = () => {
                   size="sm"
                 >
                   Esta Semana
-                </Button>
-                <Button onClick={limpiarFiltros} color="gray" size="sm">
-                  Limpiar
                 </Button>
               </div>
             </div>
