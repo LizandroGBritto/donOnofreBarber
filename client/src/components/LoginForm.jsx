@@ -87,7 +87,7 @@ const LoginForm = ({ formType }) => {
         <>
           <Form className="flex max-w-md flex-col gap-4 bg-slate-200 p-6 rounded-lg shadow-lg bg-opacity-90">
             <h2 className="text-pretty font-semibold text-gray-800 mb-3">
-              {formType === "Iniciar Sesion" ? "Iniciar Sesion" : "Registrarse"}
+              {formType === "Iniciar Sesion" ? "Iniciar Sesión" : "Registrarse"}
             </h2>
             {errors?.general && (
               <div className="text-red-600">{errors.general}</div>
