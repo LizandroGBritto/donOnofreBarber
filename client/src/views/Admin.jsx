@@ -1,5 +1,6 @@
 import AdminDashboard from "../components/AdminDashboard";
 import Footer from "../components/Footer";
+import backgroundImage from "../assets/assets_template/AlonzoStylev2.png";
 import { useEffect } from "react";
 
 const Admin = () => {
@@ -29,7 +30,12 @@ const Admin = () => {
   return (
     <>
       <div>
-        <div className="">
+        <div    style={{
+        backgroundImage: `url(${backgroundImage})`,
+        backgroundAttachment: "fixed",
+        backgroundSize: "cover",
+        backgroundRepeat: "no-repeat",
+      }}>
           <AdminDashboard />
           <Footer />
         </div>

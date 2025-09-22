@@ -6,60 +6,65 @@ import Instagram from "../assets/Instagram.svg";
 const Footer = ({ footerRef }) => {
   return (
     <>
-      <div ref={footerRef} className="flex justify-evenly items-center mb-3">
-        <div className="pb-10">
-          <h3 className="flex justify-center mt-8 ml-8 mr-8 border-b-2 border-gray-300 pb-2 pl-4 pr-4">
-            UBICACION
-          </h3>
-          <div className="flex justify-center items-baseline ">
-            <img src={Location} alt="Location" className="mr-1" />
-            <p className="flex justify-center ">Asuncion - Paraguay</p>
+      <div
+        ref={footerRef}
+        className="bg-white bg-opacity-80 rounded-lg mx-4 mb-4 p-6 backdrop-blur-sm"
+      >
+        <div className="flex flex-col md:flex-row justify-evenly items-center gap-6">
+          <div className="text-center">
+            <h3 className="text-xl font-bold text-gray-900 mb-4 pb-2 border-b-2 border-purple-300">
+              UBICACION
+            </h3>
+            <div className="flex justify-center items-center mb-3">
+              <img src={Location} alt="Location" className="mr-2" />
+              <p className="text-gray-900 font-medium">Asuncion - Paraguay</p>
+            </div>
+            <div className="flex justify-center items-center">
+              <a
+                className="flex items-center hover:text-purple-600 transition-colors duration-200"
+                href="https://g.co/kgs/6UKZTmH"
+              >
+                <img src={Maps} alt="Location" className="mr-2" />
+                <p className="text-orange-500 hover:text-orange-600 text-sm">
+                  Toca Aquí para ver en Google Maps
+                </p>
+              </a>
+            </div>
           </div>
-          <div className="flex justify-center items-baseline mt-2 mr-2">
-            <a className="flex" href="https://g.co/kgs/6UKZTmH">
-              <img src={Maps} alt="Location" className="mr-1 ml-5 mb-5" />
-              <p className="flex justify-center text-[#FF7D00]">
-                Toca Aquí para ver en
-                <br />
-                Google Maps
-              </p>
-            </a>
+          <div className="text-center">
+            <h3 className="text-xl font-bold text-gray-900 mb-4 pb-2 border-b-2 border-purple-300">
+              CONTACTO
+            </h3>
+            <div className="flex justify-center items-center mb-4">
+              <a
+                href="https://wa.me/595994622020"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center hover:text-green-600 transition-colors duration-200"
+              >
+                <img src={Whatsapp} alt="Whatsapp" className="mr-2" />
+                <p className="text-gray-900 font-medium">+595 994 622 020</p>
+              </a>
+            </div>
+
+            <div className="flex justify-center items-center">
+              <a
+                className="flex items-center hover:text-purple-600 transition-colors duration-200"
+                href="https://www.instagram.com/acapuedo/?hl=es"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <img src={Instagram} alt="Instagram" className="mr-2" />
+                <p className="text-gray-900 font-medium">@acapuedo</p>
+              </a>
+            </div>
           </div>
         </div>
-        <div className="">
-          <h3 className="flex justify-center mt-8 ml-8 mr-8 border-b-2 border-gray-300 pb-2 pl-4 pr-4">
-            CONTACTO
-          </h3>
-          <div className="flex justify-center items-baseline">
-            <a
-              href="https://wa.me/595994622020"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex"
-            >
-              <img src={Whatsapp} alt="Whatsapp" className="mr-1" />
-
-              <p className="flex">+595 994 622 020</p>
-            </a>
-          </div>
-
-          <div className="flex justify-center items-baseline mt-10 mb-9">
-            <a
-              className="flex"
-              href="https://www.instagram.com/acapuedo/?hl=es"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <img src={Instagram} alt="Instagram" className="mr-1" />
-              <p className="flex justify mr-7">@acapuedo</p>
-            </a>
-          </div>
+        <div className="bg-white bg-opacity-60 rounded-lg p-2 mt-4">
+          <h6 className="text-gray-900 text-center text-xs font-medium">
+            © 2024 Alonzo Style. Todos los derechos reservados.
+          </h6>
         </div>
-      </div>
-      <div className="bg-white">
-        <h6 className="text-black flex justify-center text-xs">
-          © 2024 Alonzo Style. Todos los derechos reservados.
-        </h6>
       </div>
     </>
   );

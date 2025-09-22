@@ -17,7 +17,7 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
     "Miercoles",
     "Jueves",
     "Viernes",
-    "Sabado"
+    "Sabado",
   ];
 
   const hoy = new Date();
@@ -68,8 +68,12 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
     });
 
   return (
-    <>
-      <div className="max-w-11/12 mx-auto" ref={agendarRef} id="agendar">
+    <div>
+      <div
+        className="max-w-11/12 mx-auto bg-black bg-opacity-80 rounded-lg p-4"
+        ref={agendarRef}
+        id="agendar"
+      >
         <h3 className="flex justify-center mt-8 ml-8 mr-8 border-b-2 border-gray-300 pb-2">
           AGENDA
         </h3>
@@ -173,7 +177,6 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
                       onCloseModal={onCloseModal}
                       refreshData={refreshData}
                       getUserId={getUserId}
-                      
                     />
                   </div>
                 </div>
@@ -182,7 +185,7 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
           </div>
         ))}
       </div>
-    </>
+    </div>
   );
 };
 

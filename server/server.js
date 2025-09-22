@@ -20,6 +20,9 @@ app.options("*", cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Servir archivos estáticos (uploads)
+app.use("/uploads", express.static("uploads"));
+
 // Conectar a MongoDB
 require("./config/mongoose.config");
 
@@ -32,6 +35,9 @@ app.use("/api/auth", UserRouter);
 
 const AdamspayRouter = require("./routes/adamsPay.route");
 app.use("/api/adamspay", AdamspayRouter); // Usar la ruta del webhook
+
+const BannerRouter = require("./routes/banner.route");
+app.use("/api/banners", BannerRouter);
 
 // Inicializar servicio de agenda
 const AgendaService = require("./services/agendaService");

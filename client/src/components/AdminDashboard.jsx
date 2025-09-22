@@ -30,6 +30,30 @@ const AdminDashboard = () => {
   const [filtroEstado, setFiltroEstado] = useState("");
   const [busqueda, setBusqueda] = useState("");
 
+  // Estados para banners
+  const [banners, setBanners] = useState([]);
+  const [selectedBanner, setSelectedBanner] = useState(null);
+  const [showBannerModal, setShowBannerModal] = useState(false);
+  const [bannerForm, setBannerForm] = useState({
+    titulo: "",
+    descripcion: "",
+    imagen: "",
+    estado: "activo",
+    tipo: "secundario",
+    version: "ambos",
+    orden: 0,
+    enlace: "",
+  });
+  const [bannerFilters, setBannerFilters] = useState({
+    estado: "",
+    tipo: "",
+    version: "",
+  });
+
+  // Estados para upload de imágenes
+  const [imagePreview, setImagePreview] = useState("");
+  const [selectedFile, setSelectedFile] = useState(null);
+
   // Función para obtener las estadísticas de turnos
   const fetchStats = async () => {
     try {
@@ -240,6 +264,136 @@ const AdminDashboard = () => {
     setBusqueda("");
   };
 
+  // Funciones para gestión de banners
+  const fetchBanners = async () => {
+    try {
+      setLoading(true);
+      const response = await axios.get("http://localhost:8000/api/banners", {
+        params: bannerFilters,
+      });
+      setBanners(response.data.banners || []);
+    } catch (error) {
+      console.error("Error al obtener banners:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Función para manejar upload de imágenes
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setSelectedFile(file);
+
+      // Crear preview de la imagen
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setImagePreview(e.target.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const saveBanner = async () => {
+    try {
+      const formData = new FormData();
+
+      // Agregar campos del formulario
+      Object.keys(bannerForm).forEach((key) => {
+        if (key !== "imagen") {
+          formData.append(key, bannerForm[key]);
+        }
+      });
+
+      // Agregar imagen si se seleccionó una nueva
+      if (selectedFile) {
+        formData.append("imagen", selectedFile);
+      } else if (bannerForm.imagen) {
+        formData.append("imagen", bannerForm.imagen);
+      }
+
+      if (selectedBanner) {
+        // Actualizar banner existente
+        await axios.put(
+          `http://localhost:8000/api/banners/${selectedBanner._id}`,
+          formData,
+          {
+            headers: {
+              "Content-Type": "multipart/form-data",
+            },
+          }
+        );
+      } else {
+        // Crear nuevo banner
+        await axios.post("http://localhost:8000/api/banners", formData, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        });
+      }
+
+      fetchBanners();
+      resetBannerForm();
+      setShowBannerModal(false);
+      setImagePreview("");
+      setSelectedFile(null);
+    } catch (error) {
+      console.error("Error al guardar banner:", error);
+    }
+  };
+
+  const deleteBanner = async (id) => {
+    if (window.confirm("¿Estás seguro de que quieres eliminar este banner?")) {
+      try {
+        await axios.delete(`http://localhost:8000/api/banners/${id}`);
+        fetchBanners();
+      } catch (error) {
+        console.error("Error al eliminar banner:", error);
+      }
+    }
+  };
+
+  const toggleBannerStatus = async (id, currentStatus) => {
+    try {
+      const newStatus = currentStatus === "activo" ? "inactivo" : "activo";
+      await axios.patch(`http://localhost:8000/api/banners/${id}/estado`, {
+        estado: newStatus,
+      });
+      fetchBanners();
+    } catch (error) {
+      console.error("Error al cambiar estado del banner:", error);
+    }
+  };
+
+  const resetBannerForm = () => {
+    setBannerForm({
+      titulo: "",
+      descripcion: "",
+      imagen: "",
+      estado: "activo",
+      tipo: "secundario",
+      version: "ambos",
+      orden: 0,
+      enlace: "",
+    });
+    setSelectedBanner(null);
+    setImagePreview("");
+    setSelectedFile(null);
+  };
+
+  const editBanner = (banner) => {
+    setSelectedBanner(banner);
+    setBannerForm({ ...banner });
+    // Si el banner tiene imagen, mostrarla en el preview
+    if (banner.imagen) {
+      setImagePreview(`http://localhost:8000/uploads/${banner.imagen}`);
+    } else {
+      setImagePreview("");
+    }
+    setSelectedFile(null);
+    setShowBannerModal(true);
+  };
+
   useEffect(() => {
     fetchStats();
   }, []);
@@ -247,6 +401,8 @@ const AdminDashboard = () => {
   useEffect(() => {
     if (activeView === "turnos") {
       fetchTurnos();
+    } else if (activeView === "banners") {
+      fetchBanners();
     }
   }, [activeView]);
 
@@ -258,19 +414,15 @@ const AdminDashboard = () => {
     const percentage = (scheduled / available) * 100;
 
     return (
-      <Card className="max-w-sm bg-white bg-opacity-80">
+      <Card className="max-w-sm" style={{ backgroundColor: "#5B4373" }}>
         <div className="flex flex-col items-center pb-4">
-          <h5 className="mb-2 text-xl font-medium text-gray-900 dark:text-white">
-            {title}
-          </h5>
+          <h5 className="mb-2 text-xl font-medium text-white">{title}</h5>
           <div className="text-center">
-            <div className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+            <div className="text-3xl font-bold text-white mb-2">
               {scheduled}/{available}
             </div>
-            <div className="text-sm text-gray-500 dark:text-gray-400 mb-3">
-              Turnos {period}
-            </div>
-            <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
+            <div className="text-sm text-gray-300 mb-3">Turnos {period}</div>
+            <div className="w-full bg-gray-600 rounded-full h-2.5">
               <div
                 className="h-2.5 rounded-full transition-all duration-300"
                 style={{
@@ -279,7 +431,7 @@ const AdminDashboard = () => {
                 }}
               ></div>
             </div>
-            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            <div className="text-xs text-gray-300 mt-1">
               {percentage.toFixed(1)}% ocupado
             </div>
           </div>
@@ -304,21 +456,21 @@ const AdminDashboard = () => {
 
   // Componente responsivo para mostrar turnos en móvil
   const TurnoCard = ({ turno }) => (
-    <Card className="mb-4 bg-white bg-opacity-80">
+    <Card className="mb-4" style={{ backgroundColor: "#5B4373" }}>
       <div className="p-4">
         <div className="flex justify-between items-start mb-2">
           <div>
-            <h3 className="font-semibold text-lg text-gray-900">
+            <h3 className="font-semibold text-lg text-white">
               {turno.NombreCliente || "Disponible"}
             </h3>
-            <p className="text-sm text-gray-900">
+            <p className="text-sm text-gray-300">
               {formatearFecha(turno.Fecha)} - {turno.Hora}
             </p>
           </div>
           <div className="text-right">{formatearEstado(turno.Estado)}</div>
         </div>
         <div className="flex justify-between items-center">
-          <div className="text-sm text-gray-900">
+          <div className="text-sm text-gray-300">
             <p>Tel: {turno.NumeroCliente || "N/A"}</p>
             <p>Costo: ${turno.Costo || 0}</p>
           </div>
@@ -338,9 +490,9 @@ const AdminDashboard = () => {
 
   return (
     <div className="p-4 md:p-6">
-      <Card className="mb-6 bg-white bg-opacity-80">
+      <Card className="mb-6" style={{ backgroundColor: "#5B4373" }}>
         <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+          <h2 className="text-2xl font-bold text-white">
             Panel de Administración
           </h2>
           <div className="flex gap-2">
@@ -355,6 +507,12 @@ const AdminDashboard = () => {
               onClick={() => setActiveView("turnos")}
             >
               Turnos
+            </Button>
+            <Button
+              color={activeView === "banners" ? "purple" : "gray"}
+              onClick={() => setActiveView("banners")}
+            >
+              Banners
             </Button>
           </div>
         </div>
@@ -388,12 +546,14 @@ const AdminDashboard = () => {
       {activeView === "turnos" && (
         <div>
           {/* Filtros */}
-          <Card className="mb-6 bg-white bg-opacity-80">
+          <Card className="mb-6" style={{ backgroundColor: "#5B4373" }}>
             <div className="space-y-4">
               {/* Fila 1: Fechas */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="fechaDesde">Desde</Label>
+                  <Label htmlFor="fechaDesde" className="text-white">
+                    Desde
+                  </Label>
                   <TextInput
                     id="fechaDesde"
                     type="date"
@@ -402,7 +562,9 @@ const AdminDashboard = () => {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="fechaHasta">Hasta</Label>
+                  <Label htmlFor="fechaHasta" className="text-white">
+                    Hasta
+                  </Label>
                   <TextInput
                     id="fechaHasta"
                     type="date"
@@ -415,7 +577,9 @@ const AdminDashboard = () => {
               {/* Fila 2: Estado y búsqueda */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="filtroEstado">Estado</Label>
+                  <Label htmlFor="filtroEstado" className="text-white">
+                    Estado
+                  </Label>
                   <Select
                     id="filtroEstado"
                     value={filtroEstado}
@@ -429,7 +593,9 @@ const AdminDashboard = () => {
                   </Select>
                 </div>
                 <div>
-                  <Label htmlFor="busqueda">Buscar</Label>
+                  <Label htmlFor="busqueda" className="text-white">
+                    Buscar
+                  </Label>
                   <TextInput
                     id="busqueda"
                     type="text"
@@ -469,13 +635,17 @@ const AdminDashboard = () => {
 
           {/* Tabla de Turnos - Desktop */}
           <div className="hidden md:block">
-            <Card className="bg-white bg-opacity-80">
+            <Card style={{ backgroundColor: "#5B4373" }}>
               {loading ? (
-                <div className="text-center py-8">Cargando turnos...</div>
+                <div className="text-center py-8 text-white">
+                  Cargando turnos...
+                </div>
               ) : filteredTurnos.length === 0 ? (
                 <div className="text-center py-8">
-                  <p>No hay turnos para mostrar con los filtros actuales.</p>
-                  <p className="text-sm text-gray-500 mt-2">
+                  <p className="text-white">
+                    No hay turnos para mostrar con los filtros actuales.
+                  </p>
+                  <p className="text-sm text-gray-300 mt-2">
                     Prueba cambiando las fechas o limpiando los filtros.
                   </p>
                 </div>
@@ -526,7 +696,9 @@ const AdminDashboard = () => {
           {/* Vista móvil - Cards */}
           <div className="block md:hidden">
             {loading ? (
-              <div className="text-center py-8">Cargando turnos...</div>
+              <div className="text-center py-8 text-white">
+                Cargando turnos...
+              </div>
             ) : (
               <div>
                 {filteredTurnos.map((turno) => (
@@ -537,6 +709,401 @@ const AdminDashboard = () => {
           </div>
         </div>
       )}
+
+      {/* Vista de Banners */}
+      {activeView === "banners" && (
+        <div>
+          {/* Filtros y acciones para banners */}
+          <Card className="mb-6" style={{ backgroundColor: "#5B4373" }}>
+            <div className="space-y-4">
+              {/* Botón para crear nuevo banner */}
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-semibold text-white">
+                  Gestión de Banners
+                </h3>
+                <Button
+                  onClick={() => {
+                    resetBannerForm();
+                    setShowBannerModal(true);
+                  }}
+                  style={{ backgroundColor: "var(--primary-color)" }}
+                >
+                  + Nuevo Banner
+                </Button>
+              </div>
+
+              {/* Filtros */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <Label htmlFor="bannerEstado" className="text-white">
+                    Estado
+                  </Label>
+                  <Select
+                    id="bannerEstado"
+                    value={bannerFilters.estado}
+                    onChange={(e) =>
+                      setBannerFilters({
+                        ...bannerFilters,
+                        estado: e.target.value,
+                      })
+                    }
+                  >
+                    <option value="">Todos</option>
+                    <option value="activo">Activo</option>
+                    <option value="inactivo">Inactivo</option>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="bannerTipo" className="text-white">
+                    Tipo
+                  </Label>
+                  <Select
+                    id="bannerTipo"
+                    value={bannerFilters.tipo}
+                    onChange={(e) =>
+                      setBannerFilters({
+                        ...bannerFilters,
+                        tipo: e.target.value,
+                      })
+                    }
+                  >
+                    <option value="">Todos</option>
+                    <option value="principal">Principal</option>
+                    <option value="secundario">Secundario</option>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="bannerVersion" className="text-white">
+                    Versión
+                  </Label>
+                  <Select
+                    id="bannerVersion"
+                    value={bannerFilters.version}
+                    onChange={(e) =>
+                      setBannerFilters({
+                        ...bannerFilters,
+                        version: e.target.value,
+                      })
+                    }
+                  >
+                    <option value="">Todas</option>
+                    <option value="mobile">Móvil</option>
+                    <option value="escritorio">Escritorio</option>
+                    <option value="ambos">Ambos</option>
+                  </Select>
+                </div>
+              </div>
+            </div>
+          </Card>
+
+          {/* Tabla de Banners - Desktop */}
+          <div className="hidden md:block">
+            <Card style={{ backgroundColor: "#5B4373" }}>
+              {loading ? (
+                <div className="text-center py-8 text-white">
+                  Cargando banners...
+                </div>
+              ) : banners.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-white">No hay banners para mostrar.</p>
+                  <p className="text-sm text-gray-300 mt-2">
+                    Crea tu primer banner usando el botón de arriba.
+                  </p>
+                </div>
+              ) : (
+                <Table>
+                  <Table.Head>
+                    <Table.HeadCell>Imagen</Table.HeadCell>
+                    <Table.HeadCell>Título</Table.HeadCell>
+                    <Table.HeadCell>Tipo</Table.HeadCell>
+                    <Table.HeadCell>Versión</Table.HeadCell>
+                    <Table.HeadCell>Estado</Table.HeadCell>
+                    <Table.HeadCell>Orden</Table.HeadCell>
+                    <Table.HeadCell>Acciones</Table.HeadCell>
+                  </Table.Head>
+                  <Table.Body className="divide-y">
+                    {banners.map((banner) => (
+                      <Table.Row
+                        key={banner._id}
+                        className="bg-white dark:border-gray-700 dark:bg-gray-800"
+                      >
+                        <Table.Cell>
+                          <img
+                            src={`http://localhost:8000/uploads/${banner.imagen}`}
+                            alt={banner.titulo}
+                            className="w-16 h-10 object-cover rounded"
+                          />
+                        </Table.Cell>
+                        <Table.Cell className="font-medium">
+                          {banner.titulo}
+                        </Table.Cell>
+                        <Table.Cell>
+                          <span
+                            className={`px-2 py-1 rounded text-xs ${
+                              banner.tipo === "principal"
+                                ? "bg-blue-100 text-blue-800"
+                                : "bg-gray-100 text-gray-800"
+                            }`}
+                          >
+                            {banner.tipo}
+                          </span>
+                        </Table.Cell>
+                        <Table.Cell>{banner.version}</Table.Cell>
+                        <Table.Cell>
+                          <Button
+                            size="xs"
+                            color={
+                              banner.estado === "activo" ? "success" : "failure"
+                            }
+                            onClick={() =>
+                              toggleBannerStatus(banner._id, banner.estado)
+                            }
+                          >
+                            {banner.estado}
+                          </Button>
+                        </Table.Cell>
+                        <Table.Cell>{banner.orden}</Table.Cell>
+                        <Table.Cell>
+                          <div className="flex gap-2">
+                            <Button
+                              size="xs"
+                              onClick={() => editBanner(banner)}
+                            >
+                              Editar
+                            </Button>
+                            <Button
+                              size="xs"
+                              color="failure"
+                              onClick={() => deleteBanner(banner._id)}
+                            >
+                              Eliminar
+                            </Button>
+                          </div>
+                        </Table.Cell>
+                      </Table.Row>
+                    ))}
+                  </Table.Body>
+                </Table>
+              )}
+            </Card>
+          </div>
+
+          {/* Vista móvil - Cards para banners */}
+          <div className="block md:hidden">
+            {loading ? (
+              <div className="text-center py-8 text-white">
+                Cargando banners...
+              </div>
+            ) : (
+              <div>
+                {banners.map((banner) => (
+                  <Card
+                    key={banner._id}
+                    className="mb-4"
+                    style={{ backgroundColor: "#5B4373" }}
+                  >
+                    <div className="p-4">
+                      <div className="flex gap-4">
+                        <img
+                          src={`http://localhost:8000/uploads/${banner.imagen}`}
+                          alt={banner.titulo}
+                          className="w-20 h-12 object-cover rounded"
+                        />
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-lg text-white">
+                            {banner.titulo}
+                          </h3>
+                          <p className="text-sm text-gray-300">
+                            {banner.tipo} • {banner.version} • Orden:{" "}
+                            {banner.orden}
+                          </p>
+                          <div className="flex gap-2 mt-2">
+                            <Button
+                              size="xs"
+                              color={
+                                banner.estado === "activo"
+                                  ? "success"
+                                  : "failure"
+                              }
+                              onClick={() =>
+                                toggleBannerStatus(banner._id, banner.estado)
+                              }
+                            >
+                              {banner.estado}
+                            </Button>
+                            <Button
+                              size="xs"
+                              onClick={() => editBanner(banner)}
+                            >
+                              Editar
+                            </Button>
+                            <Button
+                              size="xs"
+                              color="failure"
+                              onClick={() => deleteBanner(banner._id)}
+                            >
+                              Eliminar
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Modal para crear/editar banner */}
+      <Modal
+        show={showBannerModal}
+        onClose={() => setShowBannerModal(false)}
+        size="lg"
+      >
+        <Modal.Header>
+          {selectedBanner ? "Editar Banner" : "Crear Banner"}
+        </Modal.Header>
+        <Modal.Body>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="bannerTitulo">Título</Label>
+              <TextInput
+                id="bannerTitulo"
+                value={bannerForm.titulo}
+                onChange={(e) =>
+                  setBannerForm({ ...bannerForm, titulo: e.target.value })
+                }
+                placeholder="Título del banner"
+                required
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="bannerDescripcion">Descripción</Label>
+              <TextInput
+                id="bannerDescripcion"
+                value={bannerForm.descripcion}
+                onChange={(e) =>
+                  setBannerForm({ ...bannerForm, descripcion: e.target.value })
+                }
+                placeholder="Descripción del banner"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="bannerImagen" className="text-white">
+                Imagen del Banner
+              </Label>
+              <input
+                id="bannerImagen"
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                className="block w-full text-sm text-gray-300 border border-gray-600 rounded-lg cursor-pointer bg-gray-700 focus:outline-none"
+              />
+              <p className="mt-1 text-sm text-gray-400">
+                Formatos soportados: JPG, PNG, WEBP. Se convertirá
+                automáticamente a WebP optimizado.
+              </p>
+              {imagePreview && (
+                <div className="mt-2">
+                  <img
+                    src={imagePreview}
+                    alt="Vista previa"
+                    className="w-full h-32 object-cover rounded"
+                  />
+                </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="bannerFormEstado">Estado</Label>
+                <Select
+                  id="bannerFormEstado"
+                  value={bannerForm.estado}
+                  onChange={(e) =>
+                    setBannerForm({ ...bannerForm, estado: e.target.value })
+                  }
+                >
+                  <option value="activo">Activo</option>
+                  <option value="inactivo">Inactivo</option>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="bannerFormTipo">Tipo</Label>
+                <Select
+                  id="bannerFormTipo"
+                  value={bannerForm.tipo}
+                  onChange={(e) =>
+                    setBannerForm({ ...bannerForm, tipo: e.target.value })
+                  }
+                >
+                  <option value="principal">Principal</option>
+                  <option value="secundario">Secundario</option>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="bannerFormVersion">Versión</Label>
+                <Select
+                  id="bannerFormVersion"
+                  value={bannerForm.version}
+                  onChange={(e) =>
+                    setBannerForm({ ...bannerForm, version: e.target.value })
+                  }
+                >
+                  <option value="ambos">Ambos</option>
+                  <option value="mobile">Móvil</option>
+                  <option value="escritorio">Escritorio</option>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="bannerFormOrden">Orden</Label>
+                <TextInput
+                  id="bannerFormOrden"
+                  type="number"
+                  value={bannerForm.orden}
+                  onChange={(e) =>
+                    setBannerForm({
+                      ...bannerForm,
+                      orden: parseInt(e.target.value) || 0,
+                    })
+                  }
+                  min="0"
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="bannerEnlace">Enlace (opcional)</Label>
+              <TextInput
+                id="bannerEnlace"
+                value={bannerForm.enlace}
+                onChange={(e) =>
+                  setBannerForm({ ...bannerForm, enlace: e.target.value })
+                }
+                placeholder="https://ejemplo.com"
+              />
+            </div>
+          </div>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button
+            onClick={saveBanner}
+            style={{ backgroundColor: "var(--primary-color)" }}
+          >
+            {selectedBanner ? "Actualizar" : "Crear"} Banner
+          </Button>
+          <Button color="gray" onClick={() => setShowBannerModal(false)}>
+            Cancelar
+          </Button>
+        </Modal.Footer>
+      </Modal>
 
       {/* Modal para ver/editar turno */}
       <Modal show={showModal} onClose={() => setShowModal(false)}>
