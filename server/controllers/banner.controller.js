@@ -34,7 +34,7 @@ if (!fs.existsSync(uploadsDir)) {
 const processImage = async (buffer, filename) => {
   const timestamp = Date.now();
   const ext = path.extname(filename);
-  const processedFilename = `${timestamp}-${filename.replace(ext, '')}${ext}`;
+  const processedFilename = `${timestamp}-${filename.replace(ext, "")}${ext}`;
   const outputPath = path.join(uploadsDir, processedFilename);
 
   // Guardar la imagen original temporalmente (sin conversión)
