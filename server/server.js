@@ -39,6 +39,12 @@ app.use("/api/adamspay", AdamspayRouter); // Usar la ruta del webhook
 const BannerRouter = require("./routes/banner.route");
 app.use("/api/banners", BannerRouter);
 
+const ContactoRouter = require("./routes/contacto.route");
+app.use("/api/contacto", ContactoRouter);
+
+const UbicacionRouter = require("./routes/ubicacion.route");
+app.use("/api/ubicacion", UbicacionRouter);
+
 // Inicializar servicio de agenda
 const AgendaService = require("./services/agendaService");
 

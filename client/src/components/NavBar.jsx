@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useState, useEffect } from "react";
 import axios from "axios";
 import DownButton from "../assets/DownButton.svg";
@@ -7,9 +7,11 @@ import backImg from "../assets/bg2.webp";
 
 const NavBar = ({ agendarRef, footerRef }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [banners, setBanners] = useState([]);
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
 
   // Detectar si es mobile o desktop
   useEffect(() => {
@@ -44,33 +46,72 @@ const NavBar = ({ agendarRef, footerRef }) => {
   useEffect(() => {
     if (banners.length > 1) {
       const interval = setInterval(() => {
-        setCurrentBannerIndex((prevIndex) => (prevIndex + 1) % banners.length);
-      }, 5000); // Cambiar cada 5 segundos
+        setIsTransitioning(true);
+        setTimeout(() => {
+          setCurrentBannerIndex(
+            (prevIndex) => (prevIndex + 1) % banners.length
+          );
+          setIsTransitioning(false);
+        }, 200); // Duración de la transición
+      }, 4000); // Cambiar cada 4 segundos
 
       return () => clearInterval(interval);
     }
   }, [banners.length]);
 
-  // Obtener banner apropiado para la versión actual
-  const getCurrentBanner = () => {
-    if (banners.length === 0) return null;
+  // Función para navegar manualmente al banner anterior
+  const goToPrevBanner = () => {
+    if (banners.length > 1) {
+      setIsTransitioning(true);
+      setTimeout(() => {
+        setCurrentBannerIndex((prevIndex) =>
+          prevIndex === 0 ? banners.length - 1 : prevIndex - 1
+        );
+        setIsTransitioning(false);
+      }, 200);
+    }
+  };
+
+  // Función para navegar manualmente al banner siguiente
+  const goToNextBanner = () => {
+    if (banners.length > 1) {
+      setIsTransitioning(true);
+      setTimeout(() => {
+        setCurrentBannerIndex((prevIndex) => (prevIndex + 1) % banners.length);
+        setIsTransitioning(false);
+      }, 200);
+    }
+  };
+
+  // Función para ir a un banner específico
+  const goToBanner = (index) => {
+    if (index !== currentBannerIndex && banners.length > 1) {
+      setIsTransitioning(true);
+      setTimeout(() => {
+        setCurrentBannerIndex(index);
+        setIsTransitioning(false);
+      }, 200);
+    }
+  };
+
+  // Obtener banners apropiados para la versión actual
+  const getAppropiateBanners = () => {
+    if (banners.length === 0) return [];
 
     const targetVersion = isMobile ? "mobile" : "escritorio";
 
-    // Buscar banner para la versión específica
-    let appropriateBanner = banners.find(
-      (banner) => banner.version === targetVersion
+    // Filtrar banners para la versión específica o "ambos"
+    const appropriateBanners = banners.filter(
+      (banner) => banner.version === targetVersion || banner.version === "ambos"
     );
 
-    // Si no hay para la versión específica, usar cualquier banner disponible
-    if (!appropriateBanner && banners.length > 0) {
-      appropriateBanner = banners[currentBannerIndex];
-    }
-
-    return appropriateBanner;
+    // Si no hay banners específicos, usar todos los disponibles
+    return appropriateBanners.length > 0 ? appropriateBanners : banners;
   };
 
-  const currentBanner = getCurrentBanner();
+  const appropriateBanners = getAppropiateBanners();
+  const currentBanner =
+    appropriateBanners[currentBannerIndex % appropriateBanners.length];
   const backgroundImage = currentBanner?.imagen
     ? `http://localhost:8000/uploads/${currentBanner.imagen}`
     : backImg;
@@ -93,11 +134,14 @@ const NavBar = ({ agendarRef, footerRef }) => {
 
   return (
     <div
-      className="bg-cover bg-no-repeat h- relative transition-all duration-1000 ease-in-out"
+      className={`bg-cover bg-no-repeat bg-center h-screen relative transition-all duration-700 ease-in-out ${
+        isTransitioning ? "opacity-90" : "opacity-100"
+      }`}
       style={{ backgroundImage: `url(${backgroundImage})` }}
     >
       <div
-        className="navBar flex justify-evenly items-center bg-white bg-opacity-20 backdrop-blur-sm p-4 rounded-lg mx-4 mt-4"
+        className="navBar flex justify-evenly items-center backdrop-blur-sm p-4 rounded-lg mx-4 mt-4"
+        style={{ backgroundColor: "rgba(41, 7, 64, 0.2)" }}
         id="home"
       >
         <div className="iconD ml-2">
@@ -105,7 +149,7 @@ const NavBar = ({ agendarRef, footerRef }) => {
             <li className="flex items-center">
               <button
                 onClick={scrollToFooter}
-                className="text-gray-900 hover:text-purple-600 font-medium transition-colors duration-200"
+                className="text-white hover:text-gray-200 font-medium transition-colors duration-200"
               >
                 Contactame
               </button>
@@ -130,7 +174,7 @@ const NavBar = ({ agendarRef, footerRef }) => {
             <li className="flex items-center">
               <button
                 onClick={scrollToFooter}
-                className="text-gray-900 hover:text-purple-600 font-medium transition-colors duration-200"
+                className="text-white hover:text-gray-200 font-medium transition-colors duration-200"
               >
                 Ubicación
               </button>
@@ -143,6 +187,69 @@ const NavBar = ({ agendarRef, footerRef }) => {
           </ol>
         </div>
       </div>
+
+      {/* Controles del carrusel */}
+      {appropriateBanners.length > 1 && (
+        <>
+          {/* Flechas de navegación */}
+          <button
+            onClick={goToPrevBanner}
+            className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 hover:bg-opacity-70 text-white p-2 rounded-full transition-all duration-200 z-10"
+            aria-label="Banner anterior"
+          >
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 19l-7-7 7-7"
+              />
+            </svg>
+          </button>
+
+          <button
+            onClick={goToNextBanner}
+            className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 hover:bg-opacity-70 text-white p-2 rounded-full transition-all duration-200 z-10"
+            aria-label="Banner siguiente"
+          >
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 5l7 7-7 7"
+              />
+            </svg>
+          </button>
+
+          {/* Indicadores de posición */}
+          <div className="absolute bottom-20 left-1/2 transform -translate-x-1/2 flex space-x-2 z-10">
+            {appropriateBanners.map((_, index) => (
+              <button
+                key={index}
+                onClick={() => goToBanner(index)}
+                className={`w-3 h-3 rounded-full transition-all duration-200 ${
+                  index === currentBannerIndex % appropriateBanners.length
+                    ? "bg-white"
+                    : "bg-white bg-opacity-50 hover:bg-opacity-75"
+                }`}
+                aria-label={`Ir al banner ${index + 1}`}
+              />
+            ))}
+          </div>
+        </>
+      )}
+
       <div className="flex items-center flex-col mt-80 h-60 bg-black bg-opacity-50 p-6">
         <h2 className="text-4xl tracking-[0.05em] ">ALONZO STYLE</h2>
         <h3 className="tracking-[0.5em] mt-2 mb-2">CREANDO TU ESTILO</h3>

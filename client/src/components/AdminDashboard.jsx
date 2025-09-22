@@ -54,6 +54,24 @@ const AdminDashboard = () => {
   const [imagePreview, setImagePreview] = useState("");
   const [selectedFile, setSelectedFile] = useState(null);
 
+  // Estados para gestión de contacto
+  const [contacto, setContacto] = useState(null);
+  const [contactoForm, setContactoForm] = useState({
+    whatsapp: "",
+    instagram: "",
+    instagramUrl: "",
+    correo: "",
+  });
+  const [showContactoModal, setShowContactoModal] = useState(false);
+
+  // Estados para gestión de ubicación
+  const [ubicacion, setUbicacion] = useState(null);
+  const [ubicacionForm, setUbicacionForm] = useState({
+    direccion: "",
+    enlaceMaps: "",
+  });
+  const [showUbicacionModal, setShowUbicacionModal] = useState(false);
+
   // Función para obtener las estadísticas de turnos
   const fetchStats = async () => {
     try {
@@ -394,6 +412,102 @@ const AdminDashboard = () => {
     setShowBannerModal(true);
   };
 
+  // ===== FUNCIONES PARA CONTACTO =====
+  const fetchContacto = async () => {
+    try {
+      const response = await axios.get("http://localhost:8000/api/contacto");
+      setContacto(response.data.contacto);
+    } catch (error) {
+      console.error("Error al obtener contacto:", error);
+    }
+  };
+
+  const saveContacto = async () => {
+    try {
+      if (contacto) {
+        // Actualizar contacto existente
+        await axios.put(
+          `http://localhost:8000/api/contacto/${contacto._id}`,
+          contactoForm
+        );
+      } else {
+        // Crear nuevo contacto
+        await axios.post("http://localhost:8000/api/contacto", contactoForm);
+      }
+      fetchContacto();
+      setShowContactoModal(false);
+    } catch (error) {
+      console.error("Error al guardar contacto:", error);
+    }
+  };
+
+  const resetContactoForm = () => {
+    setContactoForm({
+      whatsapp: "",
+      instagram: "",
+      instagramUrl: "",
+      correo: "",
+    });
+  };
+
+  const editContacto = () => {
+    if (contacto) {
+      setContactoForm({
+        whatsapp: contacto.whatsapp || "",
+        instagram: contacto.instagram || "",
+        instagramUrl: contacto.instagramUrl || "",
+        correo: contacto.correo || "",
+      });
+    }
+    setShowContactoModal(true);
+  };
+
+  // ===== FUNCIONES PARA UBICACIÓN =====
+  const fetchUbicacion = async () => {
+    try {
+      const response = await axios.get("http://localhost:8000/api/ubicacion");
+      setUbicacion(response.data.ubicacion);
+    } catch (error) {
+      console.error("Error al obtener ubicación:", error);
+    }
+  };
+
+  const saveUbicacion = async () => {
+    try {
+      if (ubicacion) {
+        // Actualizar ubicación existente
+        await axios.put(
+          `http://localhost:8000/api/ubicacion/${ubicacion._id}`,
+          ubicacionForm
+        );
+      } else {
+        // Crear nueva ubicación
+        await axios.post("http://localhost:8000/api/ubicacion", ubicacionForm);
+      }
+      fetchUbicacion();
+      setShowUbicacionModal(false);
+    } catch (error) {
+      console.error("Error al guardar ubicación:", error);
+    }
+  };
+
+  const resetUbicacionForm = () => {
+    setUbicacionForm({
+      direccion: "",
+      enlaceMaps: "",
+    });
+  };
+
+  const editUbicacion = () => {
+    if (ubicacion) {
+      setUbicacionForm({
+        direccion: ubicacion.direccion || "",
+        enlaceMaps: ubicacion.enlaceMaps || "",
+      });
+    }
+    setShowUbicacionModal(true);
+  };
+
   useEffect(() => {
     fetchStats();
   }, []);
@@ -403,6 +517,10 @@ const AdminDashboard = () => {
       fetchTurnos();
     } else if (activeView === "banners") {
       fetchBanners();
+    } else if (activeView === "contacto") {
+      fetchContacto();
+    } else if (activeView === "ubicacion") {
+      fetchUbicacion();
     }
   }, [activeView]);
 
@@ -513,6 +631,18 @@ const AdminDashboard = () => {
               onClick={() => setActiveView("banners")}
             >
               Banners
+            </Button>
+            <Button
+              color={activeView === "contacto" ? "purple" : "gray"}
+              onClick={() => setActiveView("contacto")}
+            >
+              Contacto
+            </Button>
+            <Button
+              color={activeView === "ubicacion" ? "purple" : "gray"}
+              onClick={() => setActiveView("ubicacion")}
+            >
+              Ubicación
             </Button>
           </div>
         </div>
@@ -1100,6 +1230,252 @@ const AdminDashboard = () => {
             {selectedBanner ? "Actualizar" : "Crear"} Banner
           </Button>
           <Button color="gray" onClick={() => setShowBannerModal(false)}>
+            Cancelar
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
+      {/* Vista de Contacto */}
+      {activeView === "contacto" && (
+        <div>
+          <Card className="mb-6" style={{ backgroundColor: "#5B4373" }}>
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-semibold text-white">
+                  Gestión de Contacto
+                </h3>
+                <Button
+                  color="purple"
+                  onClick={() => {
+                    resetContactoForm();
+                    setShowContactoModal(true);
+                  }}
+                >
+                  {contacto ? "Editar Contacto" : "+ Crear Contacto"}
+                </Button>
+              </div>
+
+              {/* Información actual */}
+              {contacto ? (
+                <div className="bg-white/10 p-4 rounded-lg">
+                  <h4 className="text-white font-medium mb-2">
+                    Información Actual:
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-white">
+                    <div>
+                      <span className="font-medium">WhatsApp:</span>
+                      <p>{contacto.whatsapp || "No configurado"}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium">Instagram:</span>
+                      <p>{contacto.instagram || "No configurado"}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium">Correo:</span>
+                      <p>{contacto.correo || "No configurado"}</p>
+                    </div>
+                  </div>
+                  <div className="mt-4">
+                    <Button color="purple" size="sm" onClick={editContacto}>
+                      Editar
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-yellow-100/10 border border-yellow-400/30 p-4 rounded-lg">
+                  <p className="text-yellow-200">
+                    No hay información de contacto configurada. Haz clic en
+                    "Crear Contacto" para agregar.
+                  </p>
+                </div>
+              )}
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Vista de Ubicación */}
+      {activeView === "ubicacion" && (
+        <div>
+          <Card className="mb-6" style={{ backgroundColor: "#5B4373" }}>
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-semibold text-white">
+                  Gestión de Ubicación
+                </h3>
+                <Button
+                  color="purple"
+                  onClick={() => {
+                    resetUbicacionForm();
+                    setShowUbicacionModal(true);
+                  }}
+                >
+                  {ubicacion ? "Editar Ubicación" : "+ Crear Ubicación"}
+                </Button>
+              </div>
+
+              {/* Información actual */}
+              {ubicacion ? (
+                <div className="bg-white/10 p-4 rounded-lg">
+                  <h4 className="text-white font-medium mb-2">
+                    Información Actual:
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-white">
+                    <div>
+                      <span className="font-medium">Dirección:</span>
+                      <p>{ubicacion.direccion || "No configurado"}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium">Enlace Maps:</span>
+                      <p className="break-all">
+                        {ubicacion.enlaceMaps || "No configurado"}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-4">
+                    <Button color="purple" size="sm" onClick={editUbicacion}>
+                      Editar
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-yellow-100/10 border border-yellow-400/30 p-4 rounded-lg">
+                  <p className="text-yellow-200">
+                    No hay información de ubicación configurada. Haz clic en
+                    "Crear Ubicación" para agregar.
+                  </p>
+                </div>
+              )}
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Modal para crear/editar contacto */}
+      <Modal
+        show={showContactoModal}
+        onClose={() => setShowContactoModal(false)}
+        size="lg"
+      >
+        <Modal.Header>
+          {contacto ? "Editar Contacto" : "Crear Contacto"}
+        </Modal.Header>
+        <Modal.Body>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="whatsapp">WhatsApp</Label>
+              <TextInput
+                id="whatsapp"
+                type="text"
+                placeholder="Ej: +595123456789"
+                value={contactoForm.whatsapp}
+                onChange={(e) =>
+                  setContactoForm({ ...contactoForm, whatsapp: e.target.value })
+                }
+              />
+            </div>
+            <div>
+              <Label htmlFor="instagram">Instagram</Label>
+              <TextInput
+                id="instagram"
+                type="text"
+                placeholder="Ej: @usuario_instagram"
+                value={contactoForm.instagram}
+                onChange={(e) =>
+                  setContactoForm({
+                    ...contactoForm,
+                    instagram: e.target.value,
+                  })
+                }
+              />
+            </div>
+            <div>
+              <Label htmlFor="instagramUrl">URL de Instagram (opcional)</Label>
+              <TextInput
+                id="instagramUrl"
+                type="url"
+                placeholder="Ej: https://www.instagram.com/usuario_instagram/"
+                value={contactoForm.instagramUrl}
+                onChange={(e) =>
+                  setContactoForm({
+                    ...contactoForm,
+                    instagramUrl: e.target.value,
+                  })
+                }
+              />
+            </div>
+            <div>
+              <Label htmlFor="correo">Correo Electrónico</Label>
+              <TextInput
+                id="correo"
+                type="email"
+                placeholder="Ej: contacto@ejemplo.com"
+                value={contactoForm.correo}
+                onChange={(e) =>
+                  setContactoForm({ ...contactoForm, correo: e.target.value })
+                }
+              />
+            </div>
+          </div>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button color="purple" onClick={saveContacto}>
+            Guardar
+          </Button>
+          <Button color="gray" onClick={() => setShowContactoModal(false)}>
+            Cancelar
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
+      {/* Modal para crear/editar ubicación */}
+      <Modal
+        show={showUbicacionModal}
+        onClose={() => setShowUbicacionModal(false)}
+        size="lg"
+      >
+        <Modal.Header>
+          {ubicacion ? "Editar Ubicación" : "Crear Ubicación"}
+        </Modal.Header>
+        <Modal.Body>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="direccion">Dirección</Label>
+              <TextInput
+                id="direccion"
+                type="text"
+                placeholder="Ej: Av. Principal 123, Asunción, Paraguay"
+                value={ubicacionForm.direccion}
+                onChange={(e) =>
+                  setUbicacionForm({
+                    ...ubicacionForm,
+                    direccion: e.target.value,
+                  })
+                }
+              />
+            </div>
+            <div>
+              <Label htmlFor="enlaceMaps">Enlace de Google Maps</Label>
+              <TextInput
+                id="enlaceMaps"
+                type="url"
+                placeholder="Ej: https://maps.google.com/..."
+                value={ubicacionForm.enlaceMaps}
+                onChange={(e) =>
+                  setUbicacionForm({
+                    ...ubicacionForm,
+                    enlaceMaps: e.target.value,
+                  })
+                }
+              />
+            </div>
+          </div>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button color="purple" onClick={saveUbicacion}>
+            Guardar
+          </Button>
+          <Button color="gray" onClick={() => setShowUbicacionModal(false)}>
             Cancelar
           </Button>
         </Modal.Footer>
