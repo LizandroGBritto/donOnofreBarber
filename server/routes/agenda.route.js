@@ -7,6 +7,13 @@ const AgendaRouter = express.Router();
 AgendaRouter.get("/", AgendaController.getAllAgendas);
 
 // Nuevas rutas para estadísticas y generación de turnos
+AgendaRouter.get("/diagnostico", AgendaController.diagnosticoHorarios);
+AgendaRouter.delete(
+  "/limpiar-duplicados",
+  AgendaController.limpiarTurnosDuplicados
+);
+AgendaRouter.delete("/eliminar-hoy", AgendaController.eliminarTurnosHoy);
+AgendaRouter.post("/regenerar-fecha", AgendaController.regenerarTurnosFecha);
 AgendaRouter.get("/dashboard/estadisticas", AgendaController.getEstadisticas);
 AgendaRouter.post("/generar-turnos", AgendaController.generarTurnosMes);
 

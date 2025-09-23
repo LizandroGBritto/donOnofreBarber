@@ -45,6 +45,16 @@ app.use("/api/contacto", ContactoRouter);
 const UbicacionRouter = require("./routes/ubicacion.route");
 app.use("/api/ubicacion", UbicacionRouter);
 
+const ServicioRouter = require("./routes/servicio.route");
+app.use("/api/servicios", ServicioRouter);
+
+const HorarioRouter = require("./routes/horario.route");
+app.use("/api/horarios", HorarioRouter);
+
+// Ruta temporal para migración
+const MigracionRouter = require("./routes/migracion.route");
+app.use("/api/migracion", MigracionRouter);
+
 // Inicializar servicio de agenda
 const AgendaService = require("./services/agendaService");
 

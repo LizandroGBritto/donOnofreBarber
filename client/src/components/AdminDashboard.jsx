@@ -185,7 +185,7 @@ const AdminDashboard = () => {
     // Filtro por fecha
     if (fechaDesde) {
       filtered = filtered.filter((turno) => {
-        const fechaTurno = new Date(turno.Fecha);
+        const fechaTurno = new Date(turno.fecha); // Nuevo campo
         const fechaDesdeObj = new Date(fechaDesde);
         fechaDesdeObj.setHours(0, 0, 0, 0); // Inicio del día
         return fechaTurno >= fechaDesdeObj;
@@ -194,7 +194,7 @@ const AdminDashboard = () => {
 
     if (fechaHasta) {
       filtered = filtered.filter((turno) => {
-        const fechaTurno = new Date(turno.Fecha);
+        const fechaTurno = new Date(turno.fecha); // Nuevo campo
         const fechaHastaObj = new Date(fechaHasta);
         fechaHastaObj.setHours(23, 59, 59, 999); // Final del día
         return fechaTurno <= fechaHastaObj;
@@ -203,7 +203,7 @@ const AdminDashboard = () => {
 
     // Filtro por estado
     if (filtroEstado) {
-      filtered = filtered.filter((turno) => turno.Estado === filtroEstado);
+      filtered = filtered.filter((turno) => turno.estado === filtroEstado);
     }
 
     // Filtro por búsqueda (cliente, día, teléfono, estado)
@@ -211,12 +211,13 @@ const AdminDashboard = () => {
       const searchTerm = busqueda.toLowerCase();
       filtered = filtered.filter(
         (turno) =>
-          (turno.NombreCliente &&
-            turno.NombreCliente.toLowerCase().includes(searchTerm)) ||
-          (turno.NumeroCliente &&
-            turno.NumeroCliente.toLowerCase().includes(searchTerm)) ||
-          (turno.Dia && turno.Dia.toLowerCase().includes(searchTerm)) ||
-          (turno.Estado && turno.Estado.toLowerCase().includes(searchTerm))
+          (turno.nombreCliente &&
+            turno.nombreCliente.toLowerCase().includes(searchTerm)) ||
+          (turno.numeroCliente &&
+            turno.numeroCliente.toLowerCase().includes(searchTerm)) ||
+          (turno.diaSemana &&
+            turno.diaSemana.toLowerCase().includes(searchTerm)) ||
+          (turno.estado && turno.estado.toLowerCase().includes(searchTerm))
       );
     }
 
@@ -229,11 +230,11 @@ const AdminDashboard = () => {
     try {
       await axios.put(`http://localhost:8000/api/agenda/${id}`, {
         ...selectedTurno,
-        Estado: nuevoEstado,
+        estado: nuevoEstado, // Nuevo campo
       });
 
       const updatedTurnos = turnos.map((turno) =>
-        turno._id === id ? { ...turno, Estado: nuevoEstado } : turno
+        turno._id === id ? { ...turno, estado: nuevoEstado } : turno
       );
       setTurnos(updatedTurnos);
       filtrarTurnos();
@@ -246,9 +247,9 @@ const AdminDashboard = () => {
 
   // Funciones para filtros rápidos
   const filtrarHoy = () => {
-    const manana = obtenerFechaManana();
-    setFechaDesde(manana);
-    setFechaHasta(manana);
+    const hoy = obtenerFechaHoy();
+    setFechaDesde(hoy);
+    setFechaHasta(hoy);
     setFiltroEstado("");
     setBusqueda("");
   };
@@ -529,7 +530,8 @@ const AdminDashboard = () => {
   }, [fechaDesde, fechaHasta, filtroEstado, busqueda, turnos]);
 
   const StatsCard = ({ title, scheduled, available, period }) => {
-    const percentage = (scheduled / available) * 100;
+    const total = scheduled + available;
+    const percentage = total > 0 ? (scheduled / total) * 100 : 0;
 
     return (
       <Card className="max-w-sm" style={{ backgroundColor: "#5B4373" }}>
@@ -537,7 +539,7 @@ const AdminDashboard = () => {
           <h5 className="mb-2 text-xl font-medium text-white">{title}</h5>
           <div className="text-center">
             <div className="text-3xl font-bold text-white mb-2">
-              {scheduled}/{available}
+              {scheduled}/{total}
             </div>
             <div className="text-sm text-gray-300 mb-3">Turnos {period}</div>
             <div className="w-full bg-gray-600 rounded-full h-2.5">
@@ -551,6 +553,9 @@ const AdminDashboard = () => {
             </div>
             <div className="text-xs text-gray-300 mt-1">
               {percentage.toFixed(1)}% ocupado
+            </div>
+            <div className="text-xs text-gray-400 mt-1">
+              {available} disponibles
             </div>
           </div>
         </div>
@@ -579,18 +584,18 @@ const AdminDashboard = () => {
         <div className="flex justify-between items-start mb-2">
           <div>
             <h3 className="font-semibold text-lg text-white">
-              {turno.NombreCliente || "Disponible"}
+              {turno.nombreCliente || "Disponible"}
             </h3>
             <p className="text-sm text-gray-300">
-              {formatearFecha(turno.Fecha)} - {turno.Hora}
+              {formatearFecha(turno.fecha)} - {turno.hora}
             </p>
           </div>
-          <div className="text-right">{formatearEstado(turno.Estado)}</div>
+          <div className="text-right">{formatearEstado(turno.estado)}</div>
         </div>
         <div className="flex justify-between items-center">
           <div className="text-sm text-gray-300">
-            <p>Tel: {turno.NumeroCliente || "N/A"}</p>
-            <p>Costo: ${turno.Costo || 0}</p>
+            <p>Tel: {turno.numeroCliente || "N/A"}</p>
+            <p>Costo: ${turno.costo || 0}</p>
           </div>
           <Button
             size="sm"
@@ -796,14 +801,14 @@ const AdminDashboard = () => {
                         key={turno._id}
                         className="bg-white dark:border-gray-700 dark:bg-gray-800"
                       >
-                        <Table.Cell>{formatearFecha(turno.Fecha)}</Table.Cell>
-                        <Table.Cell>{turno.Hora}</Table.Cell>
+                        <Table.Cell>{formatearFecha(turno.fecha)}</Table.Cell>
+                        <Table.Cell>{turno.hora}</Table.Cell>
                         <Table.Cell>
-                          {turno.NombreCliente || "Disponible"}
+                          {turno.nombreCliente || "Disponible"}
                         </Table.Cell>
-                        <Table.Cell>{turno.NumeroCliente || "-"}</Table.Cell>
-                        <Table.Cell>{formatearEstado(turno.Estado)}</Table.Cell>
-                        <Table.Cell>${turno.Costo || 0}</Table.Cell>
+                        <Table.Cell>{turno.numeroCliente || "-"}</Table.Cell>
+                        <Table.Cell>{formatearEstado(turno.estado)}</Table.Cell>
+                        <Table.Cell>${turno.costo || 0}</Table.Cell>
                         <Table.Cell>
                           <Button
                             size="sm"

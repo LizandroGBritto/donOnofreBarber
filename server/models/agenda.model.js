@@ -2,66 +2,136 @@ const mongoose = require("mongoose");
 
 const AgendaSchema = new mongoose.Schema(
   {
-    Hora: {
-      type: String,
-      required: [true, "La hora de la cita es requerida"],
-      minlength: [3, "La hora debe tener al menos 3 caracteres"],
-    },
-    NombreCliente: {
-      type: String,
-    },
-    NumeroCliente: {
-      type: String,
-    },
-    Dia: {
-      type: String, // Día de la semana (ej: "Lunes", "Martes")
-    },
-    Fecha: {
+    fecha: {
       type: Date,
       required: [true, "La fecha es requerida"],
-      index: true, // Para optimizar consultas por fecha
+      index: true,
     },
-    UserId: {
+    hora: {
       type: String,
-    },
-    Servicios: {
-      type: [
-        {
-          name: { type: String, required: true },
-          price: { type: Number, required: true },
-        },
+      required: [true, "La hora es requerida"],
+      match: [
+        /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/,
+        "Formato de hora inválido (HH:MM)",
       ],
     },
-    Costo: {
+    diaSemana: {
+      type: String,
+      enum: [
+        "lunes",
+        "martes",
+        "miercoles",
+        "jueves",
+        "viernes",
+        "sabado",
+        "domingo",
+      ],
+      required: true,
+    },
+
+    // Información del cliente (solo cuando está reservado)
+    nombreCliente: {
+      type: String,
+      default: "",
+    },
+    numeroCliente: {
+      type: String,
+      default: "",
+    },
+    emailCliente: {
+      type: String,
+      default: "",
+    },
+
+    // Servicios seleccionados (referencia al modelo Servicio)
+    servicios: [
+      {
+        servicioId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Servicio",
+        },
+        nombre: String, // Copia para histórico
+        precio: Number, // Copia para histórico
+        duracion: Number, // Copia para histórico
+      },
+    ],
+
+    // Estados y gestión
+    estado: {
+      type: String,
+      enum: [
+        "disponible",
+        "reservado",
+        "confirmado",
+        "en_proceso",
+        "completado",
+        "cancelado",
+        "no_show",
+      ],
+      default: "disponible",
+      index: true,
+    },
+    estadoPago: {
+      type: String,
+      enum: ["pendiente", "pagado", "reembolsado"],
+      default: "pendiente",
+    },
+
+    // Costos
+    costoTotal: {
       type: Number,
+      default: 0,
     },
-    Estado: {
+    costoServicios: {
+      type: Number,
+      default: 0,
+    },
+    descuento: {
+      type: Number,
+      default: 0,
+    },
+
+    // Metadata
+    notas: {
       type: String,
-      default: "Sin Pagar",
+      default: "",
     },
-    // Nuevos campos para mejor gestión
-    EsRecurrente: {
+    creadoAutomaticamente: {
       type: Boolean,
-      default: false,
+      default: true, // true para turnos generados automáticamente
     },
-    TipoRecurrencia: {
-      type: String,
-      enum: ["semanal", "quincenal", "mensual"],
-      default: null,
-    },
+
+    // Fechas importantes
+    fechaReserva: Date,
+    fechaConfirmacion: Date,
+    fechaCompletado: Date,
+    fechaCancelacion: Date,
   },
   { timestamps: true }
 );
 
+// Índices compuestos para optimizar consultas
+AgendaSchema.index({ fecha: 1, hora: 1 }); // Para buscar turnos específicos
+AgendaSchema.index({ fecha: 1, estado: 1 }); // Para filtrar por fecha y estado
+AgendaSchema.index({ diaSemana: 1, estado: 1 }); // Para consultas por día de semana
+AgendaSchema.index({ nombreCliente: 1, fecha: 1 }); // Para buscar por cliente
+
 // Métodos estáticos para consultas comunes
+AgendaSchema.statics.getTurnosDisponibles = function (fecha) {
+  return this.find({
+    fecha: fecha,
+    estado: "disponible",
+  }).sort({ hora: 1 });
+};
+
 AgendaSchema.statics.getTurnosHoy = function () {
   const hoy = new Date();
   const inicioDia = new Date(hoy.setHours(0, 0, 0, 0));
   const finDia = new Date(hoy.setHours(23, 59, 59, 999));
 
   return this.find({
-    Fecha: { $gte: inicioDia, $lte: finDia },
-  });
+    fecha: { $gte: inicioDia, $lte: finDia },
+  }).sort({ hora: 1 });
 };
 
 AgendaSchema.statics.getTurnosSemana = function () {
@@ -71,8 +141,8 @@ AgendaSchema.statics.getTurnosSemana = function () {
   finSemana.setHours(23, 59, 59, 999);
 
   return this.find({
-    Fecha: { $gte: inicioSemana, $lte: finSemana },
-  });
+    fecha: { $gte: inicioSemana, $lte: finSemana },
+  }).sort({ fecha: 1, hora: 1 });
 };
 
 AgendaSchema.statics.getTurnosMes = function (año = null, mes = null) {
@@ -84,24 +154,41 @@ AgendaSchema.statics.getTurnosMes = function (año = null, mes = null) {
   const finMes = new Date(añoActual, mesActual + 1, 0, 23, 59, 59, 999);
 
   return this.find({
-    Fecha: { $gte: inicioMes, $lte: finMes },
-  });
+    fecha: { $gte: inicioMes, $lte: finMes },
+  }).sort({ fecha: 1, hora: 1 });
 };
 
-// Método para sincronizar día de la semana con fecha
+// Método para calcular costo total
+AgendaSchema.methods.calcularCostoTotal = function () {
+  const costoServicios = this.servicios.reduce((total, servicio) => {
+    return total + (servicio.precio || 0);
+  }, 0);
+
+  this.costoServicios = costoServicios;
+  this.costoTotal = costoServicios - (this.descuento || 0);
+  return this.costoTotal;
+};
+
+// Pre-save middleware para sincronizar día de la semana con fecha
 AgendaSchema.pre("save", function (next) {
-  if (this.Fecha) {
+  if (this.fecha) {
     const diasSemana = [
-      "Domingo",
-      "Lunes",
-      "Martes",
-      "Miércoles",
-      "Jueves",
-      "Viernes",
-      "Sábado",
+      "domingo",
+      "lunes",
+      "martes",
+      "miercoles",
+      "jueves",
+      "viernes",
+      "sabado",
     ];
-    this.Dia = diasSemana[this.Fecha.getDay()];
+    this.diaSemana = diasSemana[this.fecha.getDay()];
   }
+
+  // Calcular costo total si hay servicios
+  if (this.servicios && this.servicios.length > 0) {
+    this.calcularCostoTotal();
+  }
+
   next();
 });
 
