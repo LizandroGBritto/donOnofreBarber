@@ -157,10 +157,9 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
                   CERRADO
                 </Button>
               </h3>
-            ) : agenda.NombreCliente !== "" ? (
+            ) : agenda.estado !== "disponible" ? (
               <h3 className="flex justify-center mr-4 text-[#FF7D00]">
-                {agenda.nombreCliente !== "" &&
-                agenda.nombreCliente === UserId ? (
+                {agenda.nombreCliente === UserId ? (
                   <Button
                     className="flex justify-center bg-orange-500 rounded-lg text-black text-lg items-center"
                     onClick={() => {

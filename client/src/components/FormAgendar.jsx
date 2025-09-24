@@ -6,11 +6,11 @@ import useForm from "../hooks/useForm";
 
 const FormAgendar = ({ id, onCloseModal, refreshData, getUserId }) => {
   const initialValues = {
-    Hora: "",
-    NombreCliente: "",
-    NumeroCliente: "",
-    UserId: "",
-    Estado: "Sin Pagar",
+    hora: "",
+    nombreCliente: "",
+    numeroCliente: "",
+    emailCliente: "",
+    estado: "reservado",
   };
 
   const { values: agenda, setValues } = useForm(initialValues);
@@ -24,17 +24,17 @@ const FormAgendar = ({ id, onCloseModal, refreshData, getUserId }) => {
         .get(`http://localhost:8000/api/agenda/${id}`)
         .then((res) => {
           if (res.data && res.data.agenda) {
-            const { Servicios, Costo, ...agendaData } = res.data.agenda;
+            const { servicios, costoTotal, ...agendaData } = res.data.agenda;
             setValues({
               ...agendaData,
-              Hora: agendaData.Hora || "",
-              NombreCliente: agendaData.NombreCliente || "",
-              NumeroCliente: agendaData.NumeroCliente || "",
-              UserId: agendaData.UserId || "",
-              Estado: agendaData.Estado || "Sin Pagar",
+              hora: agendaData.hora || "",
+              nombreCliente: agendaData.nombreCliente || "",
+              numeroCliente: agendaData.numeroCliente || "",
+              emailCliente: agendaData.emailCliente || "",
+              estado: agendaData.estado || "reservado",
             });
-            setSelectedServices(Servicios || []); // Carga los servicios seleccionados
-            setFinalCost(Costo || 0); // Carga el costo final
+            setSelectedServices(servicios || []); // Carga los servicios seleccionados
+            setFinalCost(costoTotal || 0); // Carga el costo final
           } else {
             setValues(initialValues);
             setSelectedServices([]);
@@ -48,7 +48,7 @@ const FormAgendar = ({ id, onCloseModal, refreshData, getUserId }) => {
   }, [id, setValues]);
 
   const handleSubmit = async (values) => {
-    if (values.NombreCliente === "") {
+    if (values.nombreCliente === "") {
       Swal.fire({
         title: "¿Estás seguro?",
         text: "Te estaremos esperando!",
@@ -79,14 +79,20 @@ const FormAgendar = ({ id, onCloseModal, refreshData, getUserId }) => {
         }
       });
     } else {
+      // Añadir el UserId a los valores antes de enviar
+      const dataToSend = {
+        ...values,
+        nombreCliente: getUserId(), // Usar el ID del usuario como identificador
+      };
+
       axios
-        .put(`http://localhost:8000/api/agenda/${id}`, values)
+        .put(`http://localhost:8000/api/agenda/${id}`, dataToSend)
         .then((res) => {
           setError("");
           Swal.fire({
             icon: "success",
             title: "Excelente",
-            text: `¡Tienes una cita a las ${values.Hora}!`,
+            text: `¡Tienes una cita a las ${values.hora}!`,
           });
           refreshData(); // Actualizamos los datos
           onCloseModal(); // Cerramos el modal al enviar correctamente

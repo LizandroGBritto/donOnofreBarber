@@ -122,18 +122,18 @@ const Form = ({
         validationSchema={!isCancelling ? validationSchema : null}
         onSubmit={(values, { setSubmitting }) => {
           if (isCancelling) {
-            values.Hora = agenda.Hora;
-            values.NombreCliente = "";
-            values.NumeroCliente = "";
-            values.UserId = "";
-            values.Servicios = [];
-            values.Costo = 0;
+            values.hora = agenda.hora;
+            values.nombreCliente = "";
+            values.numeroCliente = "";
+            values.emailCliente = "";
+            values.servicios = [];
+            values.costoTotal = 0;
           } else {
-            values.UserId = getUserId();
-            values.Hora = agenda.Hora;
-            values.Servicios = selectedServices;
-            values.Costo = finalCost;
-            values.Estado = debtStatus === "paid" ? "Pagado" : "Sin Pagar";
+            values.nombreCliente = getUserId(); // Usar getUserId como identificador del cliente
+            values.hora = agenda.hora;
+            values.servicios = selectedServices;
+            values.costoTotal = finalCost;
+            values.estado = debtStatus === "paid" ? "reservado" : "reservado"; // Siempre reservado cuando se agenda
           }
           handleSubmit(values);
           setSubmitting(false);
@@ -235,7 +235,7 @@ const Form = ({
                 </div>
               </div>
               <div className="mt-6">
-                {agenda.NombreCliente !== "" && (
+                {agenda.nombreCliente !== "" && (
                   <div className="flex items-center">
                     <h4 className="text-zinc-950">
                       Estado de la Deuda:
