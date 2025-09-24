@@ -2,13 +2,7 @@ import { useState, useEffect } from "react";
 import { Formik, Field, Form as FormikForm, ErrorMessage } from "formik";
 import * as Yup from "yup";
 import axios from "axios";
-
-const services = [
-  { name: "Corte de Pelo", price: 50000 },
-  { name: "Decoloración", price: 200000 },
-  { name: "Barbería", price: 40000 },
-  { name: "Cejas", price: 20000 },
-];
+import ParaguayDateUtil from "../utils/paraguayDate";
 
 const Form = ({
   handleSubmit,
@@ -22,14 +16,38 @@ const Form = ({
 }) => {
   const [isCancelling, setIsCancelling] = useState(false);
   const [selectedServices, setSelectedServices] = useState(
-    initialSelectedServices
+    initialSelectedServices || []
   );
-  const [finalCost, setFinalCost] = useState(initialFinalCost);
+  const [finalCost, setFinalCost] = useState(initialFinalCost || 0);
+  const [services, setServices] = useState([]);
 
   useEffect(() => {
-    setSelectedServices(initialSelectedServices);
-    setFinalCost(initialFinalCost);
+    setSelectedServices(initialSelectedServices || []);
+    setFinalCost(initialFinalCost || 0);
   }, [initialSelectedServices, initialFinalCost]);
+
+  // Cargar servicios desde la API
+  useEffect(() => {
+    const loadServices = async () => {
+      try {
+        const response = await axios.get("http://localhost:8000/api/servicios");
+        if (response.data && response.data.servicios) {
+          setServices(response.data.servicios);
+        }
+      } catch (error) {
+        console.error("Error loading services:", error);
+        // Fallback services if API fails
+        setServices([
+          { nombre: "Corte de Pelo", precio: 50000 },
+          { nombre: "Decoloración", precio: 200000 },
+          { nombre: "Barbería", precio: 40000 },
+          { nombre: "Cejas", precio: 20000 },
+        ]);
+      }
+    };
+
+    loadServices();
+  }, []);
 
   const validationSchema = Yup.object().shape({
     NombreCliente: Yup.string()
@@ -70,26 +88,28 @@ const Form = ({
     NumeroCliente: agenda.NumeroCliente || "",
     UserId: agenda.UserId || "",
     Hora: agenda.Hora || "",
-    Servicios: selectedServices.map((service) => service.name),
+    Servicios: selectedServices.map((service) => service.nombre),
     Costo: 0,
   };
 
-  const handleServiceChange = (service, isChecked, setFieldValue, values) => {
+  const handleServiceChange = (service, isChecked, setFieldValue) => {
     let updatedServices;
     if (isChecked) {
       updatedServices = [
         ...selectedServices,
-        { name: service.name, price: service.price },
+        { nombre: service.nombre, precio: service.precio },
       ];
-      setFinalCost((prevCost) => prevCost + service.price);
+      setFinalCost((prevCost) => prevCost + service.precio);
     } else {
-      updatedServices = selectedServices.filter((s) => s.name !== service.name);
-      setFinalCost((prevCost) => prevCost - service.price);
+      updatedServices = selectedServices.filter(
+        (s) => s.nombre !== service.nombre
+      );
+      setFinalCost((prevCost) => prevCost - service.precio);
     }
     setSelectedServices(updatedServices);
     setFieldValue(
       "Servicios",
-      updatedServices.map((service) => service.name)
+      updatedServices.map((service) => service.nombre)
     );
   };
 
@@ -138,32 +158,32 @@ const Form = ({
                   <div className="servicios-container flex mt-8 justify-evenly items-center">
                     <div className="service-selection">
                       {services.map((service) => (
-                        <div key={service.name}>
+                        <div key={service.nombre}>
                           <label className="text-zinc-950">
                             <Field
                               className="m-1"
                               type="checkbox"
                               name="Servicios"
-                              value={service.name}
+                              value={service.nombre}
                               checked={selectedServices.some(
-                                (s) => s.name === service.name
+                                (s) => s.nombre === service.nombre
                               )}
                               onChange={(e) =>
                                 handleServiceChange(
                                   service,
                                   e.target.checked,
-                                  setFieldValue,
-                                  values
+                                  setFieldValue
                                 )
                               }
                             />
-                            {service.name} - {service.price} Gs
+                            {service.nombre} -{" "}
+                            {service.precio?.toLocaleString("es-PY")} Gs
                           </label>
                         </div>
                       ))}
 
                       <h4 className="text-zinc-950">
-                        Precio Final: {finalCost} Gs
+                        Precio Final: {finalCost?.toLocaleString("es-PY")} Gs
                       </h4>
                     </div>
                   </div>
@@ -248,21 +268,19 @@ const Form = ({
                     >
                       Confirmar Cita
                     </button>
-
-                
                   </>
                 ) : null}
-                    {agenda.UserId && (
-                      <button
-                        type="submit"
-                        className="rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600"
-                        onClick={() => {
-                          setIsCancelling(true);
-                        }}
-                      >
-                        Cancelar Cita
-                      </button>
-                    )}
+                {agenda.UserId && (
+                  <button
+                    type="submit"
+                    className="rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600"
+                    onClick={() => {
+                      setIsCancelling(true);
+                    }}
+                  >
+                    Cancelar Cita
+                  </button>
+                )}
               </div>
             </div>
           </FormikForm>

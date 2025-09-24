@@ -2,6 +2,7 @@ import axios from "axios";
 import { useState, useEffect } from "react";
 import { Button, Modal, Dropdown } from "flowbite-react";
 import FormAgendarAdmin from "./FormAgendarAdmin";
+import ParaguayDateUtil from "../utils/paraguayDate";
 
 const AgendaAdmin = ({ horarios, setHorarios, getUserId, agendarRef }) => {
   const [isLoading, setIsLoading] = useState(true);
@@ -20,11 +21,10 @@ const AgendaAdmin = ({ horarios, setHorarios, getUserId, agendarRef }) => {
     "Sabado",
   ];
 
-  const hoy = new Date();
-  const diaHoy = diasSemana[hoy.getDay()];
-
-  const manana = new Date(hoy);
-  manana.setDate(hoy.getDate() + 1);
+  // Usar fechas de Paraguay
+  const hoy = ParaguayDateUtil.now();
+  const diaHoy = ParaguayDateUtil.getDayOfWeek();
+  const manana = ParaguayDateUtil.tomorrow();
 
   function onCloseModal() {
     setOpenModal(false);

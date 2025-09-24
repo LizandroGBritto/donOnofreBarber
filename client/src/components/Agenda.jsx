@@ -1,7 +1,8 @@
 import axios from "axios";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button, Modal, Dropdown } from "flowbite-react";
 import FormAgendar from "./FormAgendar";
+import ParaguayDateUtil from "../utils/paraguayDate";
 
 const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
   const [isLoading, setIsLoading] = useState(true);
@@ -20,8 +21,11 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
     "Sabado",
   ];
 
-  const hoy = new Date();
-  const diaHoy = diasSemana[hoy.getDay()];
+  // Usar fechas de Paraguay
+  const hoy = ParaguayDateUtil.now();
+  const diaHoy = ParaguayDateUtil.getDayOfWeek();
+  // Capitalizar la primera letra para mostrar en el dropdown
+  const diaHoyCapitalizado = diaHoy.charAt(0).toUpperCase() + diaHoy.slice(1);
 
   const UserId = getUserId();
 
@@ -30,7 +34,7 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
     setSelectedId(null);
   }
 
-  function refreshData() {
+  const refreshData = useCallback(() => {
     axios
       .get("http://localhost:8000/api/agenda")
       .then((res) => {
@@ -38,7 +42,8 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
         setIsLoading(false);
 
         const hasReservation = res.data.agendas.some(
-          (agenda) => agenda.UserId === UserId
+          (agenda) =>
+            agenda.nombreCliente !== "" && agenda.nombreCliente === UserId
         );
         setUserHasReservation(hasReservation);
       })
@@ -46,24 +51,58 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
         console.log(err);
         setIsLoading(false);
       });
-  }
+  }, [setHorarios, UserId]);
 
   useEffect(() => {
-    refreshData();
-    setSelectedDay(diaHoy); // Establecer el día actual al montar el componente
-  }, [setHorarios]);
+    // Si ya se pasaron horarios como props, usarlos directamente
+    if (horarios && horarios.length > 0) {
+      setIsLoading(false);
+      const hasReservation = horarios.some(
+        (agenda) =>
+          agenda.nombreCliente !== "" && agenda.nombreCliente === UserId
+      );
+      setUserHasReservation(hasReservation);
+    } else if (horarios.length === 0) {
+      // Si no hay horarios en props, hacer la llamada a la API (compatibilidad hacia atrás)
+      refreshData();
+    }
+    setSelectedDay(diaHoyCapitalizado); // Establecer el día actual al montar el componente
+  }, [horarios, UserId, diaHoyCapitalizado, refreshData]);
 
   if (isLoading) return <h1>Loading...</h1>;
 
   // Filtrar los días de la semana que no han pasado, incluyendo el día actual
-  const diasRestantes = diasSemana.filter((_, index) => index >= hoy.getDay());
+  const diaActualIndex = ParaguayDateUtil.now().day();
+  const diasRestantes = diasSemana.filter(
+    (_, index) => index >= diaActualIndex
+  );
 
-  // Filtrar los horarios dependiendo del día seleccionado y ordenarlos de mayor a menor
+  // Filtrar los horarios por fecha específica (no solo día de la semana)
   const horariosFiltrados = horarios
-    .filter((agenda) => (selectedDay ? agenda.Dia === selectedDay : true))
+    .filter((agenda) => {
+      if (!selectedDay) {
+        // Si no hay día seleccionado, mostrar solo los de hoy
+        const fechaAgenda = ParaguayDateUtil.toParaguayTime(agenda.fecha);
+        const hoy = ParaguayDateUtil.startOfDay();
+        return fechaAgenda.isSame(hoy, "day");
+      } else {
+        // Si hay día seleccionado, filtrar por ese día específico
+        const targetDate = diasSemana.indexOf(selectedDay);
+        const currentDayIndex = ParaguayDateUtil.now().day();
+
+        // Calcular la fecha objetivo
+        let daysToAdd = targetDate - currentDayIndex;
+        if (daysToAdd < 0) daysToAdd += 7; // Si el día ya pasó esta semana, usar la siguiente
+
+        const fechaObjetivo = ParaguayDateUtil.now().add(daysToAdd, "days");
+        const fechaAgenda = ParaguayDateUtil.toParaguayTime(agenda.fecha);
+
+        return fechaAgenda.isSame(fechaObjetivo, "day");
+      }
+    })
     .sort((a, b) => {
-      const horaA = parseInt(a.Hora.replace(":", ""), 10);
-      const horaB = parseInt(b.Hora.replace(":", ""), 10);
+      const horaA = parseInt(a.hora.replace(":", ""), 10);
+      const horaB = parseInt(b.hora.replace(":", ""), 10);
       return horaA - horaB; // Orden Ascendente
     });
 
@@ -81,7 +120,7 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
           <h3 className="flex justify-start mt-2 ml-3 ">HORA</h3>
           <Dropdown
             color={""}
-            label={`Día: ${selectedDay || diaHoy}`}
+            label={`Día: ${selectedDay || diaHoyCapitalizado}`}
             dismissOnClick={true}
           >
             {diasRestantes.map((dia, index) => (
@@ -104,12 +143,12 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
           >
             <h3
               className={`flex justify-start ${
-                agenda.UserId !== "" ? "line-through" : ""
+                agenda.estado !== "disponible" ? "line-through" : ""
               }`}
             >
-              {agenda.Hora}
+              {agenda.hora}
             </h3>
-            {agenda.Dia === "Domingo" ? (
+            {agenda.diaSemana === "domingo" ? (
               <h3 className="flex justify-center mr-4 text-[#FF7D00]">
                 <Button
                   disabled
@@ -120,7 +159,8 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
               </h3>
             ) : agenda.NombreCliente !== "" ? (
               <h3 className="flex justify-center mr-4 text-[#FF7D00]">
-                {agenda.UserId === UserId ? (
+                {agenda.nombreCliente !== "" &&
+                agenda.nombreCliente === UserId ? (
                   <Button
                     className="flex justify-center bg-orange-500 rounded-lg text-black text-lg items-center"
                     onClick={() => {
@@ -143,18 +183,20 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
               <Button
                 // Si el UserId es "Reservado", el botón cambia a "RESERVADO" y se deshabilita
                 disabled={
-                  agenda.UserId === "Reservado" ||
-                  (userHasReservation && agenda.UserId !== UserId)
+                  agenda.estado !== "disponible" ||
+                  (userHasReservation &&
+                    agenda.nombreCliente !== "" &&
+                    agenda.nombreCliente !== UserId)
                 }
                 className={`flex justify-center mr-6 ${
-                  agenda.UserId === "Reservado" ? "bg-gray-400" : "bg-white"
+                  agenda.estado !== "disponible" ? "bg-gray-400" : "bg-white"
                 } rounded-lg text-black text-lg items-center`}
                 onClick={() => {
                   setSelectedId(agenda._id);
                   setOpenModal(true);
                 }}
               >
-                {agenda.UserId === "Reservado" ? "RESERVADO" : "AGENDAR"}
+                {agenda.estado !== "disponible" ? "RESERVADO" : "AGENDAR"}
               </Button>
             )}
 

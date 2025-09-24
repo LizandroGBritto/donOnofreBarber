@@ -1,37 +1,20 @@
 const AgendaModel = require("../models/agenda.model");
 const AgendaGeneratorService = require("../services/agendaGenerator.service");
 const HorarioModel = require("../models/horario.model");
+const ParaguayDateUtil = require("../utils/paraguayDate");
 
 module.exports = {
-  // Endpoint para eliminar todos los turnos de hoy (23 septiembre)
+  // Endpoint para eliminar todos los turnos de hoy (usando hora de Paraguay)
   eliminarTurnosHoy: async (req, res) => {
     try {
-      const hoy = new Date();
-      const inicioHoy = new Date(
-        hoy.getFullYear(),
-        hoy.getMonth(),
-        hoy.getDate(),
-        0,
-        0,
-        0,
-        0
-      );
-      const finHoy = new Date(
-        hoy.getFullYear(),
-        hoy.getMonth(),
-        hoy.getDate(),
-        23,
-        59,
-        59,
-        999
-      );
+      const { startOfDay, endOfDay } = ParaguayDateUtil.createDateRange();
 
       console.log(
-        `Eliminando TODOS los turnos entre ${inicioHoy.toISOString()} y ${finHoy.toISOString()}`
+        `Eliminando TODOS los turnos entre ${startOfDay.toISOString()} y ${endOfDay.toISOString()}`
       );
 
       const eliminados = await AgendaModel.deleteMany({
-        fecha: { $gte: inicioHoy, $lte: finHoy },
+        fecha: { $gte: startOfDay, $lte: endOfDay },
       });
 
       console.log(`Eliminados ${eliminados.deletedCount} turnos`);
@@ -39,8 +22,8 @@ module.exports = {
       res.status(200).json({
         message: "Turnos eliminados exitosamente",
         eliminados: eliminados.deletedCount,
-        fechaInicio: inicioHoy.toISOString(),
-        fechaFin: finHoy.toISOString(),
+        fechaInicio: startOfDay.toISOString(),
+        fechaFin: endOfDay.toISOString(),
       });
     } catch (error) {
       console.error("Error al eliminar turnos:", error);
@@ -58,31 +41,15 @@ module.exports = {
         return res.status(400).json({ message: "Fecha es requerida" });
       }
 
-      const fechaObj = new Date(fecha);
-      const inicioFecha = new Date(
-        fechaObj.getFullYear(),
-        fechaObj.getMonth(),
-        fechaObj.getDate(),
-        0,
-        0,
-        0,
-        0
-      );
-      const finFecha = new Date(
-        fechaObj.getFullYear(),
-        fechaObj.getMonth(),
-        fechaObj.getDate(),
-        23,
-        59,
-        59,
-        999
-      );
+      const fechaObj = ParaguayDateUtil.toParaguayTime(fecha).toDate();
+      const { startOfDay, endOfDay } =
+        ParaguayDateUtil.createDateRange(fechaObj);
 
       console.log(`Eliminando turnos para ${fecha}...`);
 
       // Eliminar todos los turnos de esta fecha
       const eliminados = await AgendaModel.deleteMany({
-        fecha: { $gte: inicioFecha, $lte: finFecha },
+        fecha: { $gte: startOfDay, $lte: endOfDay },
       });
 
       console.log(`Eliminados ${eliminados.deletedCount} turnos`);

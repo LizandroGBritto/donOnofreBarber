@@ -1,5 +1,6 @@
 const AgendaModel = require("../models/agenda.model");
 const HorarioModel = require("../models/horario.model");
+const ParaguayDateUtil = require("../utils/paraguayDate");
 
 class AgendaGeneratorService {
   constructor() {
@@ -23,22 +24,23 @@ class AgendaGeneratorService {
         detalles: [],
       };
 
-      const fechaActual = new Date(fechaInicio);
-      const fechaFinal = new Date(fechaFin);
+      const fechaActual =
+        ParaguayDateUtil.toParaguayTime(fechaInicio).startOf("day");
+      const fechaFinal = ParaguayDateUtil.toParaguayTime(fechaFin).endOf("day");
 
-      while (fechaActual <= fechaFinal) {
+      while (fechaActual.isSameOrBefore(fechaFinal, "day")) {
         const resultado = await this.generarTurnosPorFecha(
-          new Date(fechaActual)
+          fechaActual.toDate()
         );
         resultados.generados += resultado.generados;
         resultados.errores += resultado.errores;
         resultados.detalles.push({
-          fecha: fechaActual.toISOString().split("T")[0],
+          fecha: ParaguayDateUtil.getDateOnly(fechaActual.toDate()),
           ...resultado,
         });
 
         // Avanzar al siguiente día
-        fechaActual.setDate(fechaActual.getDate() + 1);
+        fechaActual.add(1, "day");
       }
 
       return resultados;
@@ -51,9 +53,10 @@ class AgendaGeneratorService {
   // Generar turnos para una fecha específica
   async generarTurnosPorFecha(fecha) {
     try {
-      const diaSemana = this.diasSemana[fecha.getDay()];
+      const fechaParaguay = ParaguayDateUtil.toParaguayTime(fecha);
+      const diaSemana = ParaguayDateUtil.getDayOfWeek(fecha);
       const resultados = {
-        fecha: fecha.toISOString().split("T")[0],
+        fecha: ParaguayDateUtil.getDateOnly(fecha),
         diaSemana,
         generados: 0,
         errores: 0,
@@ -76,26 +79,23 @@ class AgendaGeneratorService {
 
       if (slots.length === 0) {
         console.log(
-          `No hay slots disponibles para ${diaSemana} - ${
-            fecha.toISOString().split("T")[0]
-          }`
+          `No hay slots disponibles para ${diaSemana} - ${ParaguayDateUtil.getDateOnly(
+            fecha
+          )}`
         );
         return resultados;
       }
 
       // Verificar qué turnos ya existen para esta fecha (todo el día)
-      const inicioDia = new Date(fecha);
-      inicioDia.setHours(0, 0, 0, 0);
-      const finDia = new Date(fecha);
-      finDia.setHours(23, 59, 59, 999);
+      const { startOfDay, endOfDay } = ParaguayDateUtil.createDateRange(fecha);
 
       const turnosExistentes = await AgendaModel.find({
-        fecha: { $gte: inicioDia, $lte: finDia },
+        fecha: { $gte: startOfDay, $lte: endOfDay },
       });
       const horasExistentes = turnosExistentes.map((turno) => turno.hora);
 
       // Crear turnos para slots que no existen
-      const fechaNormalizada = new Date(fecha);
+      const fechaNormalizada = ParaguayDateUtil.toParaguayTime(fecha).toDate();
       fechaNormalizada.setHours(12, 0, 0, 0); // Normalizar a mediodía para evitar problemas de timezone
 
       for (const slot of slots) {
