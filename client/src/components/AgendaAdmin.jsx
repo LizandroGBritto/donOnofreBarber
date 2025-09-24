@@ -2,14 +2,12 @@ import axios from "axios";
 import { useState, useEffect } from "react";
 import { Button, Modal, Dropdown } from "flowbite-react";
 import FormAgendarAdmin from "./FormAgendarAdmin";
-import { getDebt } from '../services/adamspayServices';
 
 const AgendaAdmin = ({ horarios, setHorarios, getUserId, agendarRef }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [openModal, setOpenModal] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
-  const [debtStatus, setDebtStatus] = useState({});
-  const [debtPayUrl, setDebtPayUrl] = useState({});
+
   const [selectedDay, setSelectedDay] = useState(null); // Estado para el día seleccionado
 
   const diasSemana = [
@@ -56,26 +54,6 @@ const AgendaAdmin = ({ horarios, setHorarios, getUserId, agendarRef }) => {
     refreshData();
   }, [setHorarios]);
 
-  useEffect(() => {
-    horarios.forEach((agenda) => {
-      if (agenda.NombreCliente === "") return;
-      getDebt(agenda._id)
-        .then(res => {
-          if (res.success) {
-            setDebtStatus((prev) => ({ ...prev, [agenda._id]: res.debt.payStatus.status }));
-            setDebtPayUrl((prev) => ({ ...prev, [agenda._id]: res.debt.payUrl }));
-          } else {
-            setDebtStatus((prev) => ({ ...prev, [agenda._id]: null }));
-            setDebtPayUrl((prev) => ({ ...prev, [agenda._id]: '' }));
-          }
-        })
-        .catch((error) => {
-          console.error(`Error fetching debt for agenda ${agenda._id}:`, error);
-          setDebtStatus((prev) => ({ ...prev, [agenda._id]: 'error' }));
-        });
-    });
-  }, [horarios]);
-
   if (isLoading) return <h1>Loading...</h1>;
 
   // Filtrar los días de la semana que no han pasado, incluyendo el día actual
@@ -114,7 +92,6 @@ const AgendaAdmin = ({ horarios, setHorarios, getUserId, agendarRef }) => {
               </Dropdown.Item>
             ))}
           </Dropdown>
-         
         </div>
 
         {horariosFiltrados.map((agenda) => (
@@ -132,21 +109,6 @@ const AgendaAdmin = ({ horarios, setHorarios, getUserId, agendarRef }) => {
               <h3 className="flex justify-start">
                 {agenda.NumeroCliente === "" ? null : agenda.NumeroCliente}
               </h3>
-              {agenda.NombreCliente !== "" && (
-                <div className="flex items-center">
-                  <h4 className="">
-                    Estado de la Deuda: 
-                    {debtStatus[agenda._id] === undefined
-                      ? "Cargando..."
-                      : debtStatus[agenda._id] === "paid"
-                      ? "Pagada"
-                      : debtStatus[agenda._id] === "error"
-                      ? "Error al obtener deuda"
-                      : "No Pagada"}
-                  </h4>
-                  
-                </div>
-              )}
             </div>
 
             {diaHoy === "Domingo" ? (
@@ -160,14 +122,6 @@ const AgendaAdmin = ({ horarios, setHorarios, getUserId, agendarRef }) => {
               </h3>
             ) : agenda.NombreCliente !== "" ? (
               <h3 className="flex-col justify-center mr-4 text-[#FF7D00]">
-                <Button
-                    className="flex justify-center bg-orange-500 rounded-lg text-black text-lg items-center mb-1"
-                    onClick={() => {
-                      window.open(debtPayUrl[agenda._id], "_blank");
-                    }}
-                  >
-                    Ver Deuda
-                  </Button>
                 <Button
                   className="flex justify-center bg-green-400 rounded-lg text-black text-lg items-center"
                   onClick={() => {
@@ -192,7 +146,6 @@ const AgendaAdmin = ({ horarios, setHorarios, getUserId, agendarRef }) => {
               </h3>
             ) : (
               <h3 className="flex-col justify-center mr-6 text-[#FF7D00]">
-              
                 <label className="inline-flex items-center cursor-pointer">
                   <input
                     type="checkbox"
@@ -264,8 +217,6 @@ const AgendaAdmin = ({ horarios, setHorarios, getUserId, agendarRef }) => {
                       onCloseModal={onCloseModal}
                       refreshData={refreshData}
                       getUserId={getUserId}
-                      debtStatus={debtStatus[selectedId]} // Pasar el estado de la deuda
-                      debtPayUrl={debtPayUrl[selectedId]} // Pasar la URL de pago de la deuda
                     />
                   </div>
                 </div>

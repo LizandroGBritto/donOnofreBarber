@@ -33,9 +33,6 @@ app.use("/api/agenda", AgendaRouter);
 const UserRouter = require("./routes/user.route");
 app.use("/api/auth", UserRouter);
 
-const AdamspayRouter = require("./routes/adamsPay.route");
-app.use("/api/adamspay", AdamspayRouter); // Usar la ruta del webhook
-
 const BannerRouter = require("./routes/banner.route");
 app.use("/api/banners", BannerRouter);
 
