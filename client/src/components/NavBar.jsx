@@ -2,8 +2,9 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useState, useEffect } from "react";
 import axios from "axios";
 import DownButton from "../assets/DownButton.svg";
-import logoCenter from "../assets/logoCenter.webp";
+import logoCenter from "../assets/assets_template/AlonzoStylev2.png";
 import backImg from "../assets/bg2.webp";
+
 
 const NavBar = ({ agendarRef, footerRef }) => {
   const navigate = useNavigate();

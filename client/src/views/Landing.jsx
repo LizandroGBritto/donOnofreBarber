@@ -1,6 +1,7 @@
 import Agenda from "../components/Agenda";
 import Footer from "../components/Footer";
 import NavBar from "../components/NavBar";
+import Servicios from "../components/Servicios";
 import { useState, useEffect, useRef, useCallback } from "react";
 import axios from "axios";
 
@@ -50,13 +51,16 @@ const Landing = () => {
     <>
       <div className="space-y-6">
         <NavBar agendarRef={agendarRef} footerRef={footerRef} />
-        <div className="px-4">
+        <div className="px-4" id="agenda">
           <Agenda
             horarios={horarios}
             setHorarios={setHorarios}
             getUserId={getUserId}
             agendarRef={agendarRef}
           />
+        </div>
+        <div className="bg-black">
+          <Servicios />
         </div>
         <Footer footerRef={footerRef} />
       </div>

@@ -82,6 +82,23 @@ const AdminDashboard = () => {
   });
   const [showHorarioModal, setShowHorarioModal] = useState(false);
 
+  // Estados para gestión de servicios
+  const [servicios, setServicios] = useState([]);
+  const [selectedServicio, setSelectedServicio] = useState(null);
+  const [servicioForm, setServicioForm] = useState({
+    nombre: "",
+    descripcion: "",
+    precio: "",
+    activo: true,
+  });
+  const [showServicioModal, setShowServicioModal] = useState(false);
+  const [imagenesServicio, setImagenesServicio] = useState([]);
+  const [nuevasImagenes, setNuevasImagenes] = useState([]);
+  const [showImageModal, setShowImageModal] = useState(false);
+  const [currentImagenes, setCurrentImagenes] = useState([]);
+  const [currentServicioId, setCurrentServicioId] = useState(null);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
   // Función para obtener las estadísticas de turnos
   const fetchStats = async () => {
     try {
@@ -617,9 +634,188 @@ const AdminDashboard = () => {
     }
   };
 
+  // ===== FUNCIONES PARA SERVICIOS =====
+  const fetchServicios = async () => {
+    try {
+      const response = await axios.get(
+        "http://localhost:8000/api/servicios/admin/all"
+      );
+      setServicios(response.data || []);
+    } catch (error) {
+      console.error("Error al obtener servicios:", error);
+    }
+  };
+
+  const handleServicioSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const formData = new FormData();
+      formData.append("nombre", servicioForm.nombre);
+      formData.append("descripcion", servicioForm.descripcion);
+      formData.append("precio", servicioForm.precio);
+      formData.append("activo", servicioForm.activo);
+
+      // Agregar imágenes nuevas
+      nuevasImagenes.forEach((imagen) => {
+        formData.append("imagenes", imagen);
+      });
+
+      // Si estamos editando y queremos mantener imágenes existentes
+      if (selectedServicio && imagenesServicio.length > 0) {
+        formData.append("mantenerImagenes", "true");
+      }
+
+      const config = {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      };
+
+      if (selectedServicio) {
+        await axios.put(
+          `http://localhost:8000/api/servicios/${selectedServicio._id}`,
+          formData,
+          config
+        );
+      } else {
+        await axios.post(
+          "http://localhost:8000/api/servicios",
+          formData,
+          config
+        );
+      }
+      fetchServicios();
+      setShowServicioModal(false);
+      resetServicioForm();
+    } catch (error) {
+      console.error("Error al guardar servicio:", error);
+      alert("Error al guardar servicio");
+    }
+  };
+
+  const deleteServicio = async (id) => {
+    if (confirm("¿Estás seguro de que deseas eliminar este servicio?")) {
+      try {
+        await axios.delete(`http://localhost:8000/api/servicios/${id}`);
+        fetchServicios();
+      } catch (error) {
+        console.error("Error al eliminar servicio:", error);
+      }
+    }
+  };
+
+  const toggleServicioStatus = async (id, currentStatus) => {
+    try {
+      await axios.patch(`http://localhost:8000/api/servicios/${id}/toggle`);
+      fetchServicios();
+    } catch (error) {
+      console.error("Error al cambiar estado del servicio:", error);
+    }
+  };
+
+  const editServicio = (servicio) => {
+    setSelectedServicio(servicio);
+    setServicioForm({
+      nombre: servicio.nombre,
+      descripcion: servicio.descripcion || "",
+      precio: servicio.precio,
+      activo: servicio.activo,
+    });
+    setImagenesServicio(servicio.imagenes || []);
+    setNuevasImagenes([]);
+    setShowServicioModal(true);
+  };
+
+  const resetServicioForm = () => {
+    setSelectedServicio(null);
+    setServicioForm({
+      nombre: "",
+      descripcion: "",
+      precio: "",
+      activo: true,
+    });
+    setImagenesServicio([]);
+    setNuevasImagenes([]);
+  };
+
+  // Funciones para manejar imágenes
+  const handleImagenesChange = (e) => {
+    const files = Array.from(e.target.files);
+    setNuevasImagenes((prev) => [...prev, ...files]);
+  };
+
+  const removeNuevaImagen = (index) => {
+    setNuevasImagenes((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  // Alias para compatibilidad con el formulario
+  const removeNewImage = removeNuevaImagen;
+
+  const deleteExistingImage = async (index) => {
+    const imagenNombre = imagenesServicio[index];
+    await removeImagenExistente(imagenNombre);
+  };
+
+  const openImageGallery = (imagenes, startIndex = 0) => {
+    setCurrentImagenes(imagenes);
+    setCurrentImageIndex(startIndex);
+    setShowImageModal(true);
+  };
+
+  const removeImagenExistente = async (imagenNombre) => {
+    if (selectedServicio) {
+      try {
+        await axios.delete(
+          `http://localhost:8000/api/servicios/${selectedServicio._id}/imagen/${imagenNombre}`
+        );
+        setImagenesServicio((prev) =>
+          prev.filter((img) => img !== imagenNombre)
+        );
+      } catch (error) {
+        console.error("Error al eliminar imagen:", error);
+        alert("Error al eliminar imagen");
+      }
+    }
+  };
+
   useEffect(() => {
     fetchStats();
   }, []);
+
+  // Funciones para el modal de imágenes
+  const openImageModal = (imagenes, servicioId) => {
+    setCurrentImagenes(imagenes);
+    setCurrentServicioId(servicioId);
+    setShowImageModal(true);
+  };
+
+  const closeImageModal = () => {
+    setShowImageModal(false);
+    setCurrentImagenes([]);
+    setCurrentServicioId(null);
+  };
+
+  const deleteImageFromModal = async (imagenNombre) => {
+    try {
+      await axios.delete(
+        `http://localhost:8000/api/servicios/${currentServicioId}/imagen/${imagenNombre}`
+      );
+
+      // Actualizar la lista actual de imágenes
+      const nuevasImagenes = currentImagenes.filter(
+        (img) => img !== imagenNombre
+      );
+      setCurrentImagenes(nuevasImagenes);
+
+      // Refrescar la lista de servicios
+      fetchServicios();
+
+      alert("Imagen eliminada exitosamente");
+    } catch (error) {
+      console.error("Error al eliminar imagen:", error);
+      alert("Error al eliminar la imagen");
+    }
+  };
 
   useEffect(() => {
     if (activeView === "turnos") {
@@ -632,6 +828,8 @@ const AdminDashboard = () => {
       fetchUbicacion();
     } else if (activeView === "horarios") {
       fetchHorarios();
+    } else if (activeView === "servicios") {
+      fetchServicios();
     }
   }, [activeView]);
 
@@ -725,45 +923,65 @@ const AdminDashboard = () => {
     <div className="p-4 md:p-6">
       <Card className="mb-6" style={{ backgroundColor: "#5B4373" }}>
         <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-          <h2 className="text-2xl font-bold text-white">
+          <h2 className="text-xl md:text-2xl font-bold text-white text-center md:text-left">
             Panel de Administración
           </h2>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-1 md:gap-2 justify-center md:justify-end">
             <Button
+              size="sm"
               color={activeView === "dashboard" ? "purple" : "gray"}
               onClick={() => setActiveView("dashboard")}
+              className="text-xs md:text-sm"
             >
               Dashboard
             </Button>
             <Button
+              size="sm"
               color={activeView === "turnos" ? "purple" : "gray"}
               onClick={() => setActiveView("turnos")}
+              className="text-xs md:text-sm"
             >
               Turnos
             </Button>
             <Button
+              size="sm"
               color={activeView === "banners" ? "purple" : "gray"}
               onClick={() => setActiveView("banners")}
+              className="text-xs md:text-sm"
             >
               Banners
             </Button>
             <Button
+              size="sm"
               color={activeView === "contacto" ? "purple" : "gray"}
               onClick={() => setActiveView("contacto")}
+              className="text-xs md:text-sm"
             >
               Contacto
             </Button>
             <Button
+              size="sm"
               color={activeView === "ubicacion" ? "purple" : "gray"}
               onClick={() => setActiveView("ubicacion")}
+              className="text-xs md:text-sm"
             >
               Ubicación
             </Button>
             <Button
+              size="sm"
               color={activeView === "horarios" ? "purple" : "gray"}
               onClick={() => setActiveView("horarios")}
+              className="text-xs md:text-sm"
             >
               Horarios
+            </Button>
+            <Button
+              size="sm"
+              color={activeView === "servicios" ? "purple" : "gray"}
+              onClick={() => setActiveView("servicios")}
+              className="text-xs md:text-sm"
+            >
+              Servicios
             </Button>
           </div>
         </div>
@@ -1634,7 +1852,9 @@ const AdminDashboard = () => {
               <Table>
                 <Table.Head>
                   <Table.HeadCell>Hora</Table.HeadCell>
-                  <Table.HeadCell>Días de la Semana</Table.HeadCell>
+                  <Table.HeadCell className="hidden sm:table-cell">
+                    Días de la Semana
+                  </Table.HeadCell>
                   <Table.HeadCell>Estado</Table.HeadCell>
                   <Table.HeadCell>Acciones</Table.HeadCell>
                 </Table.Head>
@@ -1649,10 +1869,10 @@ const AdminDashboard = () => {
                   ) : (
                     horarios.map((horario) => (
                       <Table.Row key={horario._id}>
-                        <Table.Cell className="font-medium">
+                        <Table.Cell className="font-medium text-sm md:text-base">
                           {horario.hora}
                         </Table.Cell>
-                        <Table.Cell>
+                        <Table.Cell className="hidden sm:table-cell">
                           <div className="flex flex-wrap gap-1">
                             {horario.dias.map((dia, index) => (
                               <span
@@ -1666,7 +1886,7 @@ const AdminDashboard = () => {
                         </Table.Cell>
                         <Table.Cell>
                           <span
-                            className={`px-2 py-1 rounded-full text-xs ${
+                            className={`px-1 md:px-2 py-1 rounded-full text-xs ${
                               horario.estado === "activo"
                                 ? "bg-green-100 text-green-800"
                                 : "bg-red-100 text-red-800"
@@ -1676,11 +1896,12 @@ const AdminDashboard = () => {
                           </span>
                         </Table.Cell>
                         <Table.Cell>
-                          <div className="flex gap-2">
+                          <div className="flex flex-col sm:flex-row gap-1 sm:gap-2">
                             <Button
                               color="blue"
                               size="xs"
                               onClick={() => editHorario(horario)}
+                              className="text-xs w-full sm:w-auto"
                             >
                               Editar
                             </Button>
@@ -1692,6 +1913,7 @@ const AdminDashboard = () => {
                               onClick={() =>
                                 toggleHorarioStatus(horario._id, horario.estado)
                               }
+                              className="text-xs w-full sm:w-auto"
                             >
                               {horario.estado === "activo"
                                 ? "Desactivar"
@@ -1701,6 +1923,7 @@ const AdminDashboard = () => {
                               color="red"
                               size="xs"
                               onClick={() => deleteHorario(horario._id)}
+                              className="text-xs w-full sm:w-auto"
                             >
                               Eliminar
                             </Button>
@@ -1811,6 +2034,390 @@ const AdminDashboard = () => {
         </Modal.Footer>
       </Modal>
 
+      {/* Sección de Servicios */}
+      {activeView === "servicios" && (
+        <div className="space-y-6">
+          <Card>
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold text-black">
+                Gestión de Servicios
+              </h3>
+              <Button
+                color="purple"
+                onClick={() => {
+                  resetServicioForm();
+                  setShowServicioModal(true);
+                }}
+              >
+                Nuevo Servicio
+              </Button>
+            </div>
+
+            {servicios.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-gray-500 mb-4">
+                  No hay servicios registrados.
+                </p>
+                <p className="text-sm text-gray-400">
+                  Haz clic en "Nuevo Servicio" para agregar.
+                </p>
+              </div>
+            ) : (
+              <>
+                {/* Vista de Cards para Móvil */}
+                <div className="block md:hidden space-y-4">
+                  {servicios.map((servicio) => (
+                    <div
+                      key={servicio._id}
+                      className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm"
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center flex-1 min-w-0">
+                          <div className="min-w-0 flex-1">
+                            <h4 className="font-semibold text-gray-900 dark:text-white truncate">
+                              {servicio.nombre}
+                            </h4>
+                          </div>
+                        </div>
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs font-medium ml-2 flex-shrink-0 ${
+                            servicio.activo
+                              ? "bg-green-100 text-green-800"
+                              : "bg-red-100 text-red-800"
+                          }`}
+                        >
+                          {servicio.activo ? "Activo" : "Inactivo"}
+                        </span>
+                      </div>
+
+                      {/* Galería de imágenes */}
+                      {servicio.imagenes && servicio.imagenes.length > 0 && (
+                        <div className="mb-3">
+                          <div
+                            className="flex gap-2 overflow-x-auto pb-2 cursor-pointer"
+                            onClick={() =>
+                              openImageModal(servicio.imagenes, servicio._id)
+                            }
+                          >
+                            {servicio.imagenes.map((imagen, index) => (
+                              <img
+                                key={index}
+                                src={`http://localhost:8000/uploads/${imagen}`}
+                                alt={`${servicio.nombre} - ${index + 1}`}
+                                className="w-16 h-16 object-cover rounded-lg flex-shrink-0 hover:opacity-80"
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="space-y-2 mb-4">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-gray-500">Precio:</span>
+                          <span className="font-medium text-gray-900 dark:text-white">
+                            Gs.{servicio.precio}
+                          </span>
+                        </div>
+                        {servicio.descripcion && (
+                          <div>
+                            <span className="text-sm text-gray-500">
+                              Descripción:
+                            </span>
+                            <p className="text-sm text-gray-700 dark:text-gray-300 mt-1">
+                              {servicio.descripcion}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex flex-col gap-2">
+                        <div className="flex gap-2">
+                          <Button
+                            size="xs"
+                            color="blue"
+                            onClick={() => editServicio(servicio)}
+                            className="flex-1"
+                          >
+                            Editar
+                          </Button>
+                          <Button
+                            size="xs"
+                            color={servicio.activo ? "failure" : "success"}
+                            onClick={() =>
+                              toggleServicioStatus(
+                                servicio._id,
+                                servicio.activo
+                              )
+                            }
+                            className="flex-1"
+                          >
+                            {servicio.activo ? "Desactivar" : "Activar"}
+                          </Button>
+                        </div>
+                        <Button
+                          size="xs"
+                          color="failure"
+                          onClick={() => deleteServicio(servicio._id)}
+                          className="w-full"
+                        >
+                          Eliminar
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Vista de Tabla para Desktop */}
+                <div className="hidden md:block overflow-x-auto">
+                  <Table>
+                    <Table.Head>
+                      <Table.HeadCell>Nombre</Table.HeadCell>
+                      <Table.HeadCell>Imágenes</Table.HeadCell>
+                      <Table.HeadCell>Descripción</Table.HeadCell>
+                      <Table.HeadCell>Precio</Table.HeadCell>
+                      <Table.HeadCell>Estado</Table.HeadCell>
+                      <Table.HeadCell>Acciones</Table.HeadCell>
+                    </Table.Head>
+                    <Table.Body>
+                      {servicios.map((servicio) => (
+                        <Table.Row
+                          key={servicio._id}
+                          className="bg-white dark:bg-gray-800"
+                        >
+                          <Table.Cell className="font-medium text-gray-900 dark:text-white">
+                            <span className="truncate">{servicio.nombre}</span>
+                          </Table.Cell>
+                          <Table.Cell>
+                            {servicio.imagenes &&
+                            servicio.imagenes.length > 0 ? (
+                              <div
+                                className="flex gap-1 overflow-x-auto cursor-pointer"
+                                onClick={() =>
+                                  openImageModal(
+                                    servicio.imagenes,
+                                    servicio._id
+                                  )
+                                }
+                              >
+                                {servicio.imagenes
+                                  .slice(0, 3)
+                                  .map((imagen, index) => (
+                                    <img
+                                      key={index}
+                                      src={`http://localhost:8000/uploads/${imagen}`}
+                                      alt={`${servicio.nombre} - ${index + 1}`}
+                                      className="w-8 h-8 object-cover rounded flex-shrink-0 hover:opacity-80"
+                                    />
+                                  ))}
+                                {servicio.imagenes.length > 3 && (
+                                  <div className="w-8 h-8 bg-gray-200 rounded flex items-center justify-center text-xs">
+                                    +{servicio.imagenes.length - 3}
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-gray-400 text-sm">
+                                Sin imágenes
+                              </span>
+                            )}
+                          </Table.Cell>
+                          <Table.Cell className="max-w-xs">
+                            <span className="truncate block">
+                              {servicio.descripcion || "Sin descripción"}
+                            </span>
+                          </Table.Cell>
+                          <Table.Cell className="font-medium">
+                            Gs.{servicio.precio}
+                          </Table.Cell>
+                          <Table.Cell>
+                            <span
+                              className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                servicio.activo
+                                  ? "bg-green-100 text-green-800"
+                                  : "bg-red-100 text-red-800"
+                              }`}
+                            >
+                              {servicio.activo ? "Activo" : "Inactivo"}
+                            </span>
+                          </Table.Cell>
+                          <Table.Cell>
+                            <div className="flex gap-2">
+                              <Button
+                                size="xs"
+                                color="blue"
+                                onClick={() => editServicio(servicio)}
+                              >
+                                Editar
+                              </Button>
+                              <Button
+                                size="xs"
+                                color={servicio.activo ? "failure" : "success"}
+                                onClick={() =>
+                                  toggleServicioStatus(
+                                    servicio._id,
+                                    servicio.activo
+                                  )
+                                }
+                              >
+                                {servicio.activo ? "Desactivar" : "Activar"}
+                              </Button>
+                              <Button
+                                size="xs"
+                                color="failure"
+                                onClick={() => deleteServicio(servicio._id)}
+                              >
+                                Eliminar
+                              </Button>
+                            </div>
+                          </Table.Cell>
+                        </Table.Row>
+                      ))}
+                    </Table.Body>
+                  </Table>
+                </div>
+              </>
+            )}
+          </Card>
+        </div>
+      )}
+
+      {/* Modal para crear/editar servicio */}
+      <Modal
+        show={showServicioModal}
+        onClose={() => setShowServicioModal(false)}
+      >
+        <Modal.Header>
+          {selectedServicio ? "Editar Servicio" : "Nuevo Servicio"}
+        </Modal.Header>
+        <Modal.Body>
+          <form onSubmit={handleServicioSubmit} className="space-y-4">
+            <div>
+              <Label htmlFor="nombre">Nombre del Servicio *</Label>
+              <TextInput
+                id="nombre"
+                type="text"
+                required
+                value={servicioForm.nombre}
+                onChange={(e) =>
+                  setServicioForm({ ...servicioForm, nombre: e.target.value })
+                }
+                placeholder="Ej: Corte de cabello"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="descripcion">Descripción</Label>
+              <TextInput
+                id="descripcion"
+                type="text"
+                value={servicioForm.descripcion}
+                onChange={(e) =>
+                  setServicioForm({
+                    ...servicioForm,
+                    descripcion: e.target.value,
+                  })
+                }
+                placeholder="Descripción del servicio"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="precio">Precio *</Label>
+              <TextInput
+                id="precio"
+                type="number"
+                required
+                min="0"
+                step="0.01"
+                value={servicioForm.precio}
+                onChange={(e) =>
+                  setServicioForm({ ...servicioForm, precio: e.target.value })
+                }
+                placeholder="0.00"
+              />
+            </div>
+
+            {/* Sección de imágenes existentes (solo en edición) */}
+            {selectedServicio && imagenesServicio.length > 0 && (
+              <div>
+                <Label>Imágenes Actuales</Label>
+                <div className="grid grid-cols-3 gap-4 mt-2">
+                  {imagenesServicio.map((imagen, index) => (
+                    <div key={index} className="relative">
+                      <img
+                        src={`http://localhost:8000/uploads/${imagen}`}
+                        alt={`${servicioForm.nombre} - ${index + 1}`}
+                        className="w-full h-20 object-cover rounded border cursor-pointer"
+                        onClick={() =>
+                          openImageGallery(imagenesServicio, index)
+                        }
+                      />
+                      <button
+                        type="button"
+                        onClick={() => deleteExistingImage(index)}
+                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Sección para subir nuevas imágenes */}
+            <div>
+              <Label htmlFor="imagenes">Agregar Imágenes</Label>
+              <input
+                id="imagenes"
+                type="file"
+                multiple
+                accept="image/*"
+                onChange={handleImagenesChange}
+                className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100"
+              />
+              <p className="mt-1 text-sm text-gray-500">
+                Puedes seleccionar múltiples imágenes. PNG, JPG, JPEG, WEBP
+                (máx. 5MB cada una)
+              </p>
+            </div>
+
+            {/* Vista previa de nuevas imágenes */}
+            {nuevasImagenes.length > 0 && (
+              <div>
+                <Label>Vista Previa de Nuevas Imágenes</Label>
+                <div className="grid grid-cols-3 gap-4 mt-2">
+                  {nuevasImagenes.map((imagen, index) => (
+                    <div key={index} className="relative">
+                      <img
+                        src={URL.createObjectURL(imagen)}
+                        alt={`Nueva imagen ${index + 1}`}
+                        className="w-full h-20 object-cover rounded border"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeNewImage(index)}
+                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </form>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button color="purple" onClick={handleServicioSubmit}>
+            {selectedServicio ? "Actualizar" : "Crear"}
+          </Button>
+          <Button color="gray" onClick={() => setShowServicioModal(false)}>
+            Cancelar
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
       {/* Modal para ver/editar turno */}
       <Modal show={showModal} onClose={() => setShowModal(false)}>
         <Modal.Header>Detalles del Turno</Modal.Header>
@@ -1887,6 +2494,44 @@ const AdminDashboard = () => {
         </Modal.Body>
         <Modal.Footer>
           <Button color="gray" onClick={() => setShowModal(false)}>
+            Cerrar
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
+      {/* Modal para ver y eliminar imágenes */}
+      <Modal show={showImageModal} onClose={closeImageModal} size="4xl">
+        <Modal.Header>Galería de Imágenes</Modal.Header>
+        <Modal.Body>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {currentImagenes.map((imagen, index) => (
+              <div key={index} className="relative group">
+                <img
+                  src={`http://localhost:8000/uploads/${imagen}`}
+                  alt={`Imagen ${index + 1}`}
+                  className="w-full h-48 object-cover rounded-lg"
+                />
+                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-200 rounded-lg flex items-center justify-center">
+                  <Button
+                    color="red"
+                    size="sm"
+                    onClick={() => deleteImageFromModal(imagen)}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                  >
+                    Eliminar
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+          {currentImagenes.length === 0 && (
+            <div className="text-center py-8 text-gray-500">
+              No hay imágenes para mostrar
+            </div>
+          )}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button color="gray" onClick={closeImageModal}>
             Cerrar
           </Button>
         </Modal.Footer>

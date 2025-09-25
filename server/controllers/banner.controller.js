@@ -1,8 +1,11 @@
 const Banner = require("../models/banner.model");
 const multer = require("multer");
-// const sharp = require("sharp"); // Comentado temporalmente por compatibilidad con Node.js
 const path = require("path");
 const fs = require("fs");
+const {
+  processMultipleImages,
+  deleteImage,
+} = require("../utils/imageProcessor");
 
 // Configuración de multer para upload de archivos
 const storage = multer.memoryStorage();
@@ -30,19 +33,6 @@ if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
-// Función para procesar imagen (temporalmente sin conversión WebP)
-const processImage = async (buffer, filename) => {
-  const timestamp = Date.now();
-  const ext = path.extname(filename);
-  const processedFilename = `${timestamp}-${filename.replace(ext, "")}${ext}`;
-  const outputPath = path.join(uploadsDir, processedFilename);
-
-  // Guardar la imagen original temporalmente (sin conversión)
-  fs.writeFileSync(outputPath, buffer);
-
-  return processedFilename;
-};
-
 // Crear un nuevo banner con upload de imagen
 const crearBanner = async (req, res) => {
   try {
@@ -50,10 +40,13 @@ const crearBanner = async (req, res) => {
 
     // Si se subió una imagen, procesarla
     if (req.file) {
-      imagenFilename = await processImage(
-        req.file.buffer,
-        req.file.originalname
+      const imagenesUrls = await processMultipleImages(
+        [req.file],
+        uploadsDir,
+        "banner-",
+        { quality: 85, width: 1920, height: 1080 }
       );
+      imagenFilename = imagenesUrls[0];
     }
 
     const bannerData = {
@@ -184,8 +177,26 @@ const obtenerBannerPorId = async (req, res) => {
 const actualizarBanner = async (req, res) => {
   try {
     const { id } = req.params;
+    let updateData = { ...req.body };
 
-    const banner = await Banner.findByIdAndUpdate(id, req.body, {
+    // Si se subió una nueva imagen, procesarla
+    if (req.file) {
+      const imagenesUrls = await processMultipleImages(
+        [req.file],
+        uploadsDir,
+        "banner-",
+        { quality: 85, width: 1920, height: 1080 }
+      );
+      updateData.imagen = imagenesUrls[0];
+
+      // Eliminar la imagen anterior si existe
+      const bannerAnterior = await Banner.findById(id);
+      if (bannerAnterior && bannerAnterior.imagen) {
+        await deleteImage(bannerAnterior.imagen, uploadsDir);
+      }
+    }
+
+    const banner = await Banner.findByIdAndUpdate(id, updateData, {
       new: true,
       runValidators: true,
     });
@@ -232,6 +243,11 @@ const eliminarBanner = async (req, res) => {
         success: false,
         message: "Banner no encontrado",
       });
+    }
+
+    // Eliminar la imagen física si existe
+    if (banner.imagen) {
+      await deleteImage(banner.imagen, uploadsDir);
     }
 
     res.status(200).json({
