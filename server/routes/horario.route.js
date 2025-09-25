@@ -5,14 +5,10 @@ const HorarioRouter = express.Router();
 
 // Rutas para horarios
 HorarioRouter.get("/", horarioController.getAllHorarios);
-HorarioRouter.get("/dia/:dia", horarioController.getHorarioPorDia);
-HorarioRouter.get("/slots", horarioController.generateSlots); // ?fecha=YYYY-MM-DD
-HorarioRouter.post("/", horarioController.createOrUpdateHorario);
-HorarioRouter.post("/excepcion", horarioController.addExcepcion);
-HorarioRouter.delete(
-  "/excepcion/:diaSemana/:fecha",
-  horarioController.removeExcepcion
-);
-HorarioRouter.patch("/:diaSemana/toggle", horarioController.toggleDia);
+HorarioRouter.get("/:id", horarioController.getHorario);
+HorarioRouter.post("/", horarioController.createHorario);
+HorarioRouter.put("/:id", horarioController.updateHorario);
+HorarioRouter.delete("/:id", horarioController.deleteHorario);
+HorarioRouter.patch("/:id/estado", horarioController.toggleEstado);
 
 module.exports = HorarioRouter;

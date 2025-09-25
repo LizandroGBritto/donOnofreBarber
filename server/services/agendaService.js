@@ -1,4 +1,5 @@
 const Agenda = require("../models/agenda.model");
+const ParaguayDateUtil = require("../utils/paraguayDate");
 
 class AgendaService {
   constructor() {
@@ -41,14 +42,22 @@ class AgendaService {
 
             if (!turnoExistente) {
               turnosGenerados.push({
-                Hora: hora,
-                Fecha: new Date(año, mes, dia),
-                Estado: "Disponible",
-                NombreCliente: null,
-                NumeroCliente: null,
-                UserId: null,
-                Servicios: [],
-                Costo: 0,
+                hora: hora,
+                fecha: new Date(año, mes, dia),
+                estado: "disponible",
+                nombreCliente: "",
+                numeroCliente: "",
+                emailCliente: "",
+                diaSemana: ParaguayDateUtil.getDayOfWeek(
+                  new Date(año, mes, dia)
+                ),
+                servicios: [],
+                costoTotal: 0,
+                costoServicios: 0,
+                descuento: 0,
+                estadoPago: "pendiente",
+                notas: "",
+                creadoAutomaticamente: true,
               });
             }
           }

@@ -72,6 +72,16 @@ const AdminDashboard = () => {
   });
   const [showUbicacionModal, setShowUbicacionModal] = useState(false);
 
+  // Estados para gestión de horarios
+  const [horarios, setHorarios] = useState([]);
+  const [selectedHorario, setSelectedHorario] = useState(null);
+  const [horarioForm, setHorarioForm] = useState({
+    hora: "",
+    dias: [],
+    estado: "activo",
+  });
+  const [showHorarioModal, setShowHorarioModal] = useState(false);
+
   // Función para obtener las estadísticas de turnos
   const fetchStats = async () => {
     try {
@@ -509,6 +519,104 @@ const AdminDashboard = () => {
     setShowUbicacionModal(true);
   };
 
+  // ===== FUNCIONES PARA HORARIOS =====
+  const fetchHorarios = async () => {
+    try {
+      const response = await axios.get("http://localhost:8000/api/horarios");
+      setHorarios(response.data.horarios || []);
+    } catch (error) {
+      console.error("Error al obtener horarios:", error);
+    }
+  };
+
+  const saveHorario = async () => {
+    try {
+      if (selectedHorario) {
+        // Actualizar horario existente
+        await axios.put(
+          `http://localhost:8000/api/horarios/${selectedHorario._id}`,
+          horarioForm
+        );
+      } else {
+        // Crear nuevo horario
+        await axios.post("http://localhost:8000/api/horarios", horarioForm);
+      }
+      fetchHorarios();
+      resetHorarioForm();
+      setShowHorarioModal(false);
+    } catch (error) {
+      console.error("Error al guardar horario:", error);
+    }
+  };
+
+  const deleteHorario = async (id) => {
+    if (window.confirm("¿Estás seguro de que quieres eliminar este horario?")) {
+      try {
+        await axios.delete(`http://localhost:8000/api/horarios/${id}`);
+        fetchHorarios();
+      } catch (error) {
+        console.error("Error al eliminar horario:", error);
+      }
+    }
+  };
+
+  const toggleHorarioStatus = async (id, currentStatus) => {
+    try {
+      await axios.patch(`http://localhost:8000/api/horarios/${id}/estado`);
+      fetchHorarios();
+    } catch (error) {
+      console.error("Error al cambiar estado del horario:", error);
+    }
+  };
+
+  const resetHorarioForm = () => {
+    setHorarioForm({
+      hora: "",
+      dias: [],
+      estado: "activo",
+    });
+    setSelectedHorario(null);
+  };
+
+  const editHorario = (horario) => {
+    setSelectedHorario(horario);
+    setHorarioForm({
+      hora: horario.hora,
+      dias: horario.dias || [],
+      estado: horario.estado,
+    });
+    setShowHorarioModal(true);
+  };
+
+  const handleDiaToggle = (dia) => {
+    const diasActualizados = horarioForm.dias.includes(dia)
+      ? horarioForm.dias.filter((d) => d !== dia)
+      : [...horarioForm.dias, dia];
+
+    setHorarioForm({
+      ...horarioForm,
+      dias: diasActualizados,
+    });
+  };
+
+  const regenerarAgendaPorHorarios = async () => {
+    try {
+      setLoading(true);
+      const response = await axios.post(
+        "http://localhost:8000/api/agenda/regenerar-por-horarios",
+        {}
+      );
+      alert(
+        `Agenda regenerada exitosamente. ${response.data.turnosCreados} turnos creados, ${response.data.turnosEliminados} turnos eliminados.`
+      );
+    } catch (error) {
+      console.error("Error al regenerar agenda:", error);
+      alert("Error al regenerar agenda");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchStats();
   }, []);
@@ -522,6 +630,8 @@ const AdminDashboard = () => {
       fetchContacto();
     } else if (activeView === "ubicacion") {
       fetchUbicacion();
+    } else if (activeView === "horarios") {
+      fetchHorarios();
     }
   }, [activeView]);
 
@@ -648,6 +758,12 @@ const AdminDashboard = () => {
               onClick={() => setActiveView("ubicacion")}
             >
               Ubicación
+            </Button>
+            <Button
+              color={activeView === "horarios" ? "purple" : "gray"}
+              onClick={() => setActiveView("horarios")}
+            >
+              Horarios
             </Button>
           </div>
         </div>
@@ -1481,6 +1597,215 @@ const AdminDashboard = () => {
             Guardar
           </Button>
           <Button color="gray" onClick={() => setShowUbicacionModal(false)}>
+            Cancelar
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
+      {/* Vista de Horarios */}
+      {activeView === "horarios" && (
+        <div className="space-y-6">
+          <Card>
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold text-black">
+                Gestión de Horarios
+              </h3>
+              <div className="flex gap-2">
+                <Button
+                  color="blue"
+                  onClick={regenerarAgendaPorHorarios}
+                  size="sm"
+                >
+                  Regenerar Agenda
+                </Button>
+                <Button
+                  color="purple"
+                  onClick={() => {
+                    resetHorarioForm();
+                    setShowHorarioModal(true);
+                  }}
+                >
+                  Crear Horario
+                </Button>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <Table>
+                <Table.Head>
+                  <Table.HeadCell>Hora</Table.HeadCell>
+                  <Table.HeadCell>Días de la Semana</Table.HeadCell>
+                  <Table.HeadCell>Estado</Table.HeadCell>
+                  <Table.HeadCell>Acciones</Table.HeadCell>
+                </Table.Head>
+                <Table.Body className="divide-y">
+                  {horarios.length === 0 ? (
+                    <Table.Row>
+                      <Table.Cell colSpan="4" className="text-center">
+                        No hay horarios configurados. Haz clic en &quot;Crear
+                        Horario&quot; para agregar.
+                      </Table.Cell>
+                    </Table.Row>
+                  ) : (
+                    horarios.map((horario) => (
+                      <Table.Row key={horario._id}>
+                        <Table.Cell className="font-medium">
+                          {horario.hora}
+                        </Table.Cell>
+                        <Table.Cell>
+                          <div className="flex flex-wrap gap-1">
+                            {horario.dias.map((dia, index) => (
+                              <span
+                                key={index}
+                                className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full"
+                              >
+                                {dia}
+                              </span>
+                            ))}
+                          </div>
+                        </Table.Cell>
+                        <Table.Cell>
+                          <span
+                            className={`px-2 py-1 rounded-full text-xs ${
+                              horario.estado === "activo"
+                                ? "bg-green-100 text-green-800"
+                                : "bg-red-100 text-red-800"
+                            }`}
+                          >
+                            {horario.estado}
+                          </span>
+                        </Table.Cell>
+                        <Table.Cell>
+                          <div className="flex gap-2">
+                            <Button
+                              color="blue"
+                              size="xs"
+                              onClick={() => editHorario(horario)}
+                            >
+                              Editar
+                            </Button>
+                            <Button
+                              color={
+                                horario.estado === "activo" ? "yellow" : "green"
+                              }
+                              size="xs"
+                              onClick={() =>
+                                toggleHorarioStatus(horario._id, horario.estado)
+                              }
+                            >
+                              {horario.estado === "activo"
+                                ? "Desactivar"
+                                : "Activar"}
+                            </Button>
+                            <Button
+                              color="red"
+                              size="xs"
+                              onClick={() => deleteHorario(horario._id)}
+                            >
+                              Eliminar
+                            </Button>
+                          </div>
+                        </Table.Cell>
+                      </Table.Row>
+                    ))
+                  )}
+                </Table.Body>
+              </Table>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Modal para crear/editar horario */}
+      <Modal show={showHorarioModal} onClose={() => setShowHorarioModal(false)}>
+        <Modal.Header>
+          {selectedHorario ? "Editar Horario" : "Crear Horario"}
+        </Modal.Header>
+        <Modal.Body>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="hora" className="text-black">
+                Hora
+              </Label>
+              <TextInput
+                id="hora"
+                type="time"
+                value={horarioForm.hora}
+                onChange={(e) =>
+                  setHorarioForm({ ...horarioForm, hora: e.target.value })
+                }
+              />
+            </div>
+
+            <div>
+              <Label className="text-black">Días de la Semana</Label>
+              <div className="grid grid-cols-2 gap-2 mt-2">
+                {[
+                  "lunes",
+                  "martes",
+                  "miercoles",
+                  "jueves",
+                  "viernes",
+                  "sabado",
+                  "domingo",
+                ].map((dia) => (
+                  <label key={dia} className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      checked={horarioForm.dias.includes(dia)}
+                      onChange={() => handleDiaToggle(dia)}
+                      className="w-4 h-4 text-purple-600"
+                    />
+                    <span className="capitalize text-black">{dia}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <Label className="text-black mb-2 block">Estado</Label>
+              <div className="flex items-center space-x-3">
+                <span
+                  className={`text-sm ${
+                    horarioForm.estado === "activo"
+                      ? "text-gray-500"
+                      : "text-black font-medium"
+                  }`}
+                >
+                  Inactivo
+                </span>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="sr-only"
+                    checked={horarioForm.estado === "activo"}
+                    onChange={(e) =>
+                      setHorarioForm({
+                        ...horarioForm,
+                        estado: e.target.checked ? "activo" : "inactivo",
+                      })
+                    }
+                  />
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                </label>
+                <span
+                  className={`text-sm ${
+                    horarioForm.estado === "activo"
+                      ? "text-black font-medium"
+                      : "text-gray-500"
+                  }`}
+                >
+                  Activo
+                </span>
+              </div>
+            </div>
+          </div>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button color="purple" onClick={saveHorario}>
+            {selectedHorario ? "Actualizar" : "Crear"}
+          </Button>
+          <Button color="gray" onClick={() => setShowHorarioModal(false)}>
             Cancelar
           </Button>
         </Modal.Footer>
