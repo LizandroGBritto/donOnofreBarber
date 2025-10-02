@@ -2,6 +2,7 @@ import Agenda from "../components/Agenda";
 import Footer from "../components/Footer";
 import NavBar from "../components/NavBar";
 import Servicios from "../components/Servicios";
+import Barberos from "../components/Barberos";
 import { useState, useEffect, useRef, useCallback } from "react";
 import axios from "axios";
 
@@ -58,6 +59,9 @@ const Landing = () => {
             getUserId={getUserId}
             agendarRef={agendarRef}
           />
+        </div>
+        <div className="bg-gray-900">
+          <Barberos />
         </div>
         <div className="bg-black">
           <Servicios />

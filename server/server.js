@@ -48,6 +48,9 @@ app.use("/api/servicios", ServicioRouter);
 const HorarioRouter = require("./routes/horario.route");
 app.use("/api/horarios", HorarioRouter);
 
+const BarberoRouter = require("./routes/barbero.route");
+app.use("/api/barberos", BarberoRouter);
+
 // Ruta temporal para migración
 const MigracionRouter = require("./routes/migracion.route");
 app.use("/api/migracion", MigracionRouter);

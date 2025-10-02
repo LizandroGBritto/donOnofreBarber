@@ -7,6 +7,7 @@ import {
   TextInput,
   Label,
   Select,
+  Textarea,
 } from "flowbite-react";
 import axios from "axios";
 
@@ -98,6 +99,21 @@ const AdminDashboard = () => {
   const [currentImagenes, setCurrentImagenes] = useState([]);
   const [currentServicioId, setCurrentServicioId] = useState(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+  // Estados para gestión de barberos
+  const [barberos, setBarberos] = useState([]);
+  const [selectedBarbero, setSelectedBarbero] = useState(null);
+  const [barberoForm, setBarberoForm] = useState({
+    nombre: "",
+    descripcion: "",
+    activo: true,
+  });
+  const [showBarberoModal, setShowBarberoModal] = useState(false);
+  const [barberoFoto, setBarberoFoto] = useState(null);
+  const [barberoLogo, setBarberoLogo] = useState(null);
+  const [showNotificationModal, setShowNotificationModal] = useState(false);
+  const [notificationMessage, setNotificationMessage] = useState("");
+  const [notificationType, setNotificationType] = useState("success"); // success, error, info
 
   // Función para obtener las estadísticas de turnos
   const fetchStats = async () => {
@@ -778,6 +794,112 @@ const AdminDashboard = () => {
     }
   };
 
+  // ===== FUNCIONES PARA BARBEROS =====
+  const showNotification = (message, type = "success") => {
+    setNotificationMessage(message);
+    setNotificationType(type);
+    setShowNotificationModal(true);
+  };
+
+  const fetchBarberos = async () => {
+    try {
+      const response = await axios.get("http://localhost:8000/api/barberos");
+      setBarberos(response.data || []);
+    } catch (error) {
+      console.error("Error al obtener barberos:", error);
+      showNotification("Error al cargar barberos", "error");
+    }
+  };
+
+  const handleBarberoSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const formData = new FormData();
+      formData.append("nombre", barberoForm.nombre);
+      formData.append("descripcion", barberoForm.descripcion);
+      formData.append("activo", barberoForm.activo);
+
+      if (barberoFoto) {
+        formData.append("foto", barberoFoto);
+      }
+      if (barberoLogo) {
+        formData.append("logo", barberoLogo);
+      }
+
+      if (selectedBarbero) {
+        await axios.put(
+          `http://localhost:8000/api/barberos/${selectedBarbero._id}`,
+          formData,
+          { headers: { "Content-Type": "multipart/form-data" } }
+        );
+        showNotification("Barbero actualizado exitosamente", "success");
+      } else {
+        await axios.post("http://localhost:8000/api/barberos", formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+        showNotification("Barbero creado exitosamente", "success");
+      }
+
+      fetchBarberos();
+      resetBarberoForm();
+      setShowBarberoModal(false);
+    } catch (error) {
+      console.error("Error al guardar barbero:", error);
+      showNotification("Error al guardar barbero", "error");
+    }
+  };
+
+  const editBarbero = (barbero) => {
+    setSelectedBarbero(barbero);
+    setBarberoForm({
+      nombre: barbero.nombre,
+      descripcion: barbero.descripcion,
+      activo: barbero.activo,
+    });
+    setShowBarberoModal(true);
+  };
+
+  const resetBarberoForm = () => {
+    setSelectedBarbero(null);
+    setBarberoForm({
+      nombre: "",
+      descripcion: "",
+      activo: true,
+    });
+    setBarberoFoto(null);
+    setBarberoLogo(null);
+  };
+
+  const deleteBarbero = async (id) => {
+    if (window.confirm("¿Estás seguro de que quieres eliminar este barbero?")) {
+      try {
+        await axios.delete(`http://localhost:8000/api/barberos/${id}`);
+        fetchBarberos();
+        showNotification("Barbero eliminado exitosamente", "success");
+      } catch (error) {
+        console.error("Error al eliminar barbero:", error);
+        showNotification("Error al eliminar barbero", "error");
+      }
+    }
+  };
+
+  const toggleBarberoStatus = async (id) => {
+    try {
+      const barbero = barberos.find((b) => b._id === id);
+      await axios.patch(`http://localhost:8000/api/barberos/${id}/estado`, {
+        activo: !barbero.activo,
+      });
+      fetchBarberos();
+      showNotification(
+        `Barbero ${!barbero.activo ? "activado" : "desactivado"} exitosamente`,
+        "success"
+      );
+    } catch (error) {
+      console.error("Error al cambiar estado del barbero:", error);
+      showNotification("Error al cambiar estado del barbero", "error");
+    }
+  };
+
   useEffect(() => {
     fetchStats();
   }, []);
@@ -830,6 +952,8 @@ const AdminDashboard = () => {
       fetchHorarios();
     } else if (activeView === "servicios") {
       fetchServicios();
+    } else if (activeView === "barberos") {
+      fetchBarberos();
     }
   }, [activeView]);
 
@@ -982,6 +1106,14 @@ const AdminDashboard = () => {
               className="text-xs md:text-sm"
             >
               Servicios
+            </Button>
+            <Button
+              size="sm"
+              color={activeView === "barberos" ? "purple" : "gray"}
+              onClick={() => setActiveView("barberos")}
+              className="text-xs md:text-sm"
+            >
+              Barberos
             </Button>
           </div>
         </div>
@@ -2281,6 +2413,337 @@ const AdminDashboard = () => {
         </div>
       )}
 
+      {/* SECCIÓN BARBEROS */}
+      {activeView === "barberos" && (
+        <div className="space-y-6">
+          <Card>
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                  Gestión de Barberos
+                </h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Administra la información de los barberos del equipo
+                </p>
+              </div>
+              <Button
+                color="purple"
+                onClick={() => {
+                  resetBarberoForm();
+                  setShowBarberoModal(true);
+                }}
+              >
+                <svg
+                  className="mr-2 h-4 w-4"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                Nuevo Barbero
+              </Button>
+            </div>
+
+            {barberos.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-gray-500 dark:text-gray-400 mb-4">
+                  No hay barberos registrados aún.
+                </p>
+                <p className="text-sm text-gray-400 dark:text-gray-500">
+                  Haz clic en "Nuevo Barbero" para agregar.
+                </p>
+              </div>
+            ) : (
+              <>
+                {/* Vista de tarjetas para móvil */}
+                <div className="grid gap-4 md:hidden">
+                  {barberos.map((barbero) => (
+                    <div
+                      key={barbero._id}
+                      className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700"
+                    >
+                      <div className="flex items-start gap-4">
+                        <img
+                          src={`http://localhost:8000/uploads/${barbero.foto}`}
+                          alt={barbero.nombre}
+                          className="w-16 h-16 object-cover rounded-lg flex-shrink-0"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between mb-2">
+                            <h3 className="font-medium text-gray-900 dark:text-white truncate">
+                              {barbero.nombre}
+                            </h3>
+                            <span
+                              className={`px-2 py-1 rounded-full text-xs ${
+                                barbero.activo
+                                  ? "bg-green-100 text-green-800"
+                                  : "bg-red-100 text-red-800"
+                              }`}
+                            >
+                              {barbero.activo ? "Activo" : "Inactivo"}
+                            </span>
+                          </div>
+
+                          {barbero.logo && (
+                            <div className="mb-2">
+                              <img
+                                src={`http://localhost:8000/uploads/${barbero.logo}`}
+                                alt={`Logo de ${barbero.nombre}`}
+                                className="w-8 h-8 object-contain"
+                              />
+                            </div>
+                          )}
+
+                          <p className="text-sm text-gray-600 dark:text-gray-300 mb-3 line-clamp-2">
+                            {barbero.descripcion}
+                          </p>
+
+                          <div className="flex gap-2">
+                            <Button
+                              size="xs"
+                              color="blue"
+                              onClick={() => editBarbero(barbero)}
+                              className="flex-1"
+                            >
+                              Editar
+                            </Button>
+                            <Button
+                              size="xs"
+                              color={barbero.activo ? "yellow" : "green"}
+                              onClick={() => toggleBarberoStatus(barbero._id)}
+                              className="flex-1"
+                            >
+                              {barbero.activo ? "Desactivar" : "Activar"}
+                            </Button>
+                            <Button
+                              size="xs"
+                              color="red"
+                              onClick={() => deleteBarbero(barbero._id)}
+                              className="flex-1"
+                            >
+                              Eliminar
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Vista de tabla para desktop */}
+                <div className="hidden md:block overflow-x-auto">
+                  <Table>
+                    <Table.Head>
+                      <Table.HeadCell>Barbero</Table.HeadCell>
+                      <Table.HeadCell>Logo</Table.HeadCell>
+                      <Table.HeadCell>Descripción</Table.HeadCell>
+                      <Table.HeadCell>Estado</Table.HeadCell>
+                      <Table.HeadCell>Acciones</Table.HeadCell>
+                    </Table.Head>
+                    <Table.Body>
+                      {barberos.map((barbero) => (
+                        <Table.Row
+                          key={barbero._id}
+                          className="bg-white dark:bg-gray-800"
+                        >
+                          <Table.Cell className="font-medium">
+                            <div className="flex items-center gap-3">
+                              <img
+                                src={`http://localhost:8000/uploads/${barbero.foto}`}
+                                alt={barbero.nombre}
+                                className="w-12 h-12 object-cover rounded-lg"
+                              />
+                              <span className="text-gray-900 dark:text-white">
+                                {barbero.nombre}
+                              </span>
+                            </div>
+                          </Table.Cell>
+                          <Table.Cell>
+                            {barbero.logo ? (
+                              <img
+                                src={`http://localhost:8000/uploads/${barbero.logo}`}
+                                alt={`Logo de ${barbero.nombre}`}
+                                className="w-8 h-8 object-contain"
+                              />
+                            ) : (
+                              <span className="text-gray-400 text-sm">
+                                Sin logo
+                              </span>
+                            )}
+                          </Table.Cell>
+                          <Table.Cell>
+                            <span className="text-sm text-gray-600 dark:text-gray-300 line-clamp-2">
+                              {barbero.descripcion}
+                            </span>
+                          </Table.Cell>
+                          <Table.Cell>
+                            <span
+                              className={`px-2 py-1 rounded-full text-xs ${
+                                barbero.activo
+                                  ? "bg-green-100 text-green-800"
+                                  : "bg-red-100 text-red-800"
+                              }`}
+                            >
+                              {barbero.activo ? "Activo" : "Inactivo"}
+                            </span>
+                          </Table.Cell>
+                          <Table.Cell>
+                            <div className="flex gap-2">
+                              <Button
+                                size="xs"
+                                color="blue"
+                                onClick={() => editBarbero(barbero)}
+                              >
+                                Editar
+                              </Button>
+                              <Button
+                                size="xs"
+                                color={barbero.activo ? "yellow" : "green"}
+                                onClick={() => toggleBarberoStatus(barbero._id)}
+                              >
+                                {barbero.activo ? "Desactivar" : "Activar"}
+                              </Button>
+                              <Button
+                                size="xs"
+                                color="failure"
+                                onClick={() => deleteBarbero(barbero._id)}
+                              >
+                                Eliminar
+                              </Button>
+                            </div>
+                          </Table.Cell>
+                        </Table.Row>
+                      ))}
+                    </Table.Body>
+                  </Table>
+                </div>
+              </>
+            )}
+          </Card>
+        </div>
+      )}
+
+      {/* Modal para crear/editar barbero */}
+      <Modal show={showBarberoModal} onClose={() => setShowBarberoModal(false)}>
+        <Modal.Header>
+          {selectedBarbero ? "Editar Barbero" : "Nuevo Barbero"}
+        </Modal.Header>
+        <Modal.Body>
+          <form onSubmit={handleBarberoSubmit} className="space-y-4">
+            <div>
+              <Label htmlFor="nombreBarbero">Nombre del Barbero *</Label>
+              <TextInput
+                id="nombreBarbero"
+                type="text"
+                required
+                value={barberoForm.nombre}
+                onChange={(e) =>
+                  setBarberoForm({ ...barberoForm, nombre: e.target.value })
+                }
+                placeholder="Nombre completo del barbero"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="descripcionBarbero">Descripción *</Label>
+              <Textarea
+                id="descripcionBarbero"
+                required
+                rows={3}
+                value={barberoForm.descripcion}
+                onChange={(e) =>
+                  setBarberoForm({
+                    ...barberoForm,
+                    descripcion: e.target.value,
+                  })
+                }
+                placeholder="Descripción profesional del barbero, especialidades, experiencia..."
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="fotoBarbero">Foto del Barbero *</Label>
+              <input
+                id="fotoBarbero"
+                type="file"
+                accept="image/*"
+                required={!selectedBarbero}
+                onChange={(e) => setBarberoFoto(e.target.files[0])}
+                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Formatos: JPG, PNG, WEBP. Tamaño máximo: 5MB
+              </p>
+              {selectedBarbero && selectedBarbero.foto && (
+                <div className="mt-2">
+                  <img
+                    src={`http://localhost:8000/uploads/${selectedBarbero.foto}`}
+                    alt="Foto actual"
+                    className="w-20 h-20 object-cover rounded-lg"
+                  />
+                  <p className="text-xs text-gray-500">Foto actual</p>
+                </div>
+              )}
+            </div>
+
+            <div>
+              <Label htmlFor="logoBarbero">Logo del Barbero (Opcional)</Label>
+              <input
+                id="logoBarbero"
+                type="file"
+                accept="image/*"
+                onChange={(e) => setBarberoLogo(e.target.files[0])}
+                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Logo personal o marca del barbero (opcional)
+              </p>
+              {selectedBarbero && selectedBarbero.logo && (
+                <div className="mt-2">
+                  <img
+                    src={`http://localhost:8000/uploads/${selectedBarbero.logo}`}
+                    alt="Logo actual"
+                    className="w-16 h-16 object-contain"
+                  />
+                  <p className="text-xs text-gray-500">Logo actual</p>
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <input
+                id="activoBarbero"
+                type="checkbox"
+                checked={barberoForm.activo}
+                onChange={(e) =>
+                  setBarberoForm({ ...barberoForm, activo: e.target.checked })
+                }
+                className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+              />
+              <Label htmlFor="activoBarbero">Barbero activo</Label>
+            </div>
+
+            <div className="flex gap-2 pt-4">
+              <Button type="submit" color="purple" className="flex-1">
+                {selectedBarbero ? "Actualizar" : "Crear"} Barbero
+              </Button>
+              <Button
+                type="button"
+                color="gray"
+                onClick={() => setShowBarberoModal(false)}
+                className="flex-1"
+              >
+                Cancelar
+              </Button>
+            </div>
+          </form>
+        </Modal.Body>
+      </Modal>
+
       {/* Modal para crear/editar servicio */}
       <Modal
         show={showServicioModal}
@@ -2533,6 +2996,87 @@ const AdminDashboard = () => {
         <Modal.Footer>
           <Button color="gray" onClick={closeImageModal}>
             Cerrar
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
+      {/* Modal de Notificación */}
+      <Modal
+        show={showNotificationModal}
+        onClose={() => setShowNotificationModal(false)}
+        size="md"
+      >
+        <Modal.Header>
+          <div className="flex items-center gap-2">
+            {notificationType === "success" && (
+              <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center">
+                <svg
+                  className="w-4 h-4 text-green-600"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </div>
+            )}
+            {notificationType === "error" && (
+              <div className="w-6 h-6 bg-red-100 rounded-full flex items-center justify-center">
+                <svg
+                  className="w-4 h-4 text-red-600"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </div>
+            )}
+            {notificationType === "info" && (
+              <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
+                <svg
+                  className="w-4 h-4 text-blue-600"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </div>
+            )}
+            <span className="font-medium">
+              {notificationType === "success" && "¡Éxito!"}
+              {notificationType === "error" && "Error"}
+              {notificationType === "info" && "Información"}
+            </span>
+          </div>
+        </Modal.Header>
+        <Modal.Body>
+          <p className="text-gray-700 dark:text-gray-300">
+            {notificationMessage}
+          </p>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button
+            color={
+              notificationType === "success"
+                ? "success"
+                : notificationType === "error"
+                ? "failure"
+                : "gray"
+            }
+            onClick={() => setShowNotificationModal(false)}
+          >
+            Aceptar
           </Button>
         </Modal.Footer>
       </Modal>

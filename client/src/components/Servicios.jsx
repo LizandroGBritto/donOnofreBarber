@@ -55,7 +55,7 @@ const Servicios = () => {
     }
 
     return (
-      <div className="relative w-full h-48 rounded-lg overflow-hidden group">
+      <div className="relative w-full h-48 rounded-lg overflow-hidden group" id="servicios">
         <img
           src={`http://localhost:8000/uploads/${imagenes[currentImageIndex]}`}
           alt={`${nombre} - ${currentImageIndex + 1}`}
