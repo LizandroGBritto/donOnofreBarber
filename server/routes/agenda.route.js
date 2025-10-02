@@ -21,6 +21,16 @@ AgendaRouter.post(
 AgendaRouter.get("/dashboard/estadisticas", AgendaController.getEstadisticas);
 AgendaRouter.post("/generar-turnos", AgendaController.generarTurnosMes);
 
+// Nuevas rutas para manejo de barberos
+AgendaRouter.get(
+  "/disponibilidad/:fecha",
+  AgendaController.getDisponibilidadPorBarbero
+);
+AgendaRouter.post(
+  "/reservar-con-barbero",
+  AgendaController.reservarTurnoConBarbero
+);
+
 AgendaRouter.get("/:id", AgendaController.getOneAgenda);
 
 AgendaRouter.post("/new", AgendaController.createAgenda);

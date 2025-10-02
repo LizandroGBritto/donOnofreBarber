@@ -242,7 +242,28 @@ module.exports = {
 
   getAllAgendas: (req, res) => {
     AgendaModel.find({})
-      .then((allAgendas) => res.status(200).json({ agendas: allAgendas }))
+      .populate("barbero", "nombre foto")
+      .then((allAgendas) => {
+        console.log("=== ENVIANDO AGENDAS AL FRONTEND ===");
+        const agendasConCosto = allAgendas.filter(
+          (a) => a.costoTotal > 0 || a.costoServicios > 0
+        );
+        console.log(
+          `Total agendas: ${allAgendas.length}, Con costo: ${agendasConCosto.length}`
+        );
+        if (agendasConCosto.length > 0) {
+          console.log(
+            "Ejemplos con costo:",
+            agendasConCosto.slice(0, 3).map((a) => ({
+              id: a._id,
+              costoTotal: a.costoTotal,
+              costoServicios: a.costoServicios,
+              servicios: a.servicios?.length || 0,
+            }))
+          );
+        }
+        res.status(200).json({ agendas: allAgendas });
+      })
       .catch((err) =>
         res.status(400).json({ message: "Algo salió mal", error: err })
       );
@@ -466,6 +487,184 @@ module.exports = {
       console.error("Error al regenerar agenda por horarios:", error);
       res.status(500).json({
         message: "Error al regenerar agenda",
+        error: error.message,
+      });
+    }
+  },
+
+  // Nuevo endpoint: Obtener disponibilidad por barbero para una fecha específica
+  getDisponibilidadPorBarbero: async (req, res) => {
+    try {
+      const { fecha } = req.params;
+      const BarberoModel = require("../models/barbero.model");
+
+      if (!fecha) {
+        return res.status(400).json({ message: "Fecha es requerida" });
+      }
+
+      const fechaObj = ParaguayDateUtil.toParaguayTime(fecha).toDate();
+
+      // Obtener todos los barberos activos
+      const barberos = await BarberoModel.find({ activo: true }).select(
+        "_id nombre foto"
+      );
+
+      // Obtener todos los turnos para esta fecha
+      const turnos = await AgendaModel.find({ fecha: fechaObj }).populate(
+        "barbero",
+        "nombre foto"
+      );
+
+      // Organizar turnos por hora
+      const turnosPorHora = {};
+      turnos.forEach((turno) => {
+        if (!turnosPorHora[turno.hora]) {
+          turnosPorHora[turno.hora] = [];
+        }
+        turnosPorHora[turno.hora].push(turno);
+      });
+
+      // Crear estructura de disponibilidad
+      const disponibilidad = {};
+      Object.keys(turnosPorHora).forEach((hora) => {
+        const turnosHora = turnosPorHora[hora];
+        disponibilidad[hora] = {
+          barberosDisponibles: [],
+          barberosOcupados: [],
+          completamenteOcupado: false,
+        };
+
+        // Verificar qué barberos están disponibles
+        barberos.forEach((barbero) => {
+          const turnoOcupado = turnosHora.find(
+            (t) =>
+              t.barbero &&
+              t.barbero._id.toString() === barbero._id.toString() &&
+              ["reservado", "confirmado", "en_proceso"].includes(t.estado)
+          );
+
+          if (turnoOcupado) {
+            disponibilidad[hora].barberosOcupados.push({
+              barbero: barbero,
+              turno: turnoOcupado,
+            });
+          } else {
+            disponibilidad[hora].barberosDisponibles.push(barbero);
+          }
+        });
+
+        // Si no hay barberos disponibles, marcar como completamente ocupado
+        disponibilidad[hora].completamenteOcupado =
+          disponibilidad[hora].barberosDisponibles.length === 0;
+      });
+
+      res.status(200).json({
+        fecha: fecha,
+        barberos: barberos,
+        disponibilidad: disponibilidad,
+      });
+    } catch (error) {
+      console.error("Error al obtener disponibilidad por barbero:", error);
+      res.status(500).json({
+        message: "Error al obtener disponibilidad",
+        error: error.message,
+      });
+    }
+  },
+
+  // Nuevo endpoint: Reservar turno con barbero específico
+  reservarTurnoConBarbero: async (req, res) => {
+    try {
+      const {
+        fecha,
+        hora,
+        barberoId,
+        nombreCliente,
+        numeroCliente,
+        servicios = [],
+      } = req.body;
+
+      const BarberoModel = require("../models/barbero.model");
+
+      // Validaciones básicas (sin requerir email)
+      if (!fecha || !hora || !barberoId || !nombreCliente) {
+        return res.status(400).json({
+          message: "Fecha, hora, barbero y nombre del cliente son requeridos",
+        });
+      }
+
+      const fechaObj = ParaguayDateUtil.toParaguayTime(fecha).toDate();
+
+      // Verificar que el barbero existe y está activo
+      const barbero = await BarberoModel.findOne({
+        _id: barberoId,
+        activo: true,
+      });
+      if (!barbero) {
+        return res
+          .status(404)
+          .json({ message: "Barbero no encontrado o inactivo" });
+      }
+
+      // Verificar disponibilidad del barbero
+      const turnoExistente = await AgendaModel.findOne({
+        fecha: fechaObj,
+        hora: hora,
+        barbero: barberoId,
+        estado: { $in: ["reservado", "confirmado", "en_proceso"] },
+      });
+
+      if (turnoExistente) {
+        return res.status(409).json({
+          message: "El barbero ya tiene un turno reservado en este horario",
+        });
+      }
+
+      // Buscar un turno disponible para esta fecha/hora
+      let turnoDisponible = await AgendaModel.findOne({
+        fecha: fechaObj,
+        hora: hora,
+        estado: "disponible",
+        barbero: null,
+      });
+
+      // Si no existe turno, crear uno nuevo
+      if (!turnoDisponible) {
+        turnoDisponible = new AgendaModel({
+          fecha: fechaObj,
+          hora: hora,
+          estado: "disponible",
+          creadoAutomaticamente: false,
+        });
+      }
+
+      // Reservar el turno con el barbero
+      turnoDisponible.estado = "reservado";
+      turnoDisponible.barbero = barberoId;
+      turnoDisponible.nombreBarbero = barbero.nombre;
+      turnoDisponible.nombreCliente = nombreCliente;
+      turnoDisponible.numeroCliente = numeroCliente;
+      turnoDisponible.servicios = servicios;
+      turnoDisponible.fechaReserva = new Date();
+
+      // Calcular costo total si hay servicios
+      if (servicios.length > 0) {
+        turnoDisponible.calcularCostoTotal();
+      }
+
+      await turnoDisponible.save();
+
+      // Populate el barbero para la respuesta
+      await turnoDisponible.populate("barbero", "nombre foto");
+
+      res.status(200).json({
+        message: "Turno reservado exitosamente",
+        turno: turnoDisponible,
+      });
+    } catch (error) {
+      console.error("Error al reservar turno con barbero:", error);
+      res.status(500).json({
+        message: "Error al reservar turno",
         error: error.message,
       });
     }

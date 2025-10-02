@@ -40,9 +40,18 @@ const AgendaAdmin = ({ horarios, setHorarios, getUserId, agendarRef }) => {
     axios
       .get("http://localhost:8000/api/agenda")
       .then((res) => {
+        console.log("=== DATOS DE AGENDA RECIBIDOS ===");
+        console.log("Respuesta completa:", res.data);
+        console.log("Agendas:", res.data.agendas);
+
+        // Verificar si hay agendas con costos
+        const agendasConCosto = res.data.agendas.filter(
+          (a) => a.costoTotal > 0 || a.costoServicios > 0
+        );
+        console.log("Agendas con costo:", agendasConCosto);
+
         setHorarios(res.data.agendas);
         setIsLoading(false);
-        console.log(res);
       })
       .catch((err) => {
         console.log(err);
@@ -59,12 +68,15 @@ const AgendaAdmin = ({ horarios, setHorarios, getUserId, agendarRef }) => {
   // Filtrar los días de la semana que no han pasado, incluyendo el día actual
   const diasRestantes = diasSemana.filter((_, index) => index >= hoy.getDay());
 
-  // Filtrar los horarios dependiendo del día seleccionado y ordenarlos de mayor a menor
+  // Filtrar los horarios dependiendo del día seleccionado y ordenarlos
   const horariosFiltrados = horarios
-    .filter((agenda) => (selectedDay ? agenda.Dia === selectedDay : true))
+    .filter((agenda) => {
+      const diaAgenda = agenda.diaSemana || agenda.Dia;
+      return selectedDay ? diaAgenda === selectedDay : true;
+    })
     .sort((a, b) => {
-      const horaA = parseInt(a.Hora.replace(":", ""), 10);
-      const horaB = parseInt(b.Hora.replace(":", ""), 10);
+      const horaA = parseInt((a.hora || a.Hora).replace(":", ""), 10);
+      const horaB = parseInt((b.hora || b.Hora).replace(":", ""), 10);
       return horaA - horaB; // Orden Ascendente
     });
 
@@ -100,15 +112,54 @@ const AgendaAdmin = ({ horarios, setHorarios, getUserId, agendarRef }) => {
             key={agenda._id}
           >
             <div className="flex-col">
-              <h3 className="flex justify-start">{agenda.Hora} </h3>
-              <h3 className="flex justify-start">
-                {agenda.NombreCliente === ""
-                  ? "Sin Cliente"
-                  : agenda.NombreCliente}
+              <h3 className="flex justify-start font-bold">
+                {agenda.hora || agenda.Hora}
               </h3>
-              <h3 className="flex justify-start">
-                {agenda.NumeroCliente === "" ? null : agenda.NumeroCliente}
-              </h3>
+              <div className="text-sm">
+                <p className="font-medium">
+                  {(agenda.nombreCliente || agenda.NombreCliente) === ""
+                    ? "Sin Cliente"
+                    : agenda.nombreCliente || agenda.NombreCliente}
+                </p>
+                <p className="text-gray-600">
+                  {(agenda.numeroCliente || agenda.NumeroCliente) === ""
+                    ? null
+                    : agenda.numeroCliente || agenda.NumeroCliente}
+                </p>
+                {agenda.nombreBarbero && (
+                  <p className="text-purple-600 font-medium">
+                    Barbero: {agenda.nombreBarbero}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Información de servicios y costo */}
+            <div className="flex-col text-center mr-4">
+              {(() => {
+                // Priorizar costoTotal, luego costoServicios
+                const costoTotal =
+                  agenda.costoTotal ?? agenda.costoServicios ?? 0;
+                console.log(
+                  `Agenda ${agenda._id}: costoTotal=${agenda.costoTotal}, costoServicios=${agenda.costoServicios}, mostrando=${costoTotal}`
+                );
+                return costoTotal > 0 ? (
+                  <div className="bg-green-100 px-2 py-1 rounded mb-2">
+                    <p className="font-bold text-green-800">
+                      ₲{costoTotal.toLocaleString()}
+                    </p>
+                  </div>
+                ) : null;
+              })()}
+              {agenda.servicios && agenda.servicios.length > 0 && (
+                <div className="text-xs text-gray-600">
+                  {agenda.servicios.map((servicio, index) => (
+                    <div key={index} className="mb-1">
+                      • {servicio.nombre}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {diaHoy === "Domingo" ? (
@@ -120,25 +171,27 @@ const AgendaAdmin = ({ horarios, setHorarios, getUserId, agendarRef }) => {
                   CERRADO
                 </Button>
               </h3>
-            ) : agenda.NombreCliente !== "" ? (
+            ) : (agenda.nombreCliente || agenda.NombreCliente) !== "" ? (
               <h3 className="flex-col justify-center mr-4 text-[#FF7D00]">
                 <Button
                   className="flex justify-center bg-green-400 rounded-lg text-black text-lg items-center"
                   onClick={() => {
-                    let phoneNumber = agenda.NumeroCliente;
+                    let phoneNumber =
+                      agenda.numeroCliente || agenda.NumeroCliente;
 
                     if (phoneNumber.startsWith("0")) {
                       phoneNumber = `595${phoneNumber.slice(1)}`;
                     }
 
-                    const clientName = agenda.NombreCliente;
-                    const appointmentTime = agenda.Hora;
+                    const clientName =
+                      agenda.nombreCliente || agenda.NombreCliente;
+                    const appointmentTime = agenda.hora || agenda.Hora;
                     const message = `Hola ${clientName}, tienes un turno a las ${appointmentTime}, ¡te esperamos!`;
                     const whatsappURL = `https://api.whatsapp.com/send?phone=${phoneNumber}&text=${encodeURIComponent(
                       message
                     )}`;
 
-                    window(whatsappURL, "_blank");
+                    window.open(whatsappURL, "_blank");
                   }}
                 >
                   CONTACTAR

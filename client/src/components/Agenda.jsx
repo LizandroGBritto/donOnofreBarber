@@ -2,12 +2,15 @@ import axios from "axios";
 import { useState, useEffect, useCallback } from "react";
 import { Button, Modal, Dropdown } from "flowbite-react";
 import FormAgendar from "./FormAgendar";
+import FormReservarConBarbero from "./FormReservarConBarbero";
 import ParaguayDateUtil from "../utils/paraguayDate";
 
 const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [openModal, setOpenModal] = useState(false);
+  const [openBarberoModal, setOpenBarberoModal] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
+  const [selectedTurno, setSelectedTurno] = useState(null);
   const [userHasReservation, setUserHasReservation] = useState(false);
   const [selectedDay, setSelectedDay] = useState(null); // Estado para el día seleccionado
 
@@ -31,7 +34,9 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
 
   function onCloseModal() {
     setOpenModal(false);
+    setOpenBarberoModal(false);
     setSelectedId(null);
+    setSelectedTurno(null);
   }
 
   const refreshData = useCallback(() => {
@@ -191,8 +196,20 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
                   agenda.estado !== "disponible" ? "bg-gray-400" : "bg-white"
                 } rounded-lg text-black text-lg items-center`}
                 onClick={() => {
-                  setSelectedId(agenda._id);
-                  setOpenModal(true);
+                  // Para turnos disponibles, abrir modal de barberos
+                  if (agenda.estado === "disponible") {
+                    setSelectedTurno({
+                      _id: agenda._id,
+                      fecha: agenda.fecha,
+                      hora: agenda.hora,
+                      diaSemana: agenda.diaSemana,
+                    });
+                    setOpenBarberoModal(true);
+                  } else {
+                    // Para modificaciones, usar el modal tradicional
+                    setSelectedId(agenda._id);
+                    setOpenModal(true);
+                  }
                 }}
               >
                 {agenda.estado !== "disponible" ? "RESERVADO" : "AGENDAR"}
@@ -223,6 +240,16 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
                 </div>
               </Modal.Body>
             </Modal>
+
+            {/* Modal para reservas con barberos */}
+            {openBarberoModal && selectedTurno && (
+              <FormReservarConBarbero
+                turno={selectedTurno}
+                onCloseModal={onCloseModal}
+                refreshData={refreshData}
+                getUserId={getUserId}
+              />
+            )}
           </div>
         ))}
       </div>

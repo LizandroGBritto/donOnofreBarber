@@ -43,6 +43,17 @@ const AgendaSchema = new mongoose.Schema(
       default: "",
     },
 
+    // Barbero asignado al turno
+    barbero: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Barbero",
+      default: null,
+    },
+    nombreBarbero: {
+      type: String,
+      default: "",
+    },
+
     // Servicios seleccionados (referencia al modelo Servicio)
     servicios: [
       {
@@ -115,6 +126,8 @@ AgendaSchema.index({ fecha: 1, hora: 1 }); // Para buscar turnos específicos
 AgendaSchema.index({ fecha: 1, estado: 1 }); // Para filtrar por fecha y estado
 AgendaSchema.index({ diaSemana: 1, estado: 1 }); // Para consultas por día de semana
 AgendaSchema.index({ nombreCliente: 1, fecha: 1 }); // Para buscar por cliente
+AgendaSchema.index({ fecha: 1, hora: 1, barbero: 1 }); // Para turnos por barbero y horario
+AgendaSchema.index({ barbero: 1, fecha: 1, estado: 1 }); // Para consultas por barbero
 
 // Métodos estáticos para consultas comunes
 AgendaSchema.statics.getTurnosDisponibles = function (fecha) {
@@ -122,6 +135,35 @@ AgendaSchema.statics.getTurnosDisponibles = function (fecha) {
     fecha: fecha,
     estado: "disponible",
   }).sort({ hora: 1 });
+};
+
+// Nuevo método: Obtener barberos disponibles para una fecha y hora específica
+AgendaSchema.statics.getBarberosDisponibles = function (fecha, hora) {
+  return this.find({
+    fecha: fecha,
+    hora: hora,
+    estado: "disponible",
+    barbero: null, // Turnos sin barbero asignado
+  }).sort({ hora: 1 });
+};
+
+// Nuevo método: Verificar disponibilidad de un barbero específico
+AgendaSchema.statics.isBarberoDisponible = function (fecha, hora, barberoId) {
+  return this.findOne({
+    fecha: fecha,
+    hora: hora,
+    barbero: barberoId,
+    estado: { $in: ["reservado", "confirmado", "en_proceso"] },
+  }).then((turno) => !turno); // Retorna true si NO encuentra turno ocupado
+};
+
+// Nuevo método: Obtener turnos disponibles con información de barberos
+AgendaSchema.statics.getTurnosConBarberos = function (fecha) {
+  return this.find({
+    fecha: fecha,
+  })
+    .populate("barbero", "nombre foto")
+    .sort({ hora: 1 });
 };
 
 AgendaSchema.statics.getTurnosHoy = function () {

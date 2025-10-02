@@ -12,7 +12,7 @@ const Form = ({
   selectedServices: initialSelectedServices,
   finalCost: initialFinalCost,
   debtStatus,
-  debtPayUrl, // Nueva propiedad para la URL de pago de la deuda
+  debtPayUrl,
 }) => {
   const [isCancelling, setIsCancelling] = useState(false);
   const [selectedServices, setSelectedServices] = useState(
@@ -20,6 +20,10 @@ const Form = ({
   );
   const [finalCost, setFinalCost] = useState(initialFinalCost || 0);
   const [services, setServices] = useState([]);
+  const [barberos, setBarberos] = useState([]);
+  const [selectedBarbero, setSelectedBarbero] = useState(null);
+  const [disponibilidad, setDisponibilidad] = useState({});
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     setSelectedServices(initialSelectedServices || []);
@@ -36,7 +40,6 @@ const Form = ({
         }
       } catch (error) {
         console.error("Error loading services:", error);
-        // Fallback services if API fails
         setServices([
           { nombre: "Corte de Pelo", precio: 50000 },
           { nombre: "Decoloración", precio: 200000 },
@@ -48,6 +51,77 @@ const Form = ({
 
     loadServices();
   }, []);
+
+  // Cargar barberos activos
+  useEffect(() => {
+    const loadBarberos = async () => {
+      try {
+        const response = await axios.get(
+          "http://localhost:8000/api/barberos/activos"
+        );
+        setBarberos(response.data);
+      } catch (error) {
+        console.error("Error loading barberos:", error);
+      }
+    };
+
+    loadBarberos();
+  }, []);
+
+  // Cargar disponibilidad cuando se tiene la fecha de la agenda
+  useEffect(() => {
+    const loadDisponibilidad = async () => {
+      if (!agenda.fecha) return;
+
+      try {
+        setLoading(true);
+        const fechaISO = new Date(agenda.fecha).toISOString().split("T")[0];
+        const response = await axios.get(
+          `http://localhost:8000/api/agenda/disponibilidad/${fechaISO}`
+        );
+        setDisponibilidad(response.data.disponibilidad);
+      } catch (error) {
+        console.error("Error loading disponibilidad:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadDisponibilidad();
+  }, [agenda.fecha]);
+
+  // Cargar barberos activos
+  useEffect(() => {
+    const loadBarberos = async () => {
+      try {
+        const response = await axios.get(
+          "http://localhost:8000/api/barberos/activos"
+        );
+        setBarberos(response.data);
+      } catch (error) {
+        console.error("Error loading barberos:", error);
+      }
+    };
+
+    loadBarberos();
+  }, []);
+
+  // Cargar disponibilidad cuando se selecciona una fecha
+  const loadDisponibilidad = async (fecha) => {
+    if (!fecha) return;
+
+    try {
+      setLoading(true);
+      const response = await axios.get(
+        `http://localhost:8000/api/agenda/disponibilidad/${fecha}`
+      );
+      setDisponibilidad(response.data.disponibilidad);
+    } catch (error) {
+      console.error("Error loading disponibilidad:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const validationSchema = Yup.object().shape({
     NombreCliente: Yup.string()
