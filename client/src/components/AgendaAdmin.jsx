@@ -148,7 +148,7 @@ const AgendaAdmin = ({ horarios, setHorarios, getUserId, agendarRef }) => {
                 {agenda.costoTotal > 0 && (
                   <div className="bg-green-100 px-2 py-1 rounded mb-2">
                     <p className="font-bold text-green-800">
-                      ₲{agenda.costoTotal.toLocaleString()}
+                      Gs.{agenda.costoTotal.toLocaleString()}
                     </p>
                   </div>
                 )}

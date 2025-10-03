@@ -12,6 +12,57 @@ import {
 import axios from "axios";
 
 const AdminDashboard = () => {
+  // Función para procesar número de teléfono para WhatsApp
+  const procesarNumeroWhatsApp = (numero) => {
+    if (!numero) return null;
+
+    // Limpiar el número de espacios y caracteres especiales
+    let numeroLimpio = numero.toString().replace(/[\s\-()]/g, "");
+
+    // Si empieza con 0, reemplazar por 595
+    if (numeroLimpio.startsWith("0")) {
+      numeroLimpio = "595" + numeroLimpio.substring(1);
+    }
+    // Si no empieza con 595, agregarlo
+    else if (!numeroLimpio.startsWith("595")) {
+      numeroLimpio = "595" + numeroLimpio;
+    }
+
+    return numeroLimpio;
+  };
+
+  // Función para enviar mensaje de WhatsApp
+  const enviarMensajeWhatsApp = (turno) => {
+    const numeroWhatsApp = procesarNumeroWhatsApp(turno.numeroCliente);
+
+    if (!numeroWhatsApp) {
+      alert("No hay número de teléfono disponible para este cliente.");
+      return;
+    }
+
+    const nombreCliente = turno.nombreCliente || "Cliente";
+    const fecha = formatearFecha(turno.fecha);
+    const dia = new Date(turno.fecha).toLocaleDateString("es-PY", { weekday: "long" });
+    const barbero = turno.barbero ? turno.barbero.nombre : "un barbero";
+    const hora = turno.hora;
+    const servicios =
+      turno.servicios && turno.servicios.length > 0
+        ? turno.servicios.map((s) => s.nombre).join(", ")
+        : "sus servicios";
+
+    const mensaje =
+      `¡Hola ${nombreCliente}! 👋\n\n` +
+      `💈 Te escribimos desde Alonzo Style para recordarte tu cita programada para el ${dia} ${fecha} a las ${hora} con el barbero ${barbero}.\n\n` +
+       `💈 Servicios: ${servicios}\n\n` +
+      `💈 Se recomienda llegar 10 minutos antes de la cita, en caso de no poder asistir, por favor avísanos con anticipación para poder reprogramar tu cita.\n\n` +
+      `¡Te esperamos! 💈`;
+
+    const enlaceWhatsApp = `https://api.whatsapp.com/send?phone=${numeroWhatsApp}&text=${encodeURIComponent(
+      mensaje
+    )}`;
+
+    window.open(enlaceWhatsApp, "_blank");
+  };
   const [stats, setStats] = useState({
     today: { scheduled: 0, available: 5 },
     week: { scheduled: 0, available: 35 },
@@ -1023,25 +1074,43 @@ const AdminDashboard = () => {
             </p>
             {turno.servicios && turno.servicios.length > 0 && (
               <div className="text-xs text-gray-400 mt-1">
-                <p className="font-medium mb-1">Servicios:</p>
-                {turno.servicios.map((servicio, index) => (
-                  <div key={index} className="mb-1">
-                    • {servicio.nombre} - $
-                    {servicio.precio?.toLocaleString() || 0}
-                  </div>
-                ))}
+                <p className="font-medium mb-2">Servicios:</p>
+                <div className="flex flex-wrap gap-1">
+                  {turno.servicios.map((servicio, index) => (
+                    <div
+                      key={index}
+                      className="bg-blue-100 text-blue-800 px-2 py-1 rounded-md text-xs"
+                    >
+                      {servicio.nombre} - $
+                      {servicio.precio?.toLocaleString() || 0}
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>
-          <Button
-            size="sm"
-            onClick={() => {
-              setSelectedTurno(turno);
-              setShowModal(true);
-            }}
-          >
-            Ver Detalles
-          </Button>
+          <div className="flex gap-2 mt-2">
+            <Button
+              size="sm"
+              onClick={() => {
+                setSelectedTurno(turno);
+                setShowModal(true);
+              }}
+              className="flex-1"
+            >
+              Ver Detalles
+            </Button>
+            {turno.numeroCliente && turno.nombreCliente && (
+              <Button
+                size="sm"
+                color="success"
+                onClick={() => enviarMensajeWhatsApp(turno)}
+                className="flex-1"
+              >
+                Contactar
+              </Button>
+            )}
+          </div>
         </div>
       </div>
     </Card>
@@ -1281,13 +1350,17 @@ const AdminDashboard = () => {
                         <Table.Cell>
                           <div className="text-sm">
                             <div className="font-semibold text-green-600">
-                              ${turno.costoTotal || 0}
+                              Gs. {turno.costoTotal || 0}
                             </div>
                             {turno.servicios && turno.servicios.length > 0 && (
-                              <div className="text-xs text-gray-600 mt-1 flex flex-row gap-2 flex-wrap">
+                              <div className="text-xs text-gray-600 mt-1 flex flex-wrap gap-1">
                                 {turno.servicios.map((servicio, index) => (
-                                  <div key={index} className="mb-0">
-                                    - {servicio.nombre}
+                                  <div
+                                    key={index}
+                                    className="bg-gray-100 text-gray-700 px-2 py-1 rounded-md text-xs border"
+                                  >
+                                    {servicio.nombre} - $
+                                    {servicio.precio?.toLocaleString() || 0}
                                   </div>
                                 ))}
                               </div>
@@ -1295,15 +1368,26 @@ const AdminDashboard = () => {
                           </div>
                         </Table.Cell>
                         <Table.Cell>
-                          <Button
-                            size="sm"
-                            onClick={() => {
-                              setSelectedTurno(turno);
-                              setShowModal(true);
-                            }}
-                          >
-                            Ver Detalles
-                          </Button>
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              onClick={() => {
+                                setSelectedTurno(turno);
+                                setShowModal(true);
+                              }}
+                            >
+                              Ver Detalles
+                            </Button>
+                            {turno.numeroCliente && turno.nombreCliente && (
+                              <Button
+                                size="sm"
+                                color="success"
+                                onClick={() => enviarMensajeWhatsApp(turno)}
+                              >
+                                Contactar
+                              </Button>
+                            )}
+                          </div>
                         </Table.Cell>
                       </Table.Row>
                     ))}
@@ -2910,19 +2994,19 @@ const AdminDashboard = () => {
                 <Label htmlFor="fecha">Fecha</Label>
                 <TextInput
                   id="fecha"
-                  value={formatearFecha(selectedTurno.Fecha)}
+                  value={formatearFecha(selectedTurno.fecha)}
                   readOnly
                 />
               </div>
               <div>
                 <Label htmlFor="hora">Hora</Label>
-                <TextInput id="hora" value={selectedTurno.Hora} readOnly />
+                <TextInput id="hora" value={selectedTurno.hora} readOnly />
               </div>
               <div>
                 <Label htmlFor="cliente">Cliente</Label>
                 <TextInput
                   id="cliente"
-                  value={selectedTurno.NombreCliente || "No asignado"}
+                  value={selectedTurno.nombreCliente || "No asignado"}
                   readOnly
                 />
               </div>
@@ -2930,7 +3014,7 @@ const AdminDashboard = () => {
                 <Label htmlFor="telefono">Teléfono</Label>
                 <TextInput
                   id="telefono"
-                  value={selectedTurno.NumeroCliente || "No asignado"}
+                  value={selectedTurno.numeroCliente || "No asignado"}
                   readOnly
                 />
               </div>
@@ -2946,7 +3030,7 @@ const AdminDashboard = () => {
                 <Label htmlFor="estado">Estado</Label>
                 <Select
                   id="estado"
-                  value={selectedTurno.Estado}
+                  value={selectedTurno.estado}
                   onChange={(e) =>
                     actualizarEstadoTurno(selectedTurno._id, e.target.value)
                   }
@@ -2957,15 +3041,29 @@ const AdminDashboard = () => {
                   <option value="Cancelado">Cancelado</option>
                 </Select>
               </div>
-              {selectedTurno.Servicios &&
-                selectedTurno.Servicios.length > 0 && (
+              {selectedTurno.servicios &&
+                selectedTurno.servicios.length > 0 && (
                   <div>
                     <Label>Servicios</Label>
-                    <div className="mt-2">
-                      {selectedTurno.Servicios.map((servicio, index) => (
-                        <div key={index} className="flex justify-between">
-                          <span>{servicio.name}</span>
-                          <span>${servicio.price}</span>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {selectedTurno.servicios.map((servicio, index) => (
+                        <div
+                          key={index}
+                          className="bg-green-50 border border-green-200 rounded-lg p-3 flex-1 min-w-[200px]"
+                        >
+                          <div className="flex justify-between items-center">
+                            <span className="font-medium text-green-800">
+                              {servicio.nombre}
+                            </span>
+                            <span className="font-bold text-green-600">
+                              ${servicio.precio?.toLocaleString() || 0}
+                            </span>
+                          </div>
+                          {servicio.duracion && (
+                            <div className="text-xs text-green-600 mt-1">
+                              Duración: {servicio.duracion} min
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
