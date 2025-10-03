@@ -1015,10 +1015,23 @@ const AdminDashboard = () => {
           </div>
           <div className="text-right">{formatearEstado(turno.estado)}</div>
         </div>
-        <div className="flex justify-between items-center">
-          <div className="text-sm text-gray-300">
+        <div className="flex justify-between items-start">
+          <div className="text-sm text-gray-300 flex-1">
             <p>Tel: {turno.numeroCliente || "N/A"}</p>
-            <p>Costo: ${turno.costoTotal || 0}</p>
+            <p className="font-semibold text-green-400">
+              Costo: ${turno.costoTotal || 0}
+            </p>
+            {turno.servicios && turno.servicios.length > 0 && (
+              <div className="text-xs text-gray-400 mt-1">
+                <p className="font-medium mb-1">Servicios:</p>
+                {turno.servicios.map((servicio, index) => (
+                  <div key={index} className="mb-1">
+                    • {servicio.nombre} - $
+                    {servicio.precio?.toLocaleString() || 0}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
           <Button
             size="sm"
@@ -1265,7 +1278,22 @@ const AdminDashboard = () => {
                         </Table.Cell>
                         <Table.Cell>{turno.numeroCliente || "-"}</Table.Cell>
                         <Table.Cell>{formatearEstado(turno.estado)}</Table.Cell>
-                        <Table.Cell>${turno.costoTotal || 0}</Table.Cell>
+                        <Table.Cell>
+                          <div className="text-sm">
+                            <div className="font-semibold text-green-600">
+                              ${turno.costoTotal || 0}
+                            </div>
+                            {turno.servicios && turno.servicios.length > 0 && (
+                              <div className="text-xs text-gray-600 mt-1 flex flex-row gap-2 flex-wrap">
+                                {turno.servicios.map((servicio, index) => (
+                                  <div key={index} className="mb-0">
+                                    - {servicio.nombre}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </Table.Cell>
                         <Table.Cell>
                           <Button
                             size="sm"
