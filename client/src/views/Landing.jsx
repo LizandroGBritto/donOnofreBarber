@@ -46,6 +46,19 @@ const Landing = () => {
 
     // Cargar turnos al montar el componente
     fetchTurnos();
+
+    // Cargar script de Elfsight para Instagram feed
+    const script = document.createElement("script");
+    script.src = "https://elfsightcdn.com/platform.js";
+    script.async = true;
+    document.head.appendChild(script);
+
+    // Cleanup function
+    return () => {
+      if (script.parentNode) {
+        script.parentNode.removeChild(script);
+      }
+    };
   }, [getUserId, fetchTurnos]);
 
   return (
@@ -65,6 +78,20 @@ const Landing = () => {
         </div>
         <div className="bg-black">
           <Servicios />
+        </div>
+        <div className="bg-gray-800 py-16">
+          <div className="container mx-auto px-4">
+            <h2 className="text-4xl font-bold text-white text-center mb-12">
+              Mira nuestros últimos cortes
+            </h2>
+            <div className="flex justify-center">
+              {/* Elfsight Instagram Feed | Untitled Instagram Feed */}
+              <div
+                className="elfsight-app-db56f908-49b4-4c9c-957a-d30decec426d"
+                data-elfsight-app-lazy
+              ></div>
+            </div>
+          </div>
         </div>
         <Footer footerRef={footerRef} />
       </div>
