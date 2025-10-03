@@ -196,7 +196,6 @@ const AdminDashboard = () => {
     try {
       setLoading(true);
       const response = await axios.get("http://localhost:8000/api/agenda");
-      console.log("Turnos obtenidos:", response.data.agendas);
       setTurnos(response.data.agendas || []);
 
       // Si no hay filtros establecidos, usar el día de hoy
@@ -217,13 +216,6 @@ const AdminDashboard = () => {
   // Filtrar turnos por fecha, estado y búsqueda
   const filtrarTurnos = () => {
     let filtered = [...turnos];
-    console.log("Turnos originales:", turnos.length);
-    console.log("Filtros activos:", {
-      fechaDesde,
-      fechaHasta,
-      filtroEstado,
-      busqueda,
-    });
 
     // Filtro por fecha
     if (fechaDesde) {
@@ -264,7 +256,6 @@ const AdminDashboard = () => {
       );
     }
 
-    console.log("Turnos filtrados:", filtered.length);
     setFilteredTurnos(filtered);
   };
 
@@ -1027,7 +1018,7 @@ const AdminDashboard = () => {
         <div className="flex justify-between items-center">
           <div className="text-sm text-gray-300">
             <p>Tel: {turno.numeroCliente || "N/A"}</p>
-            <p>Costo: ${turno.costo || 0}</p>
+            <p>Costo: ${turno.costoTotal || 0}</p>
           </div>
           <Button
             size="sm"
@@ -1274,7 +1265,7 @@ const AdminDashboard = () => {
                         </Table.Cell>
                         <Table.Cell>{turno.numeroCliente || "-"}</Table.Cell>
                         <Table.Cell>{formatearEstado(turno.estado)}</Table.Cell>
-                        <Table.Cell>${turno.costo || 0}</Table.Cell>
+                        <Table.Cell>${turno.costoTotal || 0}</Table.Cell>
                         <Table.Cell>
                           <Button
                             size="sm"
@@ -2919,7 +2910,7 @@ const AdminDashboard = () => {
                 <Label htmlFor="costo">Costo</Label>
                 <TextInput
                   id="costo"
-                  value={`$${selectedTurno.Costo || 0}`}
+                  value={`$${selectedTurno.costoTotal || 0}`}
                   readOnly
                 />
               </div>
