@@ -1,5 +1,5 @@
 import LoginForm from "../components/LoginForm";
-import backgroundImage from "../assets/assets_template/AlonzoStylev2.png";
+import backgroundImage from "../assets/assets_template/AlonzoStylev2.webp";
 
 const Login = () => {
   return (
