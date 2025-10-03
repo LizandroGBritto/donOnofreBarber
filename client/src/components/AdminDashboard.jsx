@@ -42,7 +42,9 @@ const AdminDashboard = () => {
 
     const nombreCliente = turno.nombreCliente || "Cliente";
     const fecha = formatearFecha(turno.fecha);
-    const dia = new Date(turno.fecha).toLocaleDateString("es-PY", { weekday: "long" });
+    const dia = new Date(turno.fecha).toLocaleDateString("es-PY", {
+      weekday: "long",
+    });
     const barbero = turno.barbero ? turno.barbero.nombre : "un barbero";
     const hora = turno.hora;
     const servicios =
@@ -50,12 +52,24 @@ const AdminDashboard = () => {
         ? turno.servicios.map((s) => s.nombre).join(", ")
         : "sus servicios";
 
-    const mensaje =
+    // Construir mensaje base
+    let mensaje =
       `¡Hola ${nombreCliente}! 👋\n\n` +
       `💈 Te escribimos desde Alonzo Style para recordarte tu cita programada para el ${dia} ${fecha} a las ${hora} con el barbero ${barbero}.\n\n` +
-       `💈 Servicios: ${servicios}\n\n` +
-      `💈 Se recomienda llegar 10 minutos antes de la cita, en caso de no poder asistir, por favor avísanos con anticipación para poder reprogramar tu cita.\n\n` +
-      `¡Te esperamos! 💈`;
+      `💈 Servicios: ${servicios}\n\n` +
+      `💈 Se recomienda llegar 10 minutos antes de la cita, en caso de no poder asistir, por favor avísanos con anticipación para poder reprogramar tu cita.\n\n`;
+
+    // Agregar ubicación si está disponible
+    if (ubicacion) {
+      mensaje += `📍 Te esperamos aquí: ${ubicacion.direccion}\n`;
+      if (ubicacion.enlaceMaps) {
+        mensaje += `🗺️ Ver ubicación: ${ubicacion.enlaceMaps}\n\n`;
+      } else {
+        mensaje += `\n`;
+      }
+    }
+
+    mensaje += `¡Te esperamos! 💈`;
 
     const enlaceWhatsApp = `https://api.whatsapp.com/send?phone=${numeroWhatsApp}&text=${encodeURIComponent(
       mensaje
@@ -944,6 +958,7 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     fetchStats();
+    fetchUbicacion();
   }, []);
 
   // Funciones para el modal de imágenes
