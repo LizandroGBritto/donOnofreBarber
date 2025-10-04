@@ -41,8 +41,11 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
 
   const refreshData = useCallback(() => {
     axios
-      .get("http://localhost:8000/api/agenda")
+      .get("http://localhost:8000/api/agenda/landing")
       .then((res) => {
+        console.log("📅 TURNOS LANDING (LIMPIOS):", res.data.agendas);
+        console.log("📊 Total de turnos mostrados:", res.data.agendas.length);
+        console.log("ℹ️ Mensaje:", res.data.mensaje);
         setHorarios(res.data.agendas);
         setIsLoading(false);
 
@@ -82,7 +85,8 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
     (_, index) => index >= diaActualIndex
   );
 
-  // Filtrar los horarios por fecha específica (no solo día de la semana)
+  // Como el backend ahora devuelve datos limpios (un turno por hora),
+  // solo necesitamos filtrar por fecha/día seleccionado
   const horariosFiltrados = horarios
     .filter((agenda) => {
       if (!selectedDay) {

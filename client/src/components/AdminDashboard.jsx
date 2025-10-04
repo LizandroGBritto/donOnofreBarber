@@ -1064,7 +1064,7 @@ const AdminDashboard = () => {
 
   return (
     <div className="p-4 md:p-6">
-      <Card className="mb-6" style={{ backgroundColor: "#5B4373" }}>
+      <Card className="mb-6" style={{ backgroundColor: "rgb(77, 55, 119)" }}>
         <div className="flex flex-col md:flex-row justify-between items-center gap-4">
           <h2 className="text-xl md:text-2xl font-bold text-white text-center md:text-left">
             Panel de Administración
@@ -1143,7 +1143,10 @@ const AdminDashboard = () => {
       {activeView === "turnos" && (
         <div>
           {/* Filtros */}
-          <Card className="mb-6" style={{ backgroundColor: "#5B4373" }}>
+          <Card
+            className="mb-6"
+            style={{ backgroundColor: "rgb(77, 55, 119)" }}
+          >
             <div className="space-y-4">
               {/* Fila 1: Fechas */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -2979,7 +2982,7 @@ const AdminDashboard = () => {
                               {servicio.nombre}
                             </span>
                             <span className="font-bold text-green-600">
-                              ${servicio.precio?.toLocaleString() || 0}
+                              Gs.{servicio.precio?.toLocaleString() || 0}
                             </span>
                           </div>
                           {servicio.duracion && (

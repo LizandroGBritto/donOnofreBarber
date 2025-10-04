@@ -160,6 +160,9 @@ const FormReservarConBarbero = ({
         reservaData
       );
 
+      // Refresh data antes de mostrar el mensaje de éxito
+      await refreshData();
+
       Swal.fire({
         icon: "success",
         title: "¡Reserva Exitosa!",
@@ -171,7 +174,6 @@ const FormReservarConBarbero = ({
         confirmButtonText: "¡Perfecto!",
       });
 
-      refreshData();
       onCloseModal();
     } catch (error) {
       console.error("Error al reservar:", error);
@@ -196,6 +198,14 @@ const FormReservarConBarbero = ({
   const horaDisponibilidad = disponibilidad[turno.hora];
   const barberosDisponibles = horaDisponibilidad?.barberosDisponibles || [];
   const barberosOcupados = horaDisponibilidad?.barberosOcupados || [];
+
+  // Debug logs
+  console.log("🔍 Debug FormReservarConBarbero:");
+  console.log("   - Turno:", turno);
+  console.log("   - Hora disponibilidad:", horaDisponibilidad);
+  console.log("   - Barberos disponibles:", barberosDisponibles);
+  console.log("   - Barberos ocupados:", barberosOcupados);
+  console.log("   - Disponibilidad completa:", disponibilidad);
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -280,7 +290,7 @@ const FormReservarConBarbero = ({
                           (b) => b._id === barbero._id
                         );
                         const estaOcupado = barberosOcupados.some(
-                          (bo) => bo.barbero._id === barbero._id
+                          (bo) => bo.barbero && bo.barbero._id === barbero._id
                         );
 
                         return (

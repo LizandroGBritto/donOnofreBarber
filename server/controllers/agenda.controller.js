@@ -265,6 +265,363 @@ module.exports = {
       );
   },
 
+  // Nuevo endpoint: Obtener turnos con disponibilidad por barberos
+  getTurnosConDisponibilidad: async (req, res) => {
+    try {
+      const BarberoModel = require("../models/barbero.model");
+
+      // Obtener todos los barberos activos
+      const barberosActivos = await BarberoModel.find({ activo: true });
+      const totalBarberos = barberosActivos.length;
+
+      if (totalBarberos === 0) {
+        return res.status(200).json({ agendas: [] });
+      }
+
+      // Obtener todos los turnos
+      const allTurnos = await AgendaModel.find({})
+        .populate("barbero", "nombre foto")
+        .sort({ fecha: 1, hora: 1 });
+
+      // Agrupar turnos por fecha y hora
+      const turnosPorFechaHora = {};
+      allTurnos.forEach((turno) => {
+        const fechaKey = ParaguayDateUtil.getDateOnly(turno.fecha);
+        const horaKey = turno.hora;
+        const key = `${fechaKey}-${horaKey}`;
+
+        if (!turnosPorFechaHora[key]) {
+          turnosPorFechaHora[key] = {
+            fecha: turno.fecha,
+            hora: turno.hora,
+            diaSemana: turno.diaSemana,
+            turnos: [],
+          };
+        }
+        turnosPorFechaHora[key].turnos.push(turno);
+      });
+
+      // Crear turnos virtuales con estado de disponibilidad basado en barberos
+      const turnosVirtuales = [];
+
+      Object.values(turnosPorFechaHora).forEach((grupo) => {
+        const turnosOcupados = grupo.turnos.filter(
+          (t) => t.estado !== "disponible" && t.barbero
+        );
+
+        const barberosOcupados = turnosOcupados.length;
+        const hayDisponibilidad = barberosOcupados < totalBarberos;
+
+        // Si hay un turno del usuario, mostrarlo
+        const turnoUsuario = grupo.turnos.find(
+          (t) => t.nombreCliente && t.nombreCliente !== ""
+        );
+
+        if (turnoUsuario) {
+          turnosVirtuales.push(turnoUsuario);
+        } else {
+          // Crear un turno virtual que represente la disponibilidad general
+          const turnoVirtual = {
+            _id: `virtual-${grupo.fecha.getTime()}-${grupo.hora}`,
+            fecha: grupo.fecha,
+            hora: grupo.hora,
+            diaSemana: grupo.diaSemana,
+            estado: hayDisponibilidad ? "disponible" : "reservado",
+            nombreCliente: "",
+            numeroCliente: "",
+            emailCliente: "",
+            barbero: null,
+            nombreBarbero: "",
+            servicios: [],
+            costoTotal: 0,
+            costoServicios: 0,
+            barberosDisponibles: totalBarberos - barberosOcupados,
+            totalBarberos: totalBarberos,
+          };
+          turnosVirtuales.push(turnoVirtual);
+        }
+      });
+
+      res.status(200).json({ agendas: turnosVirtuales });
+    } catch (error) {
+      console.error("Error al obtener turnos con disponibilidad:", error);
+      res.status(500).json({
+        message: "Error al obtener turnos",
+        error: error.message,
+      });
+    }
+  },
+
+  // Endpoint: Obtener disponibilidad de barberos por fecha específica
+  getDisponibilidadPorFecha: async (req, res) => {
+    try {
+      const { fecha } = req.params;
+      const BarberoModel = require("../models/barbero.model");
+
+      // Obtener todos los barberos activos
+      const barberosActivos = await BarberoModel.find({ activo: true });
+
+      // Buscar todos los turnos para esa fecha
+      const fechaInicio = new Date(fecha);
+      fechaInicio.setHours(0, 0, 0, 0);
+
+      const fechaFin = new Date(fecha);
+      fechaFin.setHours(23, 59, 59, 999);
+
+      const turnosFecha = await AgendaModel.find({
+        fecha: {
+          $gte: fechaInicio,
+          $lte: fechaFin,
+        },
+      }).populate("barbero", "nombre foto");
+
+      // Agrupar por hora
+      const disponibilidadPorHora = {};
+
+      // Inicializar todas las horas con todos los barberos disponibles
+      const horasDisponibles = [...new Set(turnosFecha.map((t) => t.hora))];
+
+      horasDisponibles.forEach((hora) => {
+        const turnosHora = turnosFecha.filter((t) => t.hora === hora);
+        const turnosOcupados = turnosHora.filter(
+          (t) => t.estado !== "disponible" && t.barbero
+        );
+        const barberosOcupados = turnosOcupados.map((t) => ({
+          barbero: t.barbero,
+          turno: t,
+        }));
+
+        const barberosDisponibles = barberosActivos.filter(
+          (barbero) =>
+            !turnosOcupados.some(
+              (turnoOcupado) =>
+                turnoOcupado.barbero._id.toString() === barbero._id.toString()
+            )
+        );
+
+        disponibilidadPorHora[hora] = {
+          barberosDisponibles,
+          barberosOcupados,
+          totalDisponibles: barberosDisponibles.length,
+          totalOcupados: barberosOcupados.length,
+        };
+      });
+
+      res.status(200).json({
+        disponibilidad: disponibilidadPorHora,
+        totalBarberos: barberosActivos.length,
+      });
+    } catch (error) {
+      console.error("Error al obtener disponibilidad por fecha:", error);
+      res.status(500).json({
+        message: "Error al obtener disponibilidad",
+        error: error.message,
+      });
+    }
+  },
+
+  // Endpoint específico para la landing - Vista limpia con un turno por hora
+  getTurnosLanding: async (req, res) => {
+    try {
+      console.log("🚀 INICIANDO getTurnosLanding");
+
+      // Obtener todos los turnos
+      const allTurnos = await AgendaModel.find({})
+        .populate("barbero", "nombre foto")
+        .sort({ fecha: 1, hora: 1 });
+
+      console.log(`🔍 Total turnos encontrados en BD: ${allTurnos.length}`);
+
+      // Log de primeros 5 turnos para análisis
+      allTurnos.slice(0, 5).forEach((turno, index) => {
+        const fechaString = new Date(turno.fecha).toISOString().split("T")[0];
+        console.log(
+          `📋 Turno ${index + 1}: ${fechaString} ${turno.hora} - Estado: ${
+            turno.estado
+          } - Cliente: "${turno.nombreCliente || "VACIO"}" - ID: ${turno._id}`
+        );
+      });
+
+      // Agrupar turnos por fecha y hora usando un Map para mejor control
+      const turnosPorFechaHora = new Map();
+
+      allTurnos.forEach((turno, index) => {
+        // Crear clave más robusta
+        const fecha = new Date(turno.fecha);
+        const fechaString = fecha.toISOString().split("T")[0]; // YYYY-MM-DD
+        const key = `${fechaString}|${turno.hora}`;
+
+        console.log(
+          `🔑 Procesando turno ${index + 1}: Key="${key}" - Estado: ${
+            turno.estado
+          } - Cliente: "${turno.nombreCliente || "VACIO"}"`
+        );
+
+        if (!turnosPorFechaHora.has(key)) {
+          console.log(`✨ CREANDO nuevo grupo para key: ${key}`);
+          turnosPorFechaHora.set(key, {
+            fecha: turno.fecha,
+            hora: turno.hora,
+            diaSemana: turno.diaSemana,
+            disponibles: [],
+            ocupados: [],
+            usuarios: [], // Turnos con cliente asignado
+          });
+        } else {
+          console.log(`📂 AGREGANDO a grupo existente: ${key}`);
+        }
+
+        const grupo = turnosPorFechaHora.get(key);
+
+        if (turno.nombreCliente && turno.nombreCliente.trim() !== "") {
+          grupo.usuarios.push(turno);
+          console.log(
+            `👤 -> Agregado a USUARIOS (${grupo.usuarios.length} total)`
+          );
+        } else if (turno.estado === "disponible") {
+          grupo.disponibles.push(turno);
+          console.log(
+            `✅ -> Agregado a DISPONIBLES (${grupo.disponibles.length} total)`
+          );
+        } else {
+          grupo.ocupados.push(turno);
+          console.log(
+            `❌ -> Agregado a OCUPADOS (${grupo.ocupados.length} total)`
+          );
+        }
+      });
+
+      console.log(`📊 RESUMEN AGRUPACIÓN:`);
+      console.log(`   - Total grupos únicos: ${turnosPorFechaHora.size}`);
+
+      // Log detallado de cada grupo
+      turnosPorFechaHora.forEach((grupo, key) => {
+        console.log(
+          `🏷️  Grupo "${key}": Disponibles=${grupo.disponibles.length}, Ocupados=${grupo.ocupados.length}, Usuarios=${grupo.usuarios.length}`
+        );
+      });
+
+      // Crear vista limpia: un turno por hora, priorizando DISPONIBLES
+      const turnosLimpios = [];
+
+      turnosPorFechaHora.forEach((grupo, key) => {
+        console.log(`🎯 PROCESANDO GRUPO: ${key}`);
+        let turnoRepresentativo;
+
+        // Prioridad 1: Si hay turnos disponibles, mostrar el primero (SIEMPRE PRIMERO)
+        if (grupo.disponibles.length > 0) {
+          turnoRepresentativo = {
+            ...grupo.disponibles[0]._doc,
+            cantidadDisponibles: grupo.disponibles.length,
+            cantidadOcupados: grupo.ocupados.length,
+            cantidadUsuarios: grupo.usuarios.length,
+            hayDisponibilidad: true,
+            esUsuario: false,
+          };
+          console.log(
+            `✅ SELECCIONADO: Disponible (prioridad 1) - ID: ${grupo.disponibles[0]._id}`
+          );
+        }
+        // Prioridad 2: Si NO hay disponibles pero hay usuarios, mostrar el primero
+        else if (grupo.usuarios.length > 0) {
+          turnoRepresentativo = {
+            ...grupo.usuarios[0]._doc,
+            cantidadDisponibles: 0,
+            cantidadOcupados: grupo.ocupados.length,
+            cantidadUsuarios: grupo.usuarios.length,
+            hayDisponibilidad: false,
+            esUsuario: true,
+          };
+          console.log(
+            `👤 SELECCIONADO: Usuario (sin disponibles) (${grupo.usuarios[0].nombreCliente}) - ID: ${grupo.usuarios[0]._id}`
+          );
+        }
+        // Prioridad 3: Si NO hay disponibles ni usuarios, mostrar ocupado
+        else if (grupo.ocupados.length > 0) {
+          turnoRepresentativo = {
+            ...grupo.ocupados[0]._doc,
+            cantidadDisponibles: 0,
+            cantidadOcupados: grupo.ocupados.length,
+            cantidadUsuarios: grupo.usuarios.length,
+            hayDisponibilidad: false,
+            esUsuario: false,
+          };
+          console.log(
+            `❌ SELECCIONADO: Ocupado (sin disponibles) - ID: ${grupo.ocupados[0]._id}`
+          );
+        } else {
+          console.log(`⚠️  NO HAY TURNOS para agregar en grupo: ${key}`);
+        }
+
+        if (turnoRepresentativo) {
+          turnosLimpios.push(turnoRepresentativo);
+          console.log(
+            `✅ AGREGADO AL RESULTADO FINAL: ${key} - Total turnos limpios: ${turnosLimpios.length}`
+          );
+        }
+      });
+
+      console.log(`🎯 RESULTADO FINAL:`);
+      console.log(`   - Turnos limpios generados: ${turnosLimpios.length}`);
+      console.log(
+        `   - Debería ser igual a grupos únicos: ${turnosPorFechaHora.size}`
+      );
+
+      // Log de turnos finales para verificar duplicados
+      const keysFinal = turnosLimpios.map((t) => {
+        const fechaString = new Date(t.fecha).toISOString().split("T")[0];
+        return `${fechaString}|${t.hora}`;
+      });
+      const keysUnicas = [...new Set(keysFinal)];
+
+      console.log(`🔍 VERIFICACIÓN DUPLICADOS:`);
+      console.log(`   - Keys en resultado: ${keysFinal.length}`);
+      console.log(`   - Keys únicas: ${keysUnicas.length}`);
+
+      if (keysFinal.length !== keysUnicas.length) {
+        console.log(`❗ DUPLICADOS DETECTADOS:`);
+        const duplicados = keysFinal.filter(
+          (key, index) => keysFinal.indexOf(key) !== index
+        );
+        duplicados.forEach((key) => {
+          console.log(`   - Key duplicada: ${key}`);
+        });
+      }
+
+      // Ordenar por fecha y hora
+      turnosLimpios.sort((a, b) => {
+        const fechaA = new Date(a.fecha);
+        const fechaB = new Date(b.fecha);
+        if (fechaA.getTime() !== fechaB.getTime()) {
+          return fechaA - fechaB;
+        }
+        const horaA = parseInt(a.hora.replace(":", ""), 10);
+        const horaB = parseInt(b.hora.replace(":", ""), 10);
+        return horaA - horaB;
+      });
+
+      console.log(
+        `🏁 FINALIZANDO getTurnosLanding - Enviando ${turnosLimpios.length} turnos`
+      );
+
+      res.status(200).json({
+        agendas: turnosLimpios,
+        mensaje: "Vista optimizada para landing - un turno por hora",
+        estadisticas: {
+          totalTurnos: allTurnos.length,
+          gruposUnicos: turnosPorFechaHora.size,
+          turnosLimpios: turnosLimpios.length,
+        },
+      });
+    } catch (error) {
+      console.error("❌ ERROR en getTurnosLanding:", error);
+      res.status(500).json({
+        message: "Error al obtener turnos para landing",
+        error: error.message,
+      });
+    }
+  },
+
   // Nuevo endpoint para obtener estadísticas del dashboard
   getEstadisticas: async (req, res) => {
     try {
@@ -616,51 +973,60 @@ module.exports = {
         });
       }
 
-      // Buscar un turno disponible para esta fecha/hora
-      let turnoDisponible = await AgendaModel.findOne({
+      // Crear un nuevo turno específico para este barbero (no modificar turnos existentes)
+      const nuevoTurno = new AgendaModel({
         fecha: fechaObj,
         hora: hora,
-        estado: "disponible",
-        barbero: null,
+        diaSemana: ParaguayDateUtil.getDayOfWeek(fechaObj),
+        estado: "reservado",
+        barbero: barberoId,
+        nombreBarbero: barbero.nombre,
+        nombreCliente: nombreCliente,
+        numeroCliente: numeroCliente,
+        servicios: servicios,
+        fechaReserva: new Date(),
+        creadoAutomaticamente: false,
       });
-
-      // Si no existe turno, crear uno nuevo
-      if (!turnoDisponible) {
-        turnoDisponible = new AgendaModel({
-          fecha: fechaObj,
-          hora: hora,
-          estado: "disponible",
-          creadoAutomaticamente: false,
-        });
-      }
-
-      // Reservar el turno con el barbero
-      turnoDisponible.estado = "reservado";
-      turnoDisponible.barbero = barberoId;
-      turnoDisponible.nombreBarbero = barbero.nombre;
-      turnoDisponible.nombreCliente = nombreCliente;
-      turnoDisponible.numeroCliente = numeroCliente;
-      turnoDisponible.servicios = servicios;
-      turnoDisponible.fechaReserva = new Date();
 
       // Calcular costo total si hay servicios
       if (servicios.length > 0) {
-        turnoDisponible.calcularCostoTotal();
+        nuevoTurno.calcularCostoTotal();
       }
 
-      await turnoDisponible.save();
+      await nuevoTurno.save();
 
       // Populate el barbero para la respuesta
-      await turnoDisponible.populate("barbero", "nombre foto");
+      await nuevoTurno.populate("barbero", "nombre foto");
 
       res.status(200).json({
         message: "Turno reservado exitosamente",
-        turno: turnoDisponible,
+        turno: nuevoTurno,
       });
     } catch (error) {
       console.error("Error al reservar turno con barbero:", error);
       res.status(500).json({
         message: "Error al reservar turno",
+        error: error.message,
+      });
+    }
+  },
+
+  // Migrar agenda al nuevo sistema multi-barbero
+  migrarAgendaMultiBarbero: async (req, res) => {
+    try {
+      const AgendaGeneratorService = require("../services/agendaGenerator.service");
+      const generatorService = new AgendaGeneratorService();
+
+      const resultado = await generatorService.migrarAgendaMultiBarbero();
+
+      res.status(200).json({
+        message: "Migración completada exitosamente",
+        ...resultado,
+      });
+    } catch (error) {
+      console.error("Error en migración:", error);
+      res.status(500).json({
+        message: "Error durante la migración",
         error: error.message,
       });
     }

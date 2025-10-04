@@ -5,6 +5,15 @@ const AgendaController = require("../controllers/agenda.controller");
 const AgendaRouter = express.Router();
 
 AgendaRouter.get("/", AgendaController.getAllAgendas);
+AgendaRouter.get(
+  "/disponibilidad",
+  AgendaController.getTurnosConDisponibilidad
+);
+AgendaRouter.get(
+  "/disponibilidad/:fecha",
+  AgendaController.getDisponibilidadPorFecha
+);
+AgendaRouter.get("/landing", AgendaController.getTurnosLanding);
 
 // Nuevas rutas para estadísticas y generación de turnos
 AgendaRouter.get("/diagnostico", AgendaController.diagnosticoHorarios);
@@ -20,6 +29,12 @@ AgendaRouter.post(
 );
 AgendaRouter.get("/dashboard/estadisticas", AgendaController.getEstadisticas);
 AgendaRouter.post("/generar-turnos", AgendaController.generarTurnosMes);
+
+// Nueva ruta para migración multi-barbero
+AgendaRouter.post(
+  "/migrar-multi-barbero",
+  AgendaController.migrarAgendaMultiBarbero
+);
 
 // Nuevas rutas para manejo de barberos
 AgendaRouter.get(

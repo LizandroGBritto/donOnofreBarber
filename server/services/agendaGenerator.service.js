@@ -1,5 +1,6 @@
 const AgendaModel = require("../models/agenda.model");
 const HorarioModel = require("../models/horario.model");
+const BarberoModel = require("../models/barbero.model");
 const ParaguayDateUtil = require("../utils/paraguayDate");
 
 class AgendaGeneratorService {
@@ -92,41 +93,65 @@ class AgendaGeneratorService {
       const turnosExistentes = await AgendaModel.find({
         fecha: { $gte: startOfDay, $lte: endOfDay },
       });
-      const horasExistentes = turnosExistentes.map((turno) => turno.hora);
+
+      // Obtener barberos activos
+      const barberosActivos = await BarberoModel.find({ activo: true });
+      console.log(`📋 Barberos activos encontrados: ${barberosActivos.length}`);
+
+      // Si no hay barberos, generar al menos 1 turno por defecto
+      const cantidadTurnos =
+        barberosActivos.length > 0 ? barberosActivos.length : 1;
 
       // Crear turnos para slots que no existen
       const fechaNormalizada = ParaguayDateUtil.toParaguayTime(fecha).toDate();
       fechaNormalizada.setHours(12, 0, 0, 0); // Normalizar a mediodía para evitar problemas de timezone
 
       for (const slot of slots) {
-        if (!horasExistentes.includes(slot)) {
-          try {
-            await AgendaModel.create({
-              fecha: fechaNormalizada,
-              hora: slot,
-              diaSemana,
-              estado: "disponible",
-              creadoAutomaticamente: true,
-            });
+        // Verificar si ya existe algún turno para esta hora y fecha
+        const turnosEnHora = turnosExistentes.filter(
+          (turno) => turno.hora === slot
+        );
+        const turnosNecesarios = cantidadTurnos - turnosEnHora.length;
 
-            resultados.generados++;
-            resultados.slots.push({
-              hora: slot,
-              estado: "generado",
-            });
-          } catch (error) {
-            console.error(`Error al crear turno ${slot} para ${fecha}:`, error);
-            resultados.errores++;
-            resultados.slots.push({
-              hora: slot,
-              estado: "error",
-              error: error.message,
-            });
+        if (turnosNecesarios > 0) {
+          // Generar los turnos faltantes
+          for (let i = 0; i < turnosNecesarios; i++) {
+            try {
+              const barberoAsignado =
+                barberosActivos.length > 0
+                  ? barberosActivos[i % barberosActivos.length]
+                  : null;
+
+              await AgendaModel.create({
+                fecha: fechaNormalizada,
+                hora: slot,
+                diaSemana,
+                estado: "disponible",
+                barbero: barberoAsignado ? barberoAsignado._id : null,
+                creadoAutomaticamente: true,
+              });
+
+              resultados.generados++;
+            } catch (error) {
+              console.error(
+                `Error al crear turno ${slot} para ${fecha}:`,
+                error
+              );
+              resultados.errores++;
+            }
           }
+
+          resultados.slots.push({
+            hora: slot,
+            estado: "generado",
+            turnosCreados: turnosNecesarios,
+            totalTurnos: cantidadTurnos,
+          });
         } else {
           resultados.slots.push({
             hora: slot,
             estado: "existente",
+            turnosExistentes: turnosEnHora.length,
           });
         }
       }
@@ -299,6 +324,83 @@ class AgendaGeneratorService {
       };
     } catch (error) {
       console.error("Error al obtener estadísticas:", error);
+      throw error;
+    }
+  }
+
+  // Función para migrar agenda existente al nuevo sistema (un turno por barbero)
+  async migrarAgendaMultiBarbero() {
+    try {
+      console.log(
+        "🔄 Iniciando migración de agenda a sistema multi-barbero..."
+      );
+
+      const barberosActivos = await BarberoModel.find({ activo: true });
+      const cantidadBarberos =
+        barberosActivos.length > 0 ? barberosActivos.length : 1;
+
+      console.log(`👥 Barberos activos encontrados: ${cantidadBarberos}`);
+
+      // Obtener todos los turnos únicos (fecha + hora)
+      const turnosUnicos = await AgendaModel.aggregate([
+        {
+          $group: {
+            _id: { fecha: "$fecha", hora: "$hora", diaSemana: "$diaSemana" },
+            turnos: { $push: "$$ROOT" },
+            count: { $sum: 1 },
+          },
+        },
+      ]);
+
+      let migrados = 0;
+      let errores = 0;
+
+      for (const grupo of turnosUnicos) {
+        const { fecha, hora, diaSemana } = grupo._id;
+        const turnosExistentes = grupo.turnos;
+
+        // Si hay menos turnos de los que deberían haber (uno por barbero)
+        if (turnosExistentes.length < cantidadBarberos) {
+          const turnosNecesarios = cantidadBarberos - turnosExistentes.length;
+
+          for (let i = 0; i < turnosNecesarios; i++) {
+            try {
+              const barberoIndex =
+                (turnosExistentes.length + i) % barberosActivos.length;
+              const barberoAsignado =
+                barberosActivos.length > 0
+                  ? barberosActivos[barberoIndex]
+                  : null;
+
+              await AgendaModel.create({
+                fecha: fecha,
+                hora: hora,
+                diaSemana: diaSemana,
+                estado: "disponible",
+                barbero: barberoAsignado ? barberoAsignado._id : null,
+                creadoAutomaticamente: true,
+                migrado: true,
+              });
+
+              migrados++;
+            } catch (error) {
+              console.error(
+                `Error al migrar turno ${hora} del ${fecha}:`,
+                error
+              );
+              errores++;
+            }
+          }
+        }
+      }
+
+      console.log(`✅ Migración completada:`);
+      console.log(`   - Turnos migrados: ${migrados}`);
+      console.log(`   - Errores: ${errores}`);
+
+      return { migrados, errores };
+    } catch (error) {
+      console.error("Error durante la migración:", error);
       throw error;
     }
   }

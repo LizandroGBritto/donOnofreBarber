@@ -28,10 +28,12 @@ const Landing = () => {
     return userId;
   }, []);
 
-  // Función para cargar turnos desde la API (igual que en AdminDashboard)
+  // Función para cargar turnos desde la API usando el endpoint de landing filtrado
   const fetchTurnos = useCallback(async () => {
     try {
-      const response = await axios.get("http://localhost:8000/api/agenda");
+      const response = await axios.get(
+        "http://localhost:8000/api/agenda/landing"
+      );
       console.log("Turnos obtenidos en Landing:", response.data.agendas);
       setHorarios(response.data.agendas || []);
     } catch (error) {
