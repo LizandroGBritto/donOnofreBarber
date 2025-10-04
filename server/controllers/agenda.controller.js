@@ -425,6 +425,13 @@ module.exports = {
     try {
       console.log("🚀 INICIANDO getTurnosLanding");
 
+      // Obtener barberos activos para calcular disponibilidad
+      const BarberoModel = require("../models/barbero.model");
+      const barberosActivos = await BarberoModel.find({ activo: true });
+      const totalBarberos = barberosActivos.length;
+
+      console.log(`👥 Total barberos activos: ${totalBarberos}`);
+
       // Obtener todos los turnos
       const allTurnos = await AgendaModel.find({})
         .populate("barbero", "nombre foto")
@@ -501,15 +508,29 @@ module.exports = {
         );
       });
 
-      // Crear vista limpia: un turno por hora, priorizando DISPONIBLES
+      // Crear vista limpia: un turno por hora, considerando disponibilidad de barberos
       const turnosLimpios = [];
 
       turnosPorFechaHora.forEach((grupo, key) => {
         console.log(`🎯 PROCESANDO GRUPO: ${key}`);
+
+        // Calcular barberos ocupados en esta hora
+        const barberosOcupados =
+          grupo.usuarios.length +
+          grupo.ocupados.filter((t) => t.barbero).length;
+        const hayDisponibilidadDeBarberos = barberosOcupados < totalBarberos;
+
+        console.log(
+          `   📊 Barberos ocupados: ${barberosOcupados}/${totalBarberos}`
+        );
+        console.log(
+          `   🆓 Hay disponibilidad de barberos: ${hayDisponibilidadDeBarberos}`
+        );
+
         let turnoRepresentativo;
 
-        // Prioridad 1: Si hay turnos disponibles, mostrar el primero (SIEMPRE PRIMERO)
-        if (grupo.disponibles.length > 0) {
+        // Prioridad 1: Si hay turnos disponibles Y hay barberos disponibles, mostrar disponible
+        if (grupo.disponibles.length > 0 && hayDisponibilidadDeBarberos) {
           turnoRepresentativo = {
             ...grupo.disponibles[0]._doc,
             cantidadDisponibles: grupo.disponibles.length,
@@ -517,12 +538,34 @@ module.exports = {
             cantidadUsuarios: grupo.usuarios.length,
             hayDisponibilidad: true,
             esUsuario: false,
+            totalBarberos: totalBarberos,
+            barberosOcupados: barberosOcupados,
+            // Mantener estado original del turno disponible
+            estado: "disponible",
           };
           console.log(
-            `✅ SELECCIONADO: Disponible (prioridad 1) - ID: ${grupo.disponibles[0]._id}`
+            `✅ SELECCIONADO: Disponible (hay barberos libres) - ID: ${grupo.disponibles[0]._id}`
           );
         }
-        // Prioridad 2: Si NO hay disponibles pero hay usuarios, mostrar el primero
+        // Prioridad 2: Si hay turnos disponibles pero NO hay barberos disponibles, mostrar como reservado
+        else if (grupo.disponibles.length > 0 && !hayDisponibilidadDeBarberos) {
+          turnoRepresentativo = {
+            ...grupo.disponibles[0]._doc,
+            cantidadDisponibles: grupo.disponibles.length,
+            cantidadOcupados: grupo.ocupados.length,
+            cantidadUsuarios: grupo.usuarios.length,
+            hayDisponibilidad: false,
+            esUsuario: false,
+            totalBarberos: totalBarberos,
+            barberosOcupados: barberosOcupados,
+            // Cambiar estado a reservado porque no hay barberos disponibles
+            estado: "reservado",
+          };
+          console.log(
+            `🚫 SELECCIONADO: Disponible pero TODOS los barberos ocupados - ID: ${grupo.disponibles[0]._id}`
+          );
+        }
+        // Prioridad 3: Si NO hay disponibles pero hay usuarios, mostrar el primero
         else if (grupo.usuarios.length > 0) {
           turnoRepresentativo = {
             ...grupo.usuarios[0]._doc,
@@ -531,12 +574,14 @@ module.exports = {
             cantidadUsuarios: grupo.usuarios.length,
             hayDisponibilidad: false,
             esUsuario: true,
+            totalBarberos: totalBarberos,
+            barberosOcupados: barberosOcupados,
           };
           console.log(
             `👤 SELECCIONADO: Usuario (sin disponibles) (${grupo.usuarios[0].nombreCliente}) - ID: ${grupo.usuarios[0]._id}`
           );
         }
-        // Prioridad 3: Si NO hay disponibles ni usuarios, mostrar ocupado
+        // Prioridad 4: Si NO hay disponibles ni usuarios, mostrar ocupado
         else if (grupo.ocupados.length > 0) {
           turnoRepresentativo = {
             ...grupo.ocupados[0]._doc,
@@ -545,6 +590,8 @@ module.exports = {
             cantidadUsuarios: grupo.usuarios.length,
             hayDisponibilidad: false,
             esUsuario: false,
+            totalBarberos: totalBarberos,
+            barberosOcupados: barberosOcupados,
           };
           console.log(
             `❌ SELECCIONADO: Ocupado (sin disponibles) - ID: ${grupo.ocupados[0]._id}`
