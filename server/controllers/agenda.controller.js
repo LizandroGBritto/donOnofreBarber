@@ -1078,4 +1078,79 @@ module.exports = {
       });
     }
   },
+
+  // Endpoint para obtener información de horarios y semanas para el frontend
+  getHorariosYSemanas: async (req, res) => {
+    try {
+      // Obtener horarios activos (corregir el campo estado)
+      const horariosActivos = await HorarioModel.find({
+        estado: "activo",
+      }).lean();
+      console.log("🔍 Horarios encontrados:", horariosActivos.length);
+
+      // Mapear días de horarios activos
+      const diasActivosSet = new Set();
+      horariosActivos.forEach((horario) => {
+        console.log(
+          "📅 Procesando horario:",
+          horario.hora,
+          "días:",
+          horario.dias
+        );
+        horario.dias?.forEach((dia) => diasActivosSet.add(dia));
+      });
+
+      const diasActivos = Array.from(diasActivosSet);
+      console.log("📋 Días activos finales:", diasActivos);
+
+      // Generar próximas 4 semanas
+      const hoy = new Date();
+      const semanas = [];
+
+      for (let i = 0; i < 4; i++) {
+        const inicioSemana = new Date(hoy);
+        inicioSemana.setDate(hoy.getDate() + i * 7);
+
+        // Encontrar el lunes de esta semana
+        const diaSemana = inicioSemana.getDay();
+        const diasHastaLunes = diaSemana === 0 ? -6 : 1 - diaSemana;
+        inicioSemana.setDate(inicioSemana.getDate() + diasHastaLunes);
+
+        const finSemana = new Date(inicioSemana);
+        finSemana.setDate(inicioSemana.getDate() + 6);
+
+        semanas.push({
+          numero: i + 1,
+          inicioSemana: inicioSemana.toISOString().split("T")[0],
+          finSemana: finSemana.toISOString().split("T")[0],
+          label: `Semana ${i + 1} del ${inicioSemana
+            .getDate()
+            .toString()
+            .padStart(2, "0")}/${(inicioSemana.getMonth() + 1)
+            .toString()
+            .padStart(2, "0")} - ${finSemana
+            .getDate()
+            .toString()
+            .padStart(2, "0")}/${(finSemana.getMonth() + 1)
+            .toString()
+            .padStart(2, "0")}`,
+        });
+      }
+
+      res.status(200).json({
+        diasActivos,
+        semanas,
+        horariosActivos: horariosActivos.map((h) => ({
+          hora: h.hora,
+          dias: h.dias || [],
+        })),
+      });
+    } catch (error) {
+      console.error("Error al obtener horarios y semanas:", error);
+      res.status(500).json({
+        message: "Error al obtener horarios y semanas",
+        error: error.message,
+      });
+    }
+  },
 };

@@ -12,25 +12,70 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
   const [selectedId, setSelectedId] = useState(null);
   const [selectedTurno, setSelectedTurno] = useState(null);
   const [userHasReservation, setUserHasReservation] = useState(false);
-  const [selectedDay, setSelectedDay] = useState(null); // Estado para el día seleccionado
-
-  const diasSemana = [
-    "Domingo",
-    "Lunes",
-    "Martes",
-    "Miercoles",
-    "Jueves",
-    "Viernes",
-    "Sabado",
-  ];
+  const [selectedDay, setSelectedDay] = useState(null);
+  const [selectedWeek, setSelectedWeek] = useState(null);
+  const [diasActivos, setDiasActivos] = useState([]);
+  const [semanas, setSemanas] = useState([]);
 
   // Usar fechas de Paraguay
-  const hoy = ParaguayDateUtil.now();
   const diaHoy = ParaguayDateUtil.getDayOfWeek();
   // Capitalizar la primera letra para mostrar en el dropdown
   const diaHoyCapitalizado = diaHoy.charAt(0).toUpperCase() + diaHoy.slice(1);
 
   const UserId = getUserId();
+
+  // Cargar información de horarios y semanas
+  const loadHorariosYSemanas = useCallback(async () => {
+    console.log("🔄 Cargando horarios y semanas...");
+    try {
+      const response = await axios.get(
+        "http://localhost:8000/api/agenda/horarios-semanas"
+      );
+      const data = response.data;
+      console.log("📥 Respuesta del servidor:", data);
+
+      // Convertir días activos a formato capitalizado para mostrar
+      const diasCapitalizados = data.diasActivos.map(
+        (dia) => dia.charAt(0).toUpperCase() + dia.slice(1)
+      );
+
+      console.log("📅 Días activos:", diasCapitalizados);
+      console.log("📆 Semanas:", data.semanas);
+
+      setDiasActivos(diasCapitalizados);
+      setSemanas(data.semanas);
+
+      // Establecer semana actual por defecto
+      if (data.semanas.length > 0) {
+        setSelectedWeek(data.semanas[0]);
+        console.log("✅ Semana seleccionada por defecto:", data.semanas[0]);
+      }
+
+      // Establecer día actual si está en los días activos
+      if (diasCapitalizados.includes(diaHoyCapitalizado)) {
+        setSelectedDay(diaHoyCapitalizado);
+        console.log("✅ Día seleccionado (hoy):", diaHoyCapitalizado);
+      } else {
+        setSelectedDay(diasCapitalizados[0] || null);
+        console.log(
+          "✅ Día seleccionado (primer disponible):",
+          diasCapitalizados[0] || null
+        );
+      }
+    } catch (error) {
+      console.error("❌ Error loading horarios y semanas:", error);
+      // Fallback a los días de toda la semana
+      setDiasActivos([
+        "Lunes",
+        "Martes",
+        "Miercoles",
+        "Jueves",
+        "Viernes",
+        "Sabado",
+      ]);
+      setSelectedDay(diaHoyCapitalizado);
+    }
+  }, [diaHoyCapitalizado]);
 
   function onCloseModal() {
     setOpenModal(false);
@@ -62,6 +107,9 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
   }, [setHorarios, UserId]);
 
   useEffect(() => {
+    // Cargar horarios y semanas al montar el componente
+    loadHorariosYSemanas();
+
     // Si ya se pasaron horarios como props, usarlos directamente
     if (horarios && horarios.length > 0) {
       setIsLoading(false);
@@ -74,46 +122,88 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
       // Si no hay horarios en props, hacer la llamada a la API (compatibilidad hacia atrás)
       refreshData();
     }
-    setSelectedDay(diaHoyCapitalizado); // Establecer el día actual al montar el componente
-  }, [horarios, UserId, diaHoyCapitalizado, refreshData]);
+  }, [horarios, UserId, loadHorariosYSemanas, refreshData]);
 
   if (isLoading) return <h1>Loading...</h1>;
 
-  // Filtrar los días de la semana que no han pasado, incluyendo el día actual
-  const diaActualIndex = ParaguayDateUtil.now().day();
-  const diasRestantes = diasSemana.filter(
-    (_, index) => index >= diaActualIndex
-  );
+  // Calcular fecha objetivo basada en la semana y día seleccionados
+  const calcularFechaObjetivo = () => {
+    if (!selectedWeek || !selectedDay) return null;
+
+    // Encontrar qué día de la semana es el día seleccionado
+    // IMPORTANTE: Este array debe coincidir con cómo el backend calcula las semanas
+    // El backend establece inicioSemana al LUNES, por lo que el array debe empezar desde Lunes
+    const diasSemana = [
+      "Lunes",
+      "Martes",
+      "Miercoles",
+      "Jueves",
+      "Viernes",
+      "Sabado",
+      "Domingo",
+    ];
+    const diaIndex = diasSemana.indexOf(selectedDay);
+
+    if (diaIndex === -1) return null;
+
+    // Calcular la fecha específica en la semana seleccionada
+    const inicioSemana = ParaguayDateUtil.toParaguayTime(
+      selectedWeek.inicioSemana
+    );
+    const fechaObjetivo = inicioSemana.add(diaIndex, "days");
+
+    console.log(`🎯 Calculando fecha objetivo:`);
+    console.log(`   - Día seleccionado: ${selectedDay} (índice: ${diaIndex})`);
+    console.log(
+      `   - Inicio semana: ${inicioSemana.format("YYYY-MM-DD dddd")}`
+    );
+    console.log(
+      `   - Fecha objetivo: ${fechaObjetivo.format("YYYY-MM-DD dddd")}`
+    );
+
+    return fechaObjetivo;
+  };
 
   // Como el backend ahora devuelve datos limpios (un turno por hora),
-  // solo necesitamos filtrar por fecha/día seleccionado
+  // filtrar por la fecha específica calculada
   const horariosFiltrados = horarios
     .filter((agenda) => {
-      if (!selectedDay) {
-        // Si no hay día seleccionado, mostrar solo los de hoy
-        const fechaAgenda = ParaguayDateUtil.toParaguayTime(agenda.fecha);
-        const hoy = ParaguayDateUtil.startOfDay();
-        return fechaAgenda.isSame(hoy, "day");
-      } else {
-        // Si hay día seleccionado, filtrar por ese día específico
-        const targetDate = diasSemana.indexOf(selectedDay);
-        const currentDayIndex = ParaguayDateUtil.now().day();
-
-        // Calcular la fecha objetivo
-        let daysToAdd = targetDate - currentDayIndex;
-        if (daysToAdd < 0) daysToAdd += 7; // Si el día ya pasó esta semana, usar la siguiente
-
-        const fechaObjetivo = ParaguayDateUtil.now().add(daysToAdd, "days");
-        const fechaAgenda = ParaguayDateUtil.toParaguayTime(agenda.fecha);
-
-        return fechaAgenda.isSame(fechaObjetivo, "day");
+      const fechaObjetivo = calcularFechaObjetivo();
+      if (!fechaObjetivo) {
+        console.log("❌ No hay fecha objetivo calculada");
+        return false;
       }
+
+      const fechaAgenda = ParaguayDateUtil.toParaguayTime(agenda.fecha);
+      const coincide = fechaAgenda.isSame(fechaObjetivo, "day");
+
+      if (coincide) {
+        console.log(
+          `✅ Turno coincide: ${agenda.hora} - ${fechaAgenda.format(
+            "YYYY-MM-DD"
+          )} === ${fechaObjetivo.format("YYYY-MM-DD")}`
+        );
+      }
+
+      return coincide;
     })
     .sort((a, b) => {
       const horaA = parseInt(a.hora.replace(":", ""), 10);
       const horaB = parseInt(b.hora.replace(":", ""), 10);
       return horaA - horaB; // Orden Ascendente
     });
+
+  console.log(
+    `📊 Horarios filtrados para mostrar: ${horariosFiltrados.length}`
+  );
+  console.log("📋 Datos del filtro:");
+  console.log("- Selected Week:", selectedWeek);
+  console.log("- Selected Day:", selectedDay);
+  console.log(
+    "- Fecha objetivo:",
+    calcularFechaObjetivo()?.format("YYYY-MM-DD")
+  );
+  console.log("- Total horarios disponibles:", horarios.length);
 
   return (
     <div>
@@ -125,24 +215,48 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
         <h3 className="flex justify-center mt-8 ml-8 mr-8 border-b-2 border-gray-300 pb-2">
           AGENDA
         </h3>
-        <div className="flex border-b-2 justify-between border-gray-300 ml-8 mr-8">
-          <h3 className="flex justify-start mt-2 ml-3 ">HORA</h3>
-          <Dropdown
-            color={""}
-            label={`Día: ${selectedDay || diaHoyCapitalizado}`}
-            dismissOnClick={true}
-          >
-            {diasRestantes.map((dia, index) => (
-              <Dropdown.Item
-                key={index}
-                onClick={() => {
-                  setSelectedDay(dia); // Actualiza el día seleccionado
-                }}
-              >
-                {dia}
-              </Dropdown.Item>
-            ))}
-          </Dropdown>
+
+        {/* Selectores de Semana y Día */}
+        <div className="flex flex-col md:flex-row justify-between items-center border-b-2 border-gray-300 ml-8 mr-8 pb-4 pt-4 gap-4">
+          <h3 className="flex justify-start mt-2 ml-3">HORA</h3>
+
+          <div className="flex flex-col md:flex-row gap-4">
+            {/* Select de Semana */}
+            <Dropdown
+              color=""
+              label={selectedWeek ? selectedWeek.label : "Seleccionar Semana"}
+              dismissOnClick={true}
+            >
+              {semanas.map((semana, index) => (
+                <Dropdown.Item
+                  key={index}
+                  onClick={() => {
+                    setSelectedWeek(semana);
+                  }}
+                >
+                  {semana.label}
+                </Dropdown.Item>
+              ))}
+            </Dropdown>
+
+            {/* Select de Día */}
+            <Dropdown
+              color=""
+              label={`Día: ${selectedDay || "Seleccionar día"}`}
+              dismissOnClick={true}
+            >
+              {diasActivos.map((dia, index) => (
+                <Dropdown.Item
+                  key={index}
+                  onClick={() => {
+                    setSelectedDay(dia);
+                  }}
+                >
+                  {dia}
+                </Dropdown.Item>
+              ))}
+            </Dropdown>
+          </div>
         </div>
 
         {horariosFiltrados.map((agenda) => (

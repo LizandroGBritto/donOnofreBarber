@@ -14,6 +14,7 @@ AgendaRouter.get(
   AgendaController.getDisponibilidadPorFecha
 );
 AgendaRouter.get("/landing", AgendaController.getTurnosLanding);
+AgendaRouter.get("/horarios-semanas", AgendaController.getHorariosYSemanas);
 
 // Nuevas rutas para estadísticas y generación de turnos
 AgendaRouter.get("/diagnostico", AgendaController.diagnosticoHorarios);
