@@ -244,12 +244,8 @@ module.exports = {
     AgendaModel.find({})
       .populate("barbero", "nombre foto")
       .then((allAgendas) => {
-        console.log("=== ENVIANDO AGENDAS AL FRONTEND ===");
         const agendasConCosto = allAgendas.filter(
           (a) => a.costoTotal > 0 || a.costoServicios > 0
-        );
-        console.log(
-          `Total agendas: ${allAgendas.length}, Con costo: ${agendasConCosto.length}`
         );
         if (agendasConCosto.length > 0) {
           console.log(
