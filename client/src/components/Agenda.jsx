@@ -207,8 +207,30 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
 
   return (
     <div>
+      {/* Estilos personalizados para dropdown */}
+      <style>
+        {`
+          .agenda-dropdown [data-testid="flowbite-dropdown"] {
+            width: 20% !important;
+            min-width: 120px !important;
+            text-align: center !important;
+          }
+          .agenda-dropdown [data-testid="flowbite-dropdown"] > div {
+            text-align: center !important;
+            justify-content: center !important;
+            display: flex !important;
+            align-items: center !important;
+          }
+          .agenda-dropdown [data-testid="flowbite-dropdown"] a {
+            text-align: center !important;
+            justify-content: center !important;
+            display: flex !important;
+          }
+        `}
+      </style>
+
       <div
-        className="max-w-11/12 mx-auto bg-black bg-opacity-80 rounded-lg p-4"
+        className="max-w-11/12 mx-auto bg-black bg-opacity-80 rounded-lg p-4 agenda-dropdown"
         ref={agendarRef}
         id="agendar"
       >
@@ -218,44 +240,51 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
 
         {/* Selectores de Semana y Día */}
         <div className="flex flex-col md:flex-row justify-between items-center border-b-2 border-gray-300 ml-8 mr-8 pb-4 pt-4 gap-4">
-          <h3 className="flex justify-start mt-2 ml-3">HORA</h3>
+          <h3 className="justify-start mt-2 ml-3 hidden md:flex">HORA</h3>
 
-          <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex flex-row gap-3 px-4 md:px-0 w-full md:w-auto justify-center md:justify-end">
             {/* Select de Semana */}
-            <Dropdown
-              color=""
-              label={selectedWeek ? selectedWeek.label : "Seleccionar Semana"}
-              dismissOnClick={true}
-            >
-              {semanas.map((semana, index) => (
-                <Dropdown.Item
-                  key={index}
-                  onClick={() => {
-                    setSelectedWeek(semana);
-                  }}
-                >
-                  {semana.label}
-                </Dropdown.Item>
-              ))}
-            </Dropdown>
+            <div className="w-36 md:w-auto min-w-0">
+              <Dropdown
+                color=""
+                label={selectedWeek ? selectedWeek.label : "Seleccionar Semana"}
+                dismissOnClick={true}
+                className="w-full [&>button]:text-center [&>button]:justify-center [&>button]:text-xs [&>button]:px-2"
+              >
+                {semanas.map((semana, index) => (
+                  <Dropdown.Item
+                    key={index}
+                    onClick={() => {
+                      setSelectedWeek(semana);
+                    }}
+                  >
+                    {semana.label}
+                  </Dropdown.Item>
+                ))}
+              </Dropdown>
+            </div>
 
             {/* Select de Día */}
-            <Dropdown
-              color=""
-              label={`Día: ${selectedDay || "Seleccionar día"}`}
-              dismissOnClick={true}
-            >
-              {diasActivos.map((dia, index) => (
-                <Dropdown.Item
-                  key={index}
-                  onClick={() => {
-                    setSelectedDay(dia);
-                  }}
-                >
-                  {dia}
-                </Dropdown.Item>
-              ))}
-            </Dropdown>
+            <div className="w-24 md:w-auto min-w-0">
+              <Dropdown
+                color=""
+                label={`${selectedDay || "Día"}`}
+                dismissOnClick={true}
+                className="w-full [&>button]:text-center [&>button]:justify-center [&>button]:text-xs [&>button]:px-2"
+              >
+                {diasActivos.map((dia, index) => (
+                  <Dropdown.Item
+                    key={index}
+                    onClick={() => {
+                      setSelectedDay(dia);
+                    }}
+                    style={{ width: "20%" }}
+                  >
+                    {dia}
+                  </Dropdown.Item>
+                ))}
+              </Dropdown>
+            </div>
           </div>
         </div>
 

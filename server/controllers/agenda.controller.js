@@ -1141,7 +1141,7 @@ module.exports = {
           numero: i + 1,
           inicioSemana: inicioSemana.toISOString().split("T")[0],
           finSemana: finSemana.toISOString().split("T")[0],
-          label: `Semana ${i + 1} del ${inicioSemana
+          label: `Semana del ${inicioSemana
             .getDate()
             .toString()
             .padStart(2, "0")}/${(inicioSemana.getMonth() + 1)
