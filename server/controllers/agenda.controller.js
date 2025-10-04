@@ -1105,19 +1105,37 @@ module.exports = {
 
       // Generar próximas 4 semanas
       const hoy = new Date();
+      console.log(
+        "📅 Fecha de hoy:",
+        hoy.toISOString().split("T")[0],
+        `(${hoy.toLocaleDateString("es-ES", { weekday: "long" })})`
+      );
       const semanas = [];
 
       for (let i = 0; i < 4; i++) {
-        const inicioSemana = new Date(hoy);
-        inicioSemana.setDate(hoy.getDate() + i * 7);
+        // Calcular el lunes de la semana actual primero
+        const fechaBase = new Date(hoy);
+        const diaSemanaHoy = fechaBase.getDay();
+        const diasHastaLunesActual = diaSemanaHoy === 0 ? -6 : 1 - diaSemanaHoy;
+        fechaBase.setDate(fechaBase.getDate() + diasHastaLunesActual);
+        console.log(
+          `📍 Lunes de la semana actual: ${
+            fechaBase.toISOString().split("T")[0]
+          }`
+        );
 
-        // Encontrar el lunes de esta semana
-        const diaSemana = inicioSemana.getDay();
-        const diasHastaLunes = diaSemana === 0 ? -6 : 1 - diaSemana;
-        inicioSemana.setDate(inicioSemana.getDate() + diasHastaLunes);
+        // Ahora sumar las semanas completas
+        const inicioSemana = new Date(fechaBase);
+        inicioSemana.setDate(fechaBase.getDate() + i * 7);
 
         const finSemana = new Date(inicioSemana);
         finSemana.setDate(inicioSemana.getDate() + 6);
+
+        console.log(
+          `📆 Semana ${i + 1}: ${inicioSemana.toISOString().split("T")[0]} - ${
+            finSemana.toISOString().split("T")[0]
+          }`
+        );
 
         semanas.push({
           numero: i + 1,

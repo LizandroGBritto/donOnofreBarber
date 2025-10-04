@@ -259,117 +259,110 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
           </div>
         </div>
 
-        {horariosFiltrados.map((agenda) => (
-          <div
-            className="flex justify-between border-b-2 border-gray-300 pb-2 pl-4 mt-8 ml-8 mr-8"
-            key={agenda._id}
-          >
-            <h3
-              className={`flex justify-start ${
-                agenda.estado !== "disponible" ? "line-through" : ""
-              }`}
+        {horariosFiltrados.map((agenda) => {
+          return (
+            <div
+              className="flex justify-between border-b-2 border-gray-300 pb-2 pl-4 mt-8 ml-8 mr-8"
+              key={agenda._id}
             >
-              {agenda.hora}
-            </h3>
-            {agenda.diaSemana === "domingo" ? (
-              <h3 className="flex justify-center mr-4 text-[#FF7D00]">
-                <Button
-                  disabled
-                  className="flex justify-center bg-gray-400 rounded-lg text-black text-lg items-center"
-                >
-                  CERRADO
-                </Button>
+              <h3
+                className={`flex justify-start ${
+                  agenda.estado !== "disponible" ? "line-through" : ""
+                }`}
+              >
+                {agenda.hora}
               </h3>
-            ) : agenda.estado !== "disponible" ? (
-              <h3 className="flex justify-center mr-4 text-[#FF7D00]">
-                {agenda.nombreCliente === UserId ? (
-                  <Button
-                    className="flex justify-center bg-orange-500 rounded-lg text-black text-lg items-center"
-                    onClick={() => {
+              {agenda.estado !== "disponible" ? (
+                <h3 className="flex justify-center mr-4 text-[#FF7D00]">
+                  {agenda.nombreCliente === UserId ? (
+                    <Button
+                      className="flex justify-center bg-orange-500 rounded-lg text-black text-lg items-center"
+                      onClick={() => {
+                        setSelectedId(agenda._id);
+                        setOpenModal(true);
+                      }}
+                    >
+                      MODIFICAR
+                    </Button>
+                  ) : (
+                    <Button
+                      disabled
+                      className="flex justify-center bg-gray-400 rounded-lg text-black text-lg items-center"
+                    >
+                      RESERVADO
+                    </Button>
+                  )}
+                </h3>
+              ) : (
+                <Button
+                  // Si el UserId es "Reservado", el botón cambia a "RESERVADO" y se deshabilita
+                  disabled={
+                    agenda.estado !== "disponible" ||
+                    (userHasReservation &&
+                      agenda.nombreCliente !== "" &&
+                      agenda.nombreCliente !== UserId)
+                  }
+                  className={`flex justify-center mr-6 ${
+                    agenda.estado !== "disponible" ? "bg-gray-400" : "bg-white"
+                  } rounded-lg text-black text-lg items-center`}
+                  onClick={() => {
+                    // Para turnos disponibles, abrir modal de barberos
+                    if (agenda.estado === "disponible") {
+                      setSelectedTurno({
+                        _id: agenda._id,
+                        fecha: agenda.fecha,
+                        hora: agenda.hora,
+                        diaSemana: agenda.diaSemana,
+                      });
+                      setOpenBarberoModal(true);
+                    } else {
+                      // Para modificaciones, usar el modal tradicional
                       setSelectedId(agenda._id);
                       setOpenModal(true);
-                    }}
-                  >
-                    MODIFICAR
-                  </Button>
-                ) : (
-                  <Button
-                    disabled
-                    className="flex justify-center bg-gray-400 rounded-lg text-black text-lg items-center"
-                  >
-                    RESERVADO
-                  </Button>
-                )}
-              </h3>
-            ) : (
-              <Button
-                // Si el UserId es "Reservado", el botón cambia a "RESERVADO" y se deshabilita
-                disabled={
-                  agenda.estado !== "disponible" ||
-                  (userHasReservation &&
-                    agenda.nombreCliente !== "" &&
-                    agenda.nombreCliente !== UserId)
-                }
-                className={`flex justify-center mr-6 ${
-                  agenda.estado !== "disponible" ? "bg-gray-400" : "bg-white"
-                } rounded-lg text-black text-lg items-center`}
-                onClick={() => {
-                  // Para turnos disponibles, abrir modal de barberos
-                  if (agenda.estado === "disponible") {
-                    setSelectedTurno({
-                      _id: agenda._id,
-                      fecha: agenda.fecha,
-                      hora: agenda.hora,
-                      diaSemana: agenda.diaSemana,
-                    });
-                    setOpenBarberoModal(true);
-                  } else {
-                    // Para modificaciones, usar el modal tradicional
-                    setSelectedId(agenda._id);
-                    setOpenModal(true);
-                  }
-                }}
+                    }
+                  }}
+                >
+                  {agenda.estado !== "disponible" ? "RESERVADO" : "AGENDAR"}
+                </Button>
+              )}
+
+              <Modal
+                className="flex justify-center items-center bg-black bg-opacity-15"
+                show={openModal}
+                size="sm"
+                onClose={onCloseModal}
+                popup
               >
-                {agenda.estado !== "disponible" ? "RESERVADO" : "AGENDAR"}
-              </Button>
-            )}
-
-            <Modal
-              className="flex justify-center items-center bg-black bg-opacity-15"
-              show={openModal}
-              size="sm"
-              onClose={onCloseModal}
-              popup
-            >
-              <Modal.Header />
-              <Modal.Body>
-                <div className="space-y-6">
-                  <h3 className="text-xl font-medium text-gray-900 dark:text-white">
-                    Datos para la reserva
-                  </h3>
-                  <div className="AgendarForm">
-                    <FormAgendar
-                      id={selectedId}
-                      onCloseModal={onCloseModal}
-                      refreshData={refreshData}
-                      getUserId={getUserId}
-                    />
+                <Modal.Header />
+                <Modal.Body>
+                  <div className="space-y-6">
+                    <h3 className="text-xl font-medium text-gray-900 dark:text-white">
+                      Datos para la reserva
+                    </h3>
+                    <div className="AgendarForm">
+                      <FormAgendar
+                        id={selectedId}
+                        onCloseModal={onCloseModal}
+                        refreshData={refreshData}
+                        getUserId={getUserId}
+                      />
+                    </div>
                   </div>
-                </div>
-              </Modal.Body>
-            </Modal>
+                </Modal.Body>
+              </Modal>
 
-            {/* Modal para reservas con barberos */}
-            {openBarberoModal && selectedTurno && (
-              <FormReservarConBarbero
-                turno={selectedTurno}
-                onCloseModal={onCloseModal}
-                refreshData={refreshData}
-                getUserId={getUserId}
-              />
-            )}
-          </div>
-        ))}
+              {/* Modal para reservas con barberos */}
+              {openBarberoModal && selectedTurno && (
+                <FormReservarConBarbero
+                  turno={selectedTurno}
+                  onCloseModal={onCloseModal}
+                  refreshData={refreshData}
+                  getUserId={getUserId}
+                />
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
