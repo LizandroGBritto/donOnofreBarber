@@ -17,7 +17,7 @@ const Footer = ({ footerRef }) => {
       try {
         // Obtener información de contacto
         const contactoResponse = await axios.get(
-          "http://localhost:8000/api/contacto"
+          `${import.meta.env.VITE_API_URL}/api/contacto`
         );
         if (contactoResponse.data.contacto) {
           setContacto(contactoResponse.data.contacto);
@@ -25,7 +25,7 @@ const Footer = ({ footerRef }) => {
 
         // Obtener información de ubicación
         const ubicacionResponse = await axios.get(
-          "http://localhost:8000/api/ubicacion"
+          `${import.meta.env.VITE_API_URL}/api/ubicacion`
         );
         if (ubicacionResponse.data.ubicacion) {
           setUbicacion(ubicacionResponse.data.ubicacion);

@@ -50,7 +50,9 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
   const verificarTurnoExistente = useCallback(async (numeroCliente) => {
     try {
       const response = await axios.get(
-        `http://localhost:8000/api/agenda/verificar-turno/${numeroCliente}`
+        `${
+          import.meta.env.VITE_API_URL
+        }/api/agenda/verificar-turno/${numeroCliente}`
       );
       return response.data; // { tieneTurno: boolean, turno: objeto|null }
     } catch (error) {
@@ -63,7 +65,7 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
   const loadHorariosYSemanas = useCallback(async () => {
     try {
       const response = await axios.get(
-        "http://localhost:8000/api/agenda/horarios-semanas"
+        `${import.meta.env.VITE_API_URL}/api/agenda/horarios-semanas`
       );
       const data = response.data;
 
@@ -127,7 +129,7 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
 
   const refreshData = useCallback(() => {
     axios
-      .get("http://localhost:8000/api/agenda/landing")
+      .get(`${import.meta.env.VITE_API_URL}/api/agenda/landing`)
       .then((res) => {
         setHorarios(res.data.agendas);
         setIsLoading(false);

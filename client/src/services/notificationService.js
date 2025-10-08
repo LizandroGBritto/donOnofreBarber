@@ -63,7 +63,7 @@ class NotificationService {
   async getVapidPublicKey() {
     try {
       const response = await fetch(
-        "http://localhost:8000/api/notifications/vapid-public-key"
+        `${import.meta.env.VITE_API_URL}/api/notifications/vapid-public-key`
       );
       const data = await response.json();
       this.vapidPublicKey = data.publicKey;
@@ -135,7 +135,7 @@ class NotificationService {
   async sendSubscriptionToServer(subscription, userId) {
     try {
       const response = await fetch(
-        "http://localhost:8000/api/notifications/subscribe",
+        `${import.meta.env.VITE_API_URL}/api/notifications/subscribe`,
         {
           method: "POST",
           headers: {
@@ -173,7 +173,7 @@ class NotificationService {
         await this.subscription.unsubscribe();
 
         // Notificar al servidor
-        await fetch("http://localhost:8000/api/notifications/unsubscribe", {
+        await fetch(`${import.meta.env.VITE_API_URL}/api/notifications/unsubscribe`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -214,7 +214,7 @@ class NotificationService {
   async sendTestNotification() {
     try {
       const response = await fetch(
-        "http://localhost:8000/api/notifications/test",
+        `${import.meta.env.VITE_API_URL}/api/notifications/test`,
         {
           method: "POST",
           headers: {

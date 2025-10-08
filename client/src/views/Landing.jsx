@@ -32,7 +32,7 @@ const Landing = () => {
   const fetchTurnos = useCallback(async () => {
     try {
       const response = await axios.get(
-        "http://localhost:8000/api/agenda/landing"
+        `${import.meta.env.VITE_API_URL}/api/agenda/landing`
       );
       setHorarios(response.data.agendas || []);
     } catch (error) {

@@ -32,18 +32,13 @@ const AgendaAdmin = ({ horarios, setHorarios, getUserId, agendarRef }) => {
   const refreshData = useCallback(() => {
     setIsLoading(true);
     axios
-      .get("http://localhost:8000/api/agenda")
+      .get(`${import.meta.env.VITE_API_URL}/api/agenda`)
       .then((res) => {
-
-
         if (res.data.agendas && res.data.agendas.length > 0) {
-
           // DEBUG: Verificar costos específicamente
           const agendasConCostos = res.data.agendas.filter(
             (agenda) => agenda.costoTotal > 0 || agenda.costoServicios > 0
           );
-
-
 
           // Normalizar los datos
           const agendasNormalizadas = res.data.agendas.map((agenda) => {
@@ -64,17 +59,13 @@ const AgendaAdmin = ({ horarios, setHorarios, getUserId, agendarRef }) => {
               ...agenda,
             };
 
-
             return normalized;
           });
-
-
 
           // Verificar agendas con costo después de normalizar
           const agendasConCostoFinal = agendasNormalizadas.filter(
             (a) => a.costoTotal > 0
           );
- 
 
           setHorarios(agendasNormalizadas);
         } else {
@@ -110,8 +101,6 @@ const AgendaAdmin = ({ horarios, setHorarios, getUserId, agendarRef }) => {
       const horaB = parseInt(b.hora.replace(":", ""), 10);
       return horaA - horaB;
     });
-
-
 
   return (
     <>
@@ -240,7 +229,9 @@ const AgendaAdmin = ({ horarios, setHorarios, getUserId, agendarRef }) => {
                           if (e.target.checked) {
                             axios
                               .put(
-                                `http://localhost:8000/api/agenda/${agenda._id}`,
+                                `${import.meta.env.VITE_API_URL}/api/agenda/${
+                                  agenda._id
+                                }`,
                                 {
                                   NombreCliente: "",
                                   NumeroCliente: "",
@@ -257,7 +248,9 @@ const AgendaAdmin = ({ horarios, setHorarios, getUserId, agendarRef }) => {
                           } else {
                             axios
                               .put(
-                                `http://localhost:8000/api/agenda/${agenda._id}`,
+                                `${import.meta.env.VITE_API_URL}/api/agenda/${
+                                  agenda._id
+                                }`,
                                 {
                                   NombreCliente: "",
                                   NumeroCliente: "",

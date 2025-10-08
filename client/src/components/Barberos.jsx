@@ -14,7 +14,7 @@ const Barberos = () => {
     try {
       setLoading(true);
       const response = await axios.get(
-        "http://localhost:8000/api/barberos/activos"
+        `${import.meta.env.VITE_API_URL}/api/barberos/activos`
       );
       setBarberos(response.data);
     } catch (error) {
@@ -111,7 +111,9 @@ const Barberos = () => {
               {/* Imagen del barbero */}
               <div className="relative overflow-hidden">
                 <img
-                  src={`http://localhost:8000/uploads/${barbero.foto}`}
+                  src={`${import.meta.env.VITE_API_URL}/uploads/${
+                    barbero.foto
+                  }`}
                   alt={barbero.nombre}
                   className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-300"
                 />
@@ -120,7 +122,9 @@ const Barberos = () => {
                 {barbero.logo && (
                   <div className="absolute top-4 right-4 bg-[rgb(172_148_250)] rounded-full p-2">
                     <img
-                      src={`http://localhost:8000/uploads/${barbero.logo}`}
+                      src={`${import.meta.env.VITE_API_URL}/uploads/${
+                        barbero.logo
+                      }`}
                       alt={`Logo de ${barbero.nombre}`}
                       className="w-12 h-12 object-contain rounded-full"
                     />

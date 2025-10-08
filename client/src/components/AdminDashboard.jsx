@@ -479,9 +479,12 @@ const AdminDashboard = () => {
   const toggleBannerStatus = async (id, currentStatus) => {
     try {
       const newStatus = currentStatus === "activo" ? "inactivo" : "activo";
-      await axios.patch(`http://localhost:8000/api/banners/${id}/estado`, {
-        estado: newStatus,
-      });
+      await axios.patch(
+        `${import.meta.env.VITE_API_URL}/api/banners/${id}/estado`,
+        {
+          estado: newStatus,
+        }
+      );
       fetchBanners();
     } catch (error) {
       console.error("Error al cambiar estado del banner:", error);
@@ -821,7 +824,9 @@ const AdminDashboard = () => {
     if (selectedServicio) {
       try {
         await axios.delete(
-          `http://localhost:8000/api/servicios/${selectedServicio._id}/imagen/${imagenNombre}`
+          `${import.meta.env.VITE_API_URL}/api/servicios/${
+            selectedServicio._id
+          }/imagen/${imagenNombre}`
         );
         setImagenesServicio((prev) =>
           prev.filter((img) => img !== imagenNombre)
@@ -939,7 +944,9 @@ const AdminDashboard = () => {
   const deleteImageFromModal = async (imagenNombre) => {
     try {
       await axios.delete(
-        `http://localhost:8000/api/servicios/${currentServicioId}/imagen/${imagenNombre}`
+        `${
+          import.meta.env.VITE_API_URL
+        }/api/servicios/${currentServicioId}/imagen/${imagenNombre}`
       );
 
       // Actualizar la lista actual de imágenes
@@ -1347,7 +1354,9 @@ const AdminDashboard = () => {
                             <div className="flex items-center gap-2">
                               {turno.barbero.foto && (
                                 <img
-                                  src={`http://localhost:8000/uploads/${turno.barbero.foto}`}
+                                  src={`${
+                                    import.meta.env.VITE_API_URL
+                                  }/uploads/${turno.barbero.foto}`}
                                   alt={turno.barbero.nombre}
                                   className="w-6 h-6 rounded-full object-cover"
                                 />
@@ -1551,7 +1560,9 @@ const AdminDashboard = () => {
                       >
                         <Table.Cell>
                           <img
-                            src={`http://localhost:8000/uploads/${banner.imagen}`}
+                            src={`${import.meta.env.VITE_API_URL}/uploads/${
+                              banner.imagen
+                            }`}
                             alt={banner.titulo}
                             className="w-16 h-10 object-cover rounded"
                           />
@@ -1627,7 +1638,9 @@ const AdminDashboard = () => {
                     <div className="p-4">
                       <div className="flex gap-4">
                         <img
-                          src={`http://localhost:8000/uploads/${banner.imagen}`}
+                          src={`${import.meta.env.VITE_API_URL}/uploads/${
+                            banner.imagen
+                          }`}
                           alt={banner.titulo}
                           className="w-20 h-12 object-cover rounded"
                         />
@@ -1877,7 +1890,7 @@ const AdminDashboard = () => {
                 <div className="bg-yellow-100/10 border border-yellow-400/30 p-4 rounded-lg">
                   <p className="text-yellow-200">
                     No hay información de contacto configurada. Haz clic en
-                    "Crear Contacto" para agregar.
+                    Crear Contacto para agregar.
                   </p>
                 </div>
               )}
@@ -1934,7 +1947,7 @@ const AdminDashboard = () => {
                 <div className="bg-yellow-100/10 border border-yellow-400/30 p-4 rounded-lg">
                   <p className="text-yellow-200">
                     No hay información de ubicación configurada. Haz clic en
-                    "Crear Ubicación" para agregar.
+                    Crear Ubicación para agregar.
                   </p>
                 </div>
               )}
@@ -2312,7 +2325,7 @@ const AdminDashboard = () => {
                   No hay servicios registrados.
                 </p>
                 <p className="text-sm text-gray-400">
-                  Haz clic en "Nuevo Servicio" para agregar.
+                  Haz clic en Nuevo Servicio para agregar.
                 </p>
               </div>
             ) : (
@@ -2355,7 +2368,9 @@ const AdminDashboard = () => {
                             {servicio.imagenes.map((imagen, index) => (
                               <img
                                 key={index}
-                                src={`http://localhost:8000/uploads/${imagen}`}
+                                src={`${
+                                  import.meta.env.VITE_API_URL
+                                }/uploads/${imagen}`}
                                 alt={`${servicio.nombre} - ${index + 1}`}
                                 className="w-16 h-16 object-cover rounded-lg flex-shrink-0 hover:opacity-80"
                               />
@@ -2457,7 +2472,9 @@ const AdminDashboard = () => {
                                   .map((imagen, index) => (
                                     <img
                                       key={index}
-                                      src={`http://localhost:8000/uploads/${imagen}`}
+                                      src={`${
+                                        import.meta.env.VITE_API_URL
+                                      }/uploads/${imagen}`}
                                       alt={`${servicio.nombre} - ${index + 1}`}
                                       className="w-8 h-8 object-cover rounded flex-shrink-0 hover:opacity-80"
                                     />
@@ -2575,7 +2592,7 @@ const AdminDashboard = () => {
                   No hay barberos registrados aún.
                 </p>
                 <p className="text-sm text-gray-400 dark:text-gray-500">
-                  Haz clic en "Nuevo Barbero" para agregar.
+                  Haz clic en Nuevo Barbero para agregar.
                 </p>
               </div>
             ) : (
@@ -2589,7 +2606,9 @@ const AdminDashboard = () => {
                     >
                       <div className="flex items-start gap-4">
                         <img
-                          src={`http://localhost:8000/uploads/${barbero.foto}`}
+                          src={`${import.meta.env.VITE_API_URL}/uploads/${
+                            barbero.foto
+                          }`}
                           alt={barbero.nombre}
                           className="w-16 h-16 object-cover rounded-lg flex-shrink-0"
                         />
@@ -2612,7 +2631,9 @@ const AdminDashboard = () => {
                           {barbero.logo && (
                             <div className="mb-2">
                               <img
-                                src={`http://localhost:8000/uploads/${barbero.logo}`}
+                                src={`${import.meta.env.VITE_API_URL}/uploads/${
+                                  barbero.logo
+                                }`}
                                 alt={`Logo de ${barbero.nombre}`}
                                 className="w-8 h-8 object-contain"
                               />
@@ -2667,7 +2688,9 @@ const AdminDashboard = () => {
                           <Table.Cell className="font-medium">
                             <div className="flex items-center gap-3">
                               <img
-                                src={`http://localhost:8000/uploads/${barbero.foto}`}
+                                src={`${import.meta.env.VITE_API_URL}/uploads/${
+                                  barbero.foto
+                                }`}
                                 alt={barbero.nombre}
                                 className="w-12 h-12 object-cover rounded-lg"
                               />
@@ -2679,7 +2702,9 @@ const AdminDashboard = () => {
                           <Table.Cell>
                             {barbero.logo ? (
                               <img
-                                src={`http://localhost:8000/uploads/${barbero.logo}`}
+                                src={`${import.meta.env.VITE_API_URL}/uploads/${
+                                  barbero.logo
+                                }`}
                                 alt={`Logo de ${barbero.nombre}`}
                                 className="w-8 h-8 object-contain"
                               />
@@ -2801,7 +2826,9 @@ const AdminDashboard = () => {
               {selectedBarbero && selectedBarbero.foto && (
                 <div className="mt-2">
                   <img
-                    src={`http://localhost:8000/uploads/${selectedBarbero.foto}`}
+                    src={`${import.meta.env.VITE_API_URL}/uploads/${
+                      selectedBarbero.foto
+                    }`}
                     alt="Foto actual"
                     className="w-20 h-20 object-cover rounded-lg"
                   />
@@ -2825,7 +2852,9 @@ const AdminDashboard = () => {
               {selectedBarbero && selectedBarbero.logo && (
                 <div className="mt-2">
                   <img
-                    src={`http://localhost:8000/uploads/${selectedBarbero.logo}`}
+                    src={`${import.meta.env.VITE_API_URL}/uploads/${
+                      selectedBarbero.logo
+                    }`}
                     alt="Logo actual"
                     className="w-16 h-16 object-contain"
                   />
@@ -2944,7 +2973,9 @@ const AdminDashboard = () => {
                   {imagenesServicio.map((imagen, index) => (
                     <div key={index} className="relative">
                       <img
-                        src={`http://localhost:8000/uploads/${imagen}`}
+                        src={`${
+                          import.meta.env.VITE_API_URL
+                        }/uploads/${imagen}`}
                         alt={`${servicioForm.nombre} - ${index + 1}`}
                         className="w-full h-20 object-cover rounded border cursor-pointer"
                         onClick={() =>
@@ -3120,7 +3151,7 @@ const AdminDashboard = () => {
             {currentImagenes.map((imagen, index) => (
               <div key={index} className="relative group">
                 <img
-                  src={`http://localhost:8000/uploads/${imagen}`}
+                  src={`${import.meta.env.VITE_API_URL}/uploads/${imagen}`}
                   alt={`Imagen ${index + 1}`}
                   className="w-full h-48 object-cover rounded-lg"
                 />

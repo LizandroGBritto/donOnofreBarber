@@ -23,7 +23,7 @@ const FormReservarConBarbero = ({
     const loadBarberos = async () => {
       try {
         const response = await axios.get(
-          "http://localhost:8000/api/barberos/agenda"
+          `${import.meta.env.VITE_API_URL}/api/barberos/agenda`
         );
         setBarberos(response.data);
       } catch (error) {
@@ -38,7 +38,9 @@ const FormReservarConBarbero = ({
   useEffect(() => {
     const loadServices = async () => {
       try {
-        const response = await axios.get("http://localhost:8000/api/servicios");
+        const response = await axios.get(
+          `${import.meta.env.VITE_API_URL}/api/servicios`
+        );
         setServices(response.data || []);
       } catch (error) {
         console.error("Error loading services:", error);
@@ -65,7 +67,9 @@ const FormReservarConBarbero = ({
 
         // Usar la ruta correcta para obtener disponibilidad por barbero
         const response = await axios.get(
-          `http://localhost:8000/api/agenda/disponibilidad-barberos/${fechaISO}`
+          `${
+            import.meta.env.VITE_API_URL
+          }/api/agenda/disponibilidad-barberos/${fechaISO}`
         );
 
         setDisponibilidad(response.data.disponibilidad);
@@ -144,7 +148,9 @@ const FormReservarConBarbero = ({
       // Verificar si el usuario ya tiene un turno abierto
       try {
         const verificacionResponse = await axios.get(
-          `http://localhost:8000/api/agenda/verificar-turno/${values.numeroCliente}`
+          `${import.meta.env.VITE_API_URL}/api/agenda/verificar-turno/${
+            values.numeroCliente
+          }`
         );
 
         if (verificacionResponse.data.tieneTurno) {
@@ -177,7 +183,7 @@ const FormReservarConBarbero = ({
       };
 
       const response = await axios.post(
-        "http://localhost:8000/api/agenda/reservar-con-barbero",
+        `${import.meta.env.VITE_API_URL}/api/agenda/reservar-con-barbero`,
         reservaData
       );
 
@@ -337,7 +343,9 @@ const FormReservarConBarbero = ({
                             <div className="flex items-center space-x-3">
                               <div className="flex-shrink-0">
                                 <img
-                                  src={`http://localhost:8000/uploads/${barbero.foto}`}
+                                  src={`${
+                                    import.meta.env.VITE_API_URL
+                                  }/uploads/${barbero.foto}`}
                                   alt={barbero.nombre}
                                   className="w-12 h-12 rounded-full object-cover"
                                 />

@@ -14,7 +14,7 @@ const Dashboard = () => {
   const fetchStats = async () => {
     try {
       const response = await axios.get(
-        "http://localhost:8000/api/agenda/dashboard/estadisticas"
+        `${import.meta.env.VITE_API_URL}/api/agenda/dashboard/estadisticas`
       );
       setStats({
         today: {

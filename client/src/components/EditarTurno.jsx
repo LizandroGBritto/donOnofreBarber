@@ -29,7 +29,9 @@ const EditarTurno = () => {
   useEffect(() => {
     const fetchServicios = async () => {
       try {
-        const response = await axios.get("http://localhost:8000/api/servicios");
+        const response = await axios.get(
+          `${import.meta.env.VITE_API_URL}/api/servicios`
+        );
         const serviciosActivos =
           response.data.filter((servicio) => servicio.activo) || [];
         console.log("Servicios disponibles cargados:", serviciosActivos);
@@ -75,7 +77,7 @@ const EditarTurno = () => {
       try {
         setLoading(true);
         const response = await axios.get(
-          `http://localhost:8000/api/agenda/${turnoId}`
+          `${import.meta.env.VITE_API_URL}/api/agenda/${turnoId}`
         );
         const turnoData = response.data.agenda;
 
@@ -182,7 +184,7 @@ const EditarTurno = () => {
 
       const costoTotal = calcularCostoTotal();
 
-      await axios.put(`http://localhost:8000/api/agenda/${turnoId}`, {
+      await axios.put(`${import.meta.env.VITE_API_URL}/api/agenda/${turnoId}`, {
         ...turno,
         ...formData,
         servicios: serviciosCompletos,
@@ -218,7 +220,7 @@ const EditarTurno = () => {
       setSaving(true);
       setError("");
 
-      await axios.put(`http://localhost:8000/api/agenda/${turnoId}`, {
+      await axios.put(`${import.meta.env.VITE_API_URL}/api/agenda/${turnoId}`, {
         ...turno,
         estado: "disponible", // Cambiar a disponible en lugar de cancelado
         nombreCliente: "",
@@ -320,7 +322,9 @@ const EditarTurno = () => {
                     <div className="flex items-center gap-2 mt-1">
                       {turno.barbero.foto && (
                         <img
-                          src={`http://localhost:8000/uploads/${turno.barbero.foto}`}
+                          src={`${import.meta.env.VITE_API_URL}/uploads/${
+                            turno.barbero.foto
+                          }`}
                           alt={turno.barbero.nombre}
                           className="w-8 h-8 rounded-full object-cover"
                         />

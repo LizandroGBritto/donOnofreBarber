@@ -34,7 +34,9 @@ const Form = ({
   useEffect(() => {
     const loadServices = async () => {
       try {
-        const response = await axios.get("http://localhost:8000/api/servicios");
+        const response = await axios.get(
+          `${import.meta.env.VITE_API_URL}/api/servicios`
+        );
         if (response.data && response.data.servicios) {
           setServices(response.data.servicios);
         }
@@ -57,7 +59,7 @@ const Form = ({
     const loadBarberos = async () => {
       try {
         const response = await axios.get(
-          "http://localhost:8000/api/barberos/agenda"
+          `${import.meta.env.VITE_API_URL}/api/barberos/agenda`
         );
         setBarberos(response.data);
       } catch (error) {
@@ -77,7 +79,9 @@ const Form = ({
         setLoading(true);
         const fechaISO = new Date(agenda.fecha).toISOString().split("T")[0];
         const response = await axios.get(
-          `http://localhost:8000/api/agenda/disponibilidad/${fechaISO}`
+          `${
+            import.meta.env.VITE_API_URL
+          }/api/agenda/disponibilidad/${fechaISO}`
         );
         setDisponibilidad(response.data.disponibilidad);
       } catch (error) {
@@ -95,7 +99,7 @@ const Form = ({
     const loadBarberos = async () => {
       try {
         const response = await axios.get(
-          "http://localhost:8000/api/barberos/agenda"
+          `${import.meta.env.VITE_API_URL}/api/barberos/agenda`
         );
         setBarberos(response.data);
       } catch (error) {
@@ -113,7 +117,7 @@ const Form = ({
     try {
       setLoading(true);
       const response = await axios.get(
-        `http://localhost:8000/api/agenda/disponibilidad/${fecha}`
+        `${import.meta.env.VITE_API_URL}/api/agenda/disponibilidad/${fecha}`
       );
       setDisponibilidad(response.data.disponibilidad);
     } catch (error) {
@@ -142,7 +146,7 @@ const Form = ({
           if (!value) return true;
           try {
             const response = await axios.get(
-              "http://localhost:8000/api/agenda"
+              `${import.meta.env.VITE_API_URL}/api/agenda`
             );
             const exists = response.data.agendas.some(
               (agenda) => agenda.NumeroCliente === value

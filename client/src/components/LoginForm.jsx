@@ -23,7 +23,7 @@ const LoginForm = ({ formType }) => {
   const registerUser = async (values, setErrors) => {
     try {
       await axios.post(
-        "http://localhost:8000/api/auth/register",
+        `${import.meta.env.VITE_API_URL}/api/auth/register`,
         {
           userName: values.userName,
           password: values.password,
@@ -40,7 +40,7 @@ const LoginForm = ({ formType }) => {
   const loginUser = async (values, setErrors) => {
     try {
       let res = await axios.post(
-        "http://localhost:8000/api/auth/login",
+        `${import.meta.env.VITE_API_URL}/api/auth/login`,
         {
           userName: values.userName,
           password: values.password,
