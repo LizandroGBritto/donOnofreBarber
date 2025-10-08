@@ -96,6 +96,7 @@ const GestionUsuarios = () => {
       // Solo incluir password si se proporciona
       if (usuarioForm.password) {
         userData.password = usuarioForm.password;
+        userData.confirmPassword = usuarioForm.confirmPassword; // Agregar confirmPassword
       }
 
       if (selectedUsuario) {
@@ -109,6 +110,7 @@ const GestionUsuarios = () => {
       } else {
         // Crear
         userData.password = usuarioForm.password; // Password es requerido para crear
+        userData.confirmPassword = usuarioForm.confirmPassword; // confirmPassword es requerido para crear
         await axios.post("http://localhost:8000/api/user/register", userData, {
           withCredentials: true,
         });
@@ -120,10 +122,25 @@ const GestionUsuarios = () => {
       fetchUsuarios();
     } catch (error) {
       console.error("Error al guardar usuario:", error);
-      const errorMessage =
-        error.response?.data?.msg ||
-        error.response?.data?.message ||
-        "Error al guardar usuario";
+      
+      // Manejo más específico de errores
+      let errorMessage = "Error al guardar usuario";
+      
+      if (error.response?.data?.errors) {
+        // Errores de validación de Mongoose
+        const validationErrors = error.response.data.errors;
+        const errorKeys = Object.keys(validationErrors);
+        if (errorKeys.length > 0) {
+          errorMessage = validationErrors[errorKeys[0]].message;
+        }
+      } else if (error.response?.data?.msg) {
+        errorMessage = error.response.data.msg;
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
       showAlert(errorMessage, "failure");
     }
   };
