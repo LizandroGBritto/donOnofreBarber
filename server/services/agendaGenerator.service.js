@@ -1,406 +1,452 @@
-const AgendaModel = require("../models/agenda.model");
+const Agenda = require("../models/agenda.model");
 const HorarioModel = require("../models/horario.model");
 const BarberoModel = require("../models/barbero.model");
 const ParaguayDateUtil = require("../utils/paraguayDate");
 
 class AgendaGeneratorService {
-  constructor() {
-    this.diasSemana = [
-      "domingo",
-      "lunes",
-      "martes",
-      "miercoles",
-      "jueves",
-      "viernes",
-      "sabado",
-    ];
-  }
-
-  // Generar turnos para un rango de fechas
-  async generarTurnosRango(fechaInicio, fechaFin) {
-    try {
-      const resultados = {
-        generados: 0,
-        errores: 0,
-        detalles: [],
-      };
-
-      const fechaActual =
-        ParaguayDateUtil.toParaguayTime(fechaInicio).startOf("day");
-      const fechaFinal = ParaguayDateUtil.toParaguayTime(fechaFin).endOf("day");
-
-      while (fechaActual.isSameOrBefore(fechaFinal, "day")) {
-        const resultado = await this.generarTurnosPorFecha(
-          fechaActual.toDate()
-        );
-        resultados.generados += resultado.generados;
-        resultados.errores += resultado.errores;
-        resultados.detalles.push({
-          fecha: ParaguayDateUtil.getDateOnly(fechaActual.toDate()),
-          ...resultado,
-        });
-
-        // Avanzar al siguiente día
-        fechaActual.add(1, "day");
-      }
-
-      return resultados;
-    } catch (error) {
-      console.error("Error al generar turnos por rango:", error);
-      throw error;
-    }
-  }
-
-  // Generar turnos para una fecha específica
+  /**
+   * Genera turnos por fecha considerando TODOS los barberos activos
+   * Crea UN turno por barbero por cada horario configurado
+   */
   async generarTurnosPorFecha(fecha) {
     try {
-      const fechaParaguay = ParaguayDateUtil.toParaguayTime(fecha);
-      const diaSemana = ParaguayDateUtil.getDayOfWeek(fecha);
-      const resultados = {
-        fecha: ParaguayDateUtil.getDateOnly(fecha),
-        diaSemana,
-        generados: 0,
-        errores: 0,
-        slots: [],
-      };
+      const fechaObj = ParaguayDateUtil.toParaguayTime(fecha).toDate();
+      const diaSemana = ParaguayDateUtil.getDayOfWeek(fechaObj);
 
-      // Obtener configuración de horarios para este día
-      const horario = await HorarioModel.findOne({
-        diaSemana: diaSemana,
+      // 1. Obtener barberos activos que estén incluidos en agenda
+      const barberosActivos = await BarberoModel.find({
         activo: true,
+        incluirEnAgenda: true,
       });
 
-      if (!horario) {
-        console.log(`No hay horarios configurados para ${diaSemana}`);
-        return resultados;
+      if (barberosActivos.length === 0) {
+        return {
+          mensaje:
+            "No hay barberos activos incluidos en agenda para generar turnos",
+          turnosCreados: 0,
+        };
       }
 
-      // Generar slots de tiempo
-      const slots = horario.generarSlots(fecha);
-
-      if (slots.length === 0) {
-        console.log(
-          `No hay slots disponibles para ${diaSemana} - ${ParaguayDateUtil.getDateOnly(
-            fecha
-          )}`
-        );
-        return resultados;
-      }
-
-      // Verificar qué turnos ya existen para esta fecha (todo el día)
-      const { startOfDay, endOfDay } = ParaguayDateUtil.createDateRange(fecha);
-
-      const turnosExistentes = await AgendaModel.find({
-        fecha: { $gte: startOfDay, $lte: endOfDay },
+      // 2. Obtener horarios configurados para este día
+      const horariosDelDia = await HorarioModel.find({
+        dias: diaSemana,
+        estado: "activo",
       });
 
-      // Obtener barberos activos
-      const barberosActivos = await BarberoModel.find({ activo: true });
-      console.log(`📋 Barberos activos encontrados: ${barberosActivos.length}`);
+      if (horariosDelDia.length === 0) {
+        return {
+          mensaje: `No hay horarios configurados para ${diaSemana}`,
+          turnosCreados: 0,
+        };
+      }
 
-      // Si no hay barberos, generar al menos 1 turno por defecto
-      const cantidadTurnos =
-        barberosActivos.length > 0 ? barberosActivos.length : 1;
+      horariosDelDia.forEach((h) => console.log(`   - ${h.hora}`));
 
-      // Crear turnos para slots que no existen
-      const fechaNormalizada = ParaguayDateUtil.toParaguayTime(fecha).toDate();
-      fechaNormalizada.setHours(12, 0, 0, 0); // Normalizar a mediodía para evitar problemas de timezone
+      // 3. Generar turnos: uno por barbero por cada horario
+      const turnosACrear = [];
 
-      for (const slot of slots) {
-        // Verificar si ya existe algún turno para esta hora y fecha
-        const turnosEnHora = turnosExistentes.filter(
-          (turno) => turno.hora === slot
-        );
-        const turnosNecesarios = cantidadTurnos - turnosEnHora.length;
+      for (const horario of horariosDelDia) {
+        for (const barbero of barberosActivos) {
+          // Verificar si ya existe este turno específico
+          const turnoExistente = await Agenda.findOne({
+            fecha: {
+              $gte: ParaguayDateUtil.startOfDay(fechaObj).toDate(),
+              $lte: ParaguayDateUtil.endOfDay(fechaObj).toDate(),
+            },
+            hora: horario.hora,
+            barbero: barbero._id,
+          });
 
-        if (turnosNecesarios > 0) {
-          // Generar los turnos faltantes
-          for (let i = 0; i < turnosNecesarios; i++) {
-            try {
-              const barberoAsignado =
-                barberosActivos.length > 0
-                  ? barberosActivos[i % barberosActivos.length]
-                  : null;
-
-              await AgendaModel.create({
-                fecha: fechaNormalizada,
-                hora: slot,
-                diaSemana,
-                estado: "disponible",
-                barbero: barberoAsignado ? barberoAsignado._id : null,
-                creadoAutomaticamente: true,
-              });
-
-              resultados.generados++;
-            } catch (error) {
-              console.error(
-                `Error al crear turno ${slot} para ${fecha}:`,
-                error
-              );
-              resultados.errores++;
-            }
+          if (!turnoExistente) {
+            turnosACrear.push({
+              fecha: ParaguayDateUtil.startOfDay(fechaObj).toDate(),
+              hora: horario.hora,
+              diaSemana: diaSemana,
+              barbero: barbero._id,
+              nombreBarbero: barbero.nombre,
+              nombreCliente: "",
+              numeroCliente: "",
+              emailCliente: "",
+              estado: "disponible",
+              estadoPago: "pendiente",
+              costoTotal: 0,
+              costoServicios: 0,
+              descuento: 0,
+              notas: "",
+              creadoAutomaticamente: true,
+              servicios: [],
+            });
           }
-
-          resultados.slots.push({
-            hora: slot,
-            estado: "generado",
-            turnosCreados: turnosNecesarios,
-            totalTurnos: cantidadTurnos,
-          });
-        } else {
-          resultados.slots.push({
-            hora: slot,
-            estado: "existente",
-            turnosExistentes: turnosEnHora.length,
-          });
         }
       }
 
-      return resultados;
-    } catch (error) {
-      console.error("Error al generar turnos por fecha:", error);
-      throw error;
-    }
-  }
-
-  // Generar turnos para todo el año
-  async generarTurnosAño(año = null) {
-    try {
-      const añoActual = año || new Date().getFullYear();
-      const fechaInicio = new Date(añoActual, 0, 1); // 1 de enero
-      const fechaFin = new Date(añoActual, 11, 31); // 31 de diciembre
-
-      console.log(`🗓️ Generando turnos para todo el año ${añoActual}...`);
-
-      const resultado = await this.generarTurnosRango(fechaInicio, fechaFin);
-
-      console.log(`✅ Generación completada para ${añoActual}:`);
-      console.log(`   - Turnos generados: ${resultado.generados}`);
-      console.log(`   - Errores: ${resultado.errores}`);
+      // 4. Insertar turnos en la base de datos
+      if (turnosACrear.length > 0) {
+        await Agenda.insertMany(turnosACrear);
+      }
 
       return {
-        año: añoActual,
-        fechaInicio: fechaInicio.toISOString().split("T")[0],
-        fechaFin: fechaFin.toISOString().split("T")[0],
-        ...resultado,
+        mensaje: "Turnos generados exitosamente",
+        turnosCreados: turnosACrear.length,
+        barberos: barberosActivos.length,
+        horarios: horariosDelDia.length,
       };
     } catch (error) {
-      console.error("Error al generar turnos del año:", error);
+      console.error("❌ Error generando turnos por fecha:", error);
       throw error;
     }
   }
 
-  // Generar turnos para el próximo mes
-  async generarTurnosProximoMes() {
+  /**
+   * Genera turnos para un rango de fechas
+   */
+  async generarTurnosRango(fechaInicio, fechaFin) {
     try {
-      const hoy = new Date();
-      const proximoMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 1);
-      const finProximoMes = new Date(
-        proximoMes.getFullYear(),
-        proximoMes.getMonth() + 1,
-        0
-      );
+      const inicio = ParaguayDateUtil.toParaguayTime(fechaInicio);
+      const fin = ParaguayDateUtil.toParaguayTime(fechaFin);
+
+      let totalTurnosCreados = 0;
+      const fechaActual = inicio.clone();
+
+      while (fechaActual.isSameOrBefore(fin, "day")) {
+        const resultado = await this.generarTurnosPorFecha(
+          fechaActual.toDate()
+        );
+        totalTurnosCreados += resultado.turnosCreados;
+        fechaActual.add(1, "day");
+      }
+
+      return {
+        mensaje: "Rango de turnos generado exitosamente",
+        turnosCreados: totalTurnosCreados,
+        fechaInicio: inicio.format("YYYY-MM-DD"),
+        fechaFin: fin.format("YYYY-MM-DD"),
+      };
+    } catch (error) {
+      console.error("❌ Error generando turnos en rango:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Genera turnos para el próximo mes
+   */
+  async generarTurnosProximoMes() {
+    const hoy = ParaguayDateUtil.now();
+    const inicioProximoMes = hoy.clone().add(1, "month").startOf("month");
+    const finProximoMes = inicioProximoMes.clone().endOf("month");
+
+    return this.generarTurnosRango(
+      inicioProximoMes.toDate(),
+      finProximoMes.toDate()
+    );
+  }
+
+  /**
+   * Genera turnos para un año completo
+   */
+  async generarTurnosAño(año) {
+    const inicioAño = ParaguayDateUtil.toParaguayTime(new Date(año, 0, 1));
+    const finAño = ParaguayDateUtil.toParaguayTime(new Date(año, 11, 31));
+
+    return this.generarTurnosRango(inicioAño.toDate(), finAño.toDate());
+  }
+
+  /**
+   * Obtener estadísticas de la agenda
+   */
+  async obtenerEstadisticas() {
+    try {
+      const hoy = ParaguayDateUtil.now().toDate();
+      const inicioSemana = ParaguayDateUtil.now().startOf("week").toDate();
+      const finSemana = ParaguayDateUtil.now().endOf("week").toDate();
+      const inicioMes = ParaguayDateUtil.now().startOf("month").toDate();
+      const finMes = ParaguayDateUtil.now().endOf("month").toDate();
+
+      const [
+        turnosAgendadosHoy,
+        turnosDisponiblesHoy,
+        turnosAgendadosSemana,
+        turnosDisponiblesSemana,
+        turnosAgendadosMes,
+        turnosDisponiblesMes,
+      ] = await Promise.all([
+        // Turnos agendados hoy
+        Agenda.countDocuments({
+          fecha: {
+            $gte: ParaguayDateUtil.startOfDay(hoy).toDate(),
+            $lte: ParaguayDateUtil.endOfDay(hoy).toDate(),
+          },
+          estado: { $ne: "disponible" },
+        }),
+        // Turnos disponibles hoy
+        Agenda.countDocuments({
+          fecha: {
+            $gte: ParaguayDateUtil.startOfDay(hoy).toDate(),
+            $lte: ParaguayDateUtil.endOfDay(hoy).toDate(),
+          },
+          estado: "disponible",
+        }),
+        // Turnos agendados esta semana
+        Agenda.countDocuments({
+          fecha: { $gte: inicioSemana, $lte: finSemana },
+          estado: { $ne: "disponible" },
+        }),
+        // Turnos disponibles esta semana
+        Agenda.countDocuments({
+          fecha: { $gte: inicioSemana, $lte: finSemana },
+          estado: "disponible",
+        }),
+        // Turnos agendados este mes
+        Agenda.countDocuments({
+          fecha: { $gte: inicioMes, $lte: finMes },
+          estado: { $ne: "disponible" },
+        }),
+        // Turnos disponibles este mes
+        Agenda.countDocuments({
+          fecha: { $gte: inicioMes, $lte: finMes },
+          estado: "disponible",
+        }),
+      ]);
+
+      return {
+        hoy: {
+          agendados: turnosAgendadosHoy,
+          disponibles: turnosDisponiblesHoy,
+        },
+        semana: {
+          agendados: turnosAgendadosSemana,
+          disponibles: turnosDisponiblesSemana,
+        },
+        mes: {
+          agendados: turnosAgendadosMes,
+          disponibles: turnosDisponiblesMes,
+        },
+      };
+    } catch (error) {
+      console.error("Error obteniendo estadísticas:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Regenerar agenda completa eliminando turnos disponibles y recreándolos
+   */
+  async regenerarAgendaCompleta(fechaInicio, fechaFin) {
+    try {
+      const inicio = fechaInicio
+        ? ParaguayDateUtil.toParaguayTime(fechaInicio)
+        : ParaguayDateUtil.now();
+
+      const fin = fechaFin
+        ? ParaguayDateUtil.toParaguayTime(fechaFin)
+        : ParaguayDateUtil.now().add(3, "months");
 
       console.log(
-        `📅 Generando turnos para ${proximoMes.toLocaleDateString("es-ES", {
-          month: "long",
-          year: "numeric",
-        })}...`
+        `🔄 Regenerando agenda desde ${inicio.format(
+          "YYYY-MM-DD"
+        )} hasta ${fin.format("YYYY-MM-DD")}`
       );
 
-      return await this.generarTurnosRango(proximoMes, finProximoMes);
-    } catch (error) {
-      console.error("Error al generar turnos del próximo mes:", error);
-      throw error;
-    }
-  }
+      // Obtener barberos que NO están incluidos en agenda
+      const barberosExcluidos = await BarberoModel.find({
+        $or: [
+          { incluirEnAgenda: false },
+          { incluirEnAgenda: { $exists: false } },
+        ],
+      });
 
-  // Limpiar turnos antiguos (opcional)
-  async limpiarTurnosAntiguos(diasAtras = 30) {
-    try {
-      const fechaLimite = new Date();
-      fechaLimite.setDate(fechaLimite.getDate() - diasAtras);
+      let turnosEliminadosTotal = 0;
 
-      const resultado = await AgendaModel.deleteMany({
-        fecha: { $lt: fechaLimite },
+      // Eliminar SOLO turnos disponibles en el rango
+      const eliminadosDisponibles = await Agenda.deleteMany({
+        fecha: {
+          $gte: inicio.toDate(),
+          $lte: fin.toDate(),
+        },
         estado: "disponible",
         creadoAutomaticamente: true,
       });
 
+      turnosEliminadosTotal += eliminadosDisponibles.deletedCount;
       console.log(
-        `🧹 Limpieza completada: ${resultado.deletedCount} turnos antiguos eliminados`
+        `🗑️  Eliminados ${eliminadosDisponibles.deletedCount} turnos disponibles`
+      );
+
+      // Eliminar turnos disponibles de barberos excluidos
+      if (barberosExcluidos.length > 0) {
+        const idsExcluidos = barberosExcluidos.map((b) => b._id);
+        const eliminadosExcluidos = await Agenda.deleteMany({
+          fecha: {
+            $gte: inicio.toDate(),
+            $lte: fin.toDate(),
+          },
+          barbero: { $in: idsExcluidos },
+          estado: "disponible",
+          creadoAutomaticamente: true,
+        });
+
+        turnosEliminadosTotal += eliminadosExcluidos.deletedCount;
+        console.log(
+          `🗑️  Eliminados ${eliminadosExcluidos.deletedCount} turnos de barberos excluidos de agenda`
+        );
+      }
+
+      // Regenerar turnos
+      const resultado = await this.generarTurnosRango(
+        inicio.toDate(),
+        fin.toDate()
       );
 
       return {
-        eliminados: resultado.deletedCount,
-        fechaLimite: fechaLimite.toISOString().split("T")[0],
+        mensaje: "Agenda regenerada exitosamente",
+        turnosEliminados: turnosEliminadosTotal,
+        ...resultado,
       };
     } catch (error) {
-      console.error("Error al limpiar turnos antiguos:", error);
+      console.error("❌ Error regenerando agenda:", error);
       throw error;
     }
   }
 
-  // Obtener estadísticas de generación
-  async obtenerEstadisticas(año = null) {
+  /**
+   * Limpiar turnos duplicados manteniendo solo uno por barbero/hora
+   */
+  async limpiarDuplicadosPorBarbero() {
     try {
-      const hoy = new Date();
-      const inicioHoy = new Date(
-        hoy.getFullYear(),
-        hoy.getMonth(),
-        hoy.getDate()
-      );
-      const finHoy = new Date(
-        hoy.getFullYear(),
-        hoy.getMonth(),
-        hoy.getDate() + 1
-      );
+      console.log("🧹 Iniciando limpieza de turnos duplicados por barbero...");
 
-      // Estadísticas de HOY
-      const turnosHoy = await AgendaModel.countDocuments({
-        fecha: { $gte: inicioHoy, $lt: finHoy },
-      });
-
-      const disponiblesHoy = await AgendaModel.countDocuments({
-        fecha: { $gte: inicioHoy, $lt: finHoy },
-        estado: "disponible",
-      });
-
-      const agendadosHoy = turnosHoy - disponiblesHoy;
-
-      // Estadísticas de SEMANA (lunes a domingo)
-      const diaActual = hoy.getDay();
-      const inicioSemana = new Date(hoy);
-      inicioSemana.setDate(
-        hoy.getDate() - diaActual + (diaActual === 0 ? -6 : 1)
-      );
-      inicioSemana.setHours(0, 0, 0, 0);
-
-      const finSemana = new Date(inicioSemana);
-      finSemana.setDate(inicioSemana.getDate() + 7);
-
-      const turnosSemana = await AgendaModel.countDocuments({
-        fecha: { $gte: inicioSemana, $lt: finSemana },
-      });
-
-      const disponiblesSemana = await AgendaModel.countDocuments({
-        fecha: { $gte: inicioSemana, $lt: finSemana },
-        estado: "disponible",
-      });
-
-      const agendadosSemana = turnosSemana - disponiblesSemana;
-
-      // Estadísticas de MES
-      const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
-      const finMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 1);
-
-      const turnosMes = await AgendaModel.countDocuments({
-        fecha: { $gte: inicioMes, $lt: finMes },
-      });
-
-      const disponiblesMes = await AgendaModel.countDocuments({
-        fecha: { $gte: inicioMes, $lt: finMes },
-        estado: "disponible",
-      });
-
-      const agendadosMes = turnosMes - disponiblesMes;
-
-      return {
-        hoy: {
-          agendados: agendadosHoy,
-          disponibles: disponiblesHoy,
-          total: turnosHoy,
+      const pipeline = [
+        {
+          $match: {
+            estado: "disponible",
+            creadoAutomaticamente: true,
+          },
         },
-        semana: {
-          agendados: agendadosSemana,
-          disponibles: disponiblesSemana,
-          total: turnosSemana,
-        },
-        mes: {
-          agendados: agendadosMes,
-          disponibles: disponiblesMes,
-          total: turnosMes,
-        },
-      };
-    } catch (error) {
-      console.error("Error al obtener estadísticas:", error);
-      throw error;
-    }
-  }
-
-  // Función para migrar agenda existente al nuevo sistema (un turno por barbero)
-  async migrarAgendaMultiBarbero() {
-    try {
-      console.log(
-        "🔄 Iniciando migración de agenda a sistema multi-barbero..."
-      );
-
-      const barberosActivos = await BarberoModel.find({ activo: true });
-      const cantidadBarberos =
-        barberosActivos.length > 0 ? barberosActivos.length : 1;
-
-      console.log(`👥 Barberos activos encontrados: ${cantidadBarberos}`);
-
-      // Obtener todos los turnos únicos (fecha + hora)
-      const turnosUnicos = await AgendaModel.aggregate([
         {
           $group: {
-            _id: { fecha: "$fecha", hora: "$hora", diaSemana: "$diaSemana" },
+            _id: {
+              fecha: { $dateToString: { format: "%Y-%m-%d", date: "$fecha" } },
+              hora: "$hora",
+              barbero: "$barbero",
+            },
             turnos: { $push: "$$ROOT" },
             count: { $sum: 1 },
           },
         },
-      ]);
+        {
+          $match: { count: { $gt: 1 } },
+        },
+      ];
 
-      let migrados = 0;
-      let errores = 0;
+      const duplicados = await Agenda.aggregate(pipeline);
+      let eliminados = 0;
 
-      for (const grupo of turnosUnicos) {
-        const { fecha, hora, diaSemana } = grupo._id;
-        const turnosExistentes = grupo.turnos;
+      for (const grupo of duplicados) {
+        // Mantener el primero, eliminar el resto
+        const turnosAEliminar = grupo.turnos.slice(1);
+        const ids = turnosAEliminar.map((t) => t._id);
 
-        // Si hay menos turnos de los que deberían haber (uno por barbero)
-        if (turnosExistentes.length < cantidadBarberos) {
-          const turnosNecesarios = cantidadBarberos - turnosExistentes.length;
+        const resultado = await Agenda.deleteMany({ _id: { $in: ids } });
+        eliminados += resultado.deletedCount;
 
-          for (let i = 0; i < turnosNecesarios; i++) {
-            try {
-              const barberoIndex =
-                (turnosExistentes.length + i) % barberosActivos.length;
-              const barberoAsignado =
-                barberosActivos.length > 0
-                  ? barberosActivos[barberoIndex]
-                  : null;
-
-              await AgendaModel.create({
-                fecha: fecha,
-                hora: hora,
-                diaSemana: diaSemana,
-                estado: "disponible",
-                barbero: barberoAsignado ? barberoAsignado._id : null,
-                creadoAutomaticamente: true,
-                migrado: true,
-              });
-
-              migrados++;
-            } catch (error) {
-              console.error(
-                `Error al migrar turno ${hora} del ${fecha}:`,
-                error
-              );
-              errores++;
-            }
-          }
-        }
+        console.log(
+          `   Eliminados ${resultado.deletedCount} duplicados para ${grupo._id.fecha} ${grupo._id.hora} - Barbero: ${grupo._id.barbero}`
+        );
       }
 
-      console.log(`✅ Migración completada:`);
-      console.log(`   - Turnos migrados: ${migrados}`);
-      console.log(`   - Errores: ${errores}`);
+      console.log(`✅ Limpieza completada. ${eliminados} turnos eliminados.`);
 
-      return { migrados, errores };
+      return {
+        mensaje: "Limpieza completada",
+        gruposDuplicados: duplicados.length,
+        turnosEliminados: eliminados,
+      };
     } catch (error) {
-      console.error("Error durante la migración:", error);
+      console.error("❌ Error limpiando duplicados:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Limpiar turnos de barberos excluidos de la agenda
+   * CUIDADO: Esta función elimina TODOS los turnos (incluidos los agendados) de barberos excluidos
+   */
+  async limpiarTurnosBarberosExcluidos(fechaInicio, fechaFin) {
+    try {
+      console.log("🧹 Iniciando limpieza de turnos de barberos excluidos...");
+
+      const inicio = fechaInicio
+        ? ParaguayDateUtil.toParaguayTime(fechaInicio)
+        : ParaguayDateUtil.now();
+
+      const fin = fechaFin
+        ? ParaguayDateUtil.toParaguayTime(fechaFin)
+        : ParaguayDateUtil.now().add(3, "months");
+
+      // Obtener barberos que NO están incluidos en agenda
+      const barberosExcluidos = await BarberoModel.find({
+        $or: [
+          { incluirEnAgenda: false },
+          { incluirEnAgenda: { $exists: false } },
+        ],
+      });
+
+      if (barberosExcluidos.length === 0) {
+        return {
+          mensaje: "No hay barberos excluidos de la agenda",
+          turnosEliminados: 0,
+        };
+      }
+
+      const idsExcluidos = barberosExcluidos.map((b) => b._id);
+
+      // Contar turnos que se van a eliminar
+      const turnosAEliminar = await Agenda.countDocuments({
+        fecha: {
+          $gte: inicio.toDate(),
+          $lte: fin.toDate(),
+        },
+        barbero: { $in: idsExcluidos },
+      });
+
+      // Contar turnos agendados que se perderán
+      const turnosAgendados = await Agenda.countDocuments({
+        fecha: {
+          $gte: inicio.toDate(),
+          $lte: fin.toDate(),
+        },
+        barbero: { $in: idsExcluidos },
+        estado: { $ne: "disponible" },
+      });
+
+      console.log(`⚠️  Se eliminarán ${turnosAEliminar} turnos en total`);
+      console.log(
+        `⚠️  De estos, ${turnosAgendados} están agendados con clientes`
+      );
+
+      // Eliminar turnos
+      const resultado = await Agenda.deleteMany({
+        fecha: {
+          $gte: inicio.toDate(),
+          $lte: fin.toDate(),
+        },
+        barbero: { $in: idsExcluidos },
+      });
+
+      console.log(
+        `✅ Eliminados ${resultado.deletedCount} turnos de barberos excluidos`
+      );
+
+      return {
+        mensaje: "Limpieza de barberos excluidos completada",
+        barberosExcluidos: barberosExcluidos.length,
+        turnosEliminados: resultado.deletedCount,
+        turnosAgendadosPerdidos: turnosAgendados,
+        barberos: barberosExcluidos.map((b) => b.nombre),
+      };
+    } catch (error) {
+      console.error("❌ Error limpiando turnos de barberos excluidos:", error);
       throw error;
     }
   }

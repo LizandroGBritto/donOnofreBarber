@@ -26,6 +26,11 @@ const BarberoSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    incluirEnAgenda: {
+      type: Boolean,
+      default: true,
+      required: false,
+    },
   },
   { timestamps: true }
 );

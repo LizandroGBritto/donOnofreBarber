@@ -135,6 +135,27 @@ module.exports = {
     }
   },
 
+  // Nuevo endpoint para limpiar turnos de barberos excluidos
+  limpiarTurnosBarberosExcluidos: async (req, res) => {
+    try {
+      const { fechaInicio, fechaFin } = req.body;
+
+      const resultado =
+        await AgendaGeneratorService.limpiarTurnosBarberosExcluidos(
+          fechaInicio ? new Date(fechaInicio) : null,
+          fechaFin ? new Date(fechaFin) : null
+        );
+
+      res.status(200).json(resultado);
+    } catch (error) {
+      console.error("Error al limpiar turnos de barberos excluidos:", error);
+      res.status(500).json({
+        message: "Error al limpiar turnos de barberos excluidos",
+        error: error.message,
+      });
+    }
+  },
+
   // Endpoint de diagnóstico para verificar horarios y turnos
   diagnosticoHorarios: async (req, res) => {
     try {
@@ -754,87 +775,13 @@ module.exports = {
     try {
       const { fechaInicio, fechaFin } = req.body;
 
-      // Si no se proporcionan fechas, usar desde hoy hasta 3 meses después
-      const inicio = fechaInicio
-        ? ParaguayDateUtil.toParaguayTime(fechaInicio)
-        : ParaguayDateUtil.now();
-
-      const fin = fechaFin
-        ? ParaguayDateUtil.toParaguayTime(fechaFin)
-        : ParaguayDateUtil.now().add(3, "months");
-
-      console.log(
-        `Regenerando agenda desde ${inicio.format(
-          "YYYY-MM-DD"
-        )} hasta ${fin.format("YYYY-MM-DD")}`
+      // Usar el nuevo método del servicio que genera UN turno por barbero
+      const resultado = await AgendaGeneratorService.regenerarAgendaCompleta(
+        fechaInicio ? new Date(fechaInicio) : null,
+        fechaFin ? new Date(fechaFin) : null
       );
 
-      // Obtener todos los horarios activos
-      const horariosActivos = await HorarioModel.find({ estado: "activo" });
-
-      if (horariosActivos.length === 0) {
-        return res.status(400).json({
-          message: "No hay horarios activos configurados",
-        });
-      }
-
-      let turnosCreados = 0;
-      let turnosEliminados = 0;
-
-      // Para cada día desde el inicio hasta el fin
-      const fechaActual = inicio.clone();
-      while (fechaActual.isSameOrBefore(fin, "day")) {
-        const diaSemana = ParaguayDateUtil.getDayOfWeek(fechaActual.toDate());
-
-        // Eliminar turnos existentes sin cliente para este día
-        const eliminados = await AgendaModel.deleteMany({
-          fecha: {
-            $gte: ParaguayDateUtil.startOfDay(fechaActual.toDate()).toDate(),
-            $lte: ParaguayDateUtil.endOfDay(fechaActual.toDate()).toDate(),
-          },
-          nombreCliente: { $in: ["", null] },
-          estado: "disponible",
-        });
-
-        turnosEliminados += eliminados.deletedCount;
-
-        // Crear nuevos turnos basados en horarios configurados
-        for (const horario of horariosActivos) {
-          // Verificar si este horario aplica para el día actual
-          if (horario.dias.includes(diaSemana)) {
-            const nuevoTurno = {
-              fecha: ParaguayDateUtil.startOfDay(fechaActual.toDate()).toDate(),
-              hora: horario.hora,
-              diaSemana: diaSemana,
-              nombreCliente: "",
-              numeroCliente: "",
-              emailCliente: "",
-              estado: "disponible",
-              estadoPago: "pendiente",
-              costoTotal: 0,
-              costoServicios: 0,
-              descuento: 0,
-              notas: "",
-              creadoAutomaticamente: true,
-              servicios: [],
-            };
-
-            await AgendaModel.create(nuevoTurno);
-            turnosCreados++;
-          }
-        }
-
-        fechaActual.add(1, "day");
-      }
-
-      res.status(200).json({
-        message: "Agenda regenerada exitosamente",
-        turnosCreados,
-        turnosEliminados,
-        horariosUtilizados: horariosActivos.length,
-        fechaInicio: inicio.format("YYYY-MM-DD"),
-        fechaFin: fin.format("YYYY-MM-DD"),
-      });
+      res.status(200).json(resultado);
     } catch (error) {
       console.error("Error al regenerar agenda por horarios:", error);
       res.status(500).json({

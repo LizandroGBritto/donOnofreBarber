@@ -176,6 +176,7 @@ const AdminDashboard = () => {
     nombre: "",
     descripcion: "",
     activo: true,
+    incluirEnAgenda: true,
   });
   const [showBarberoModal, setShowBarberoModal] = useState(false);
   const [barberoFoto, setBarberoFoto] = useState(null);
@@ -862,6 +863,7 @@ const AdminDashboard = () => {
       formData.append("nombre", barberoForm.nombre);
       formData.append("descripcion", barberoForm.descripcion);
       formData.append("activo", barberoForm.activo);
+      formData.append("incluirEnAgenda", barberoForm.incluirEnAgenda);
 
       if (barberoFoto) {
         formData.append("foto", barberoFoto);
@@ -899,6 +901,7 @@ const AdminDashboard = () => {
       nombre: barbero.nombre,
       descripcion: barbero.descripcion,
       activo: barbero.activo,
+      incluirEnAgenda: barbero.incluirEnAgenda ?? true,
     });
     setShowBarberoModal(true);
   };
@@ -909,6 +912,7 @@ const AdminDashboard = () => {
       nombre: "",
       descripcion: "",
       activo: true,
+      incluirEnAgenda: true,
     });
     setBarberoFoto(null);
     setBarberoLogo(null);
@@ -2670,6 +2674,7 @@ const AdminDashboard = () => {
                       <Table.HeadCell>Logo</Table.HeadCell>
                       <Table.HeadCell>Descripción</Table.HeadCell>
                       <Table.HeadCell>Estado</Table.HeadCell>
+                      <Table.HeadCell>Incluir en Agenda</Table.HeadCell>
                       <Table.HeadCell>Acciones</Table.HeadCell>
                     </Table.Head>
                     <Table.Body>
@@ -2717,6 +2722,19 @@ const AdminDashboard = () => {
                               }`}
                             >
                               {barbero.activo ? "Activo" : "Inactivo"}
+                            </span>
+                          </Table.Cell>
+                          <Table.Cell>
+                            <span
+                              className={`px-2 py-1 rounded-full text-xs ${
+                                barbero.incluirEnAgenda
+                                  ? "bg-blue-100 text-blue-800"
+                                  : "bg-gray-100 text-gray-800"
+                              }`}
+                            >
+                              {barbero.incluirEnAgenda
+                                ? "Incluido"
+                                : "Excluido"}
                             </span>
                           </Table.Cell>
                           <Table.Cell>
@@ -2853,6 +2871,22 @@ const AdminDashboard = () => {
                 className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
               />
               <Label htmlFor="activoBarbero">Barbero activo</Label>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <input
+                id="incluirEnAgendaBarbero"
+                type="checkbox"
+                checked={barberoForm.incluirEnAgenda}
+                onChange={(e) =>
+                  setBarberoForm({
+                    ...barberoForm,
+                    incluirEnAgenda: e.target.checked,
+                  })
+                }
+                className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+              />
+              <Label htmlFor="incluirEnAgendaBarbero">Incluir en agenda</Label>
             </div>
 
             <div className="flex gap-2 pt-4">

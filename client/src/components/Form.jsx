@@ -52,12 +52,12 @@ const Form = ({
     loadServices();
   }, []);
 
-  // Cargar barberos activos
+  // Cargar barberos activos incluidos en agenda
   useEffect(() => {
     const loadBarberos = async () => {
       try {
         const response = await axios.get(
-          "http://localhost:8000/api/barberos/activos"
+          "http://localhost:8000/api/barberos/agenda"
         );
         setBarberos(response.data);
       } catch (error) {
@@ -90,12 +90,12 @@ const Form = ({
     loadDisponibilidad();
   }, [agenda.fecha]);
 
-  // Cargar barberos activos
+  // Cargar barberos activos incluidos en agenda
   useEffect(() => {
     const loadBarberos = async () => {
       try {
         const response = await axios.get(
-          "http://localhost:8000/api/barberos/activos"
+          "http://localhost:8000/api/barberos/agenda"
         );
         setBarberos(response.data);
       } catch (error) {

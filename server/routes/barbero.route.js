@@ -11,6 +11,9 @@ BarberoRouter.get("/", BarberoController.getAllBarberos);
 // Obtener barberos activos
 BarberoRouter.get("/activos", BarberoController.getBarberosActivos);
 
+// Obtener barberos incluidos en agenda
+BarberoRouter.get("/agenda", BarberoController.getBarberosParaAgenda);
+
 // Obtener un barbero por ID
 BarberoRouter.get("/:id", BarberoController.getOneBarbero);
 

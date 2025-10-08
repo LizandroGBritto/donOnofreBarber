@@ -31,6 +31,10 @@ AgendaRouter.delete(
   "/limpiar-duplicados",
   AgendaController.limpiarTurnosDuplicados
 );
+AgendaRouter.delete(
+  "/limpiar-barberos-excluidos",
+  AgendaController.limpiarTurnosBarberosExcluidos
+);
 AgendaRouter.delete("/eliminar-hoy", AgendaController.eliminarTurnosHoy);
 AgendaRouter.post("/regenerar-fecha", AgendaController.regenerarTurnosFecha);
 AgendaRouter.post(

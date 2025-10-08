@@ -58,6 +58,25 @@ module.exports = {
     }
   },
 
+  // Obtener barberos incluidos en agenda
+  getBarberosParaAgenda: async (req, res) => {
+    try {
+      const barberos = await BarberoModel.find({
+        activo: true,
+        incluirEnAgenda: true,
+      }).sort({
+        createdAt: 1,
+      });
+      res.status(200).json(barberos);
+    } catch (error) {
+      console.error("Error al obtener barberos para agenda:", error);
+      res.status(500).json({
+        message: "Error al obtener barberos para agenda",
+        error: error.message,
+      });
+    }
+  },
+
   // Obtener un barbero por ID
   getOneBarbero: async (req, res) => {
     try {
@@ -78,7 +97,12 @@ module.exports = {
   // Crear nuevo barbero
   createBarbero: async (req, res) => {
     try {
-      const { nombre, descripcion, activo = true } = req.body;
+      const {
+        nombre,
+        descripcion,
+        activo = true,
+        incluirEnAgenda = true,
+      } = req.body;
 
       // Procesar las imágenes subidas
       const imagenes = [];
@@ -120,6 +144,7 @@ module.exports = {
         foto: imagenes[0], // Primera imagen procesada (foto)
         logo: imagenes[1] || null, // Segunda imagen si existe (logo)
         activo,
+        incluirEnAgenda,
       };
 
       const barberoCreado = await BarberoModel.create(nuevoBarbero);
@@ -137,7 +162,7 @@ module.exports = {
   updateBarbero: async (req, res) => {
     try {
       const { id } = req.params;
-      const { nombre, descripcion, activo } = req.body;
+      const { nombre, descripcion, activo, incluirEnAgenda } = req.body;
 
       const barbero = await BarberoModel.findById(id);
       if (!barbero) {
@@ -148,6 +173,7 @@ module.exports = {
         nombre,
         descripcion,
         activo,
+        incluirEnAgenda,
       };
 
       // Procesar nuevas imágenes si se subieron
