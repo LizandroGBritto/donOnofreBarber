@@ -47,7 +47,6 @@ module.exports = {
     try {
       const barberos = await BarberoModel.find({ activo: true }).sort({
         createdAt: 1,
-        createdAt: 1,
       });
       res.status(200).json(barberos);
     } catch (error) {

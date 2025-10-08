@@ -979,6 +979,7 @@ const AdminDashboard = () => {
   useEffect(() => {
     if (activeView === "turnos") {
       fetchTurnos();
+      fetchBarberos(); // 🆕 CARGAR barberos para el filtro
     } else if (activeView === "banners") {
       fetchBanners();
     } else if (activeView === "contacto") {
