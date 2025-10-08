@@ -2,6 +2,7 @@ const AgendaModel = require("../models/agenda.model");
 const AgendaGeneratorService = require("../services/agendaGenerator.service");
 const HorarioModel = require("../models/horario.model");
 const ParaguayDateUtil = require("../utils/paraguayDate");
+const NotificationService = require("../services/notificationService");
 
 module.exports = {
   // Endpoint para eliminar todos los turnos de hoy (usando hora de Paraguay)
@@ -247,17 +248,6 @@ module.exports = {
         const agendasConCosto = allAgendas.filter(
           (a) => a.costoTotal > 0 || a.costoServicios > 0
         );
-        if (agendasConCosto.length > 0) {
-          console.log(
-            "Ejemplos con costo:",
-            agendasConCosto.slice(0, 3).map((a) => ({
-              id: a._id,
-              costoTotal: a.costoTotal,
-              costoServicios: a.costoServicios,
-              servicios: a.servicios?.length || 0,
-            }))
-          );
-        }
         res.status(200).json({ agendas: allAgendas });
       })
       .catch((err) =>
@@ -423,7 +413,6 @@ module.exports = {
   // Endpoint específico para la landing - Vista limpia con un turno por hora
   getTurnosLanding: async (req, res) => {
     try {
-
       // Obtener barberos activos para calcular disponibilidad
       const BarberoModel = require("../models/barbero.model");
       const barberosActivos = await BarberoModel.find({ activo: true });
@@ -448,9 +437,6 @@ module.exports = {
         const fechaString = fecha.toISOString().split("T")[0]; // YYYY-MM-DD
         const key = `${fechaString}|${turno.hora}`;
 
-
-
-
         if (!turnosPorFechaHora.has(key)) {
           turnosPorFechaHora.set(key, {
             fecha: turno.fecha,
@@ -460,32 +446,27 @@ module.exports = {
             ocupados: [],
             usuarios: [], // Turnos con cliente asignado
           });
-        } 
+        }
         const grupo = turnosPorFechaHora.get(key);
 
         if (turno.nombreCliente && turno.nombreCliente.trim() !== "") {
           grupo.usuarios.push(turno);
-
         } else if (turno.estado === "disponible") {
           grupo.disponibles.push(turno);
-
         } else {
           grupo.ocupados.push(turno);
         }
       });
 
-
       // Crear vista limpia: un turno por hora, considerando disponibilidad de barberos
       const turnosLimpios = [];
 
       turnosPorFechaHora.forEach((grupo, key) => {
-
         // Calcular barberos ocupados en esta hora
         const barberosOcupados =
           grupo.usuarios.length +
           grupo.ocupados.filter((t) => t.barbero).length;
         const hayDisponibilidadDeBarberos = barberosOcupados < totalBarberos;
-
 
         let turnoRepresentativo;
 
@@ -518,7 +499,6 @@ module.exports = {
             // Cambiar estado a reservado porque no hay barberos disponibles
             estado: "reservado",
           };
-
         }
         // Prioridad 3: Si NO hay disponibles pero hay usuarios, mostrar el primero
         else if (grupo.usuarios.length > 0) {
@@ -532,7 +512,6 @@ module.exports = {
             totalBarberos: totalBarberos,
             barberosOcupados: barberosOcupados,
           };
-
         }
         // Prioridad 4: Si NO hay disponibles ni usuarios, mostrar ocupado
         else if (grupo.ocupados.length > 0) {
@@ -546,18 +525,14 @@ module.exports = {
             totalBarberos: totalBarberos,
             barberosOcupados: barberosOcupados,
           };
-
         } else {
           console.log(`⚠️  NO HAY TURNOS para agregar en grupo: ${key}`);
         }
 
         if (turnoRepresentativo) {
           turnosLimpios.push(turnoRepresentativo);
-
         }
       });
-
-
 
       // Log de turnos finales para verificar duplicados
       const keysFinal = turnosLimpios.map((t) => {
@@ -565,8 +540,6 @@ module.exports = {
         return `${fechaString}|${t.hora}`;
       });
       const keysUnicas = [...new Set(keysFinal)];
-
-
 
       if (keysFinal.length !== keysUnicas.length) {
         console.log(`❗ DUPLICADOS DETECTADOS:`);
@@ -589,7 +562,6 @@ module.exports = {
         const horaB = parseInt(b.hora.replace(":", ""), 10);
         return horaA - horaB;
       });
-
 
       res.status(200).json({
         agendas: turnosLimpios,
@@ -683,14 +655,53 @@ module.exports = {
         res.status(400).json({ message: "Algo salió mal", error: err })
       );
   },
-  updateOneAgendaById: (req, res) => {
-    AgendaModel.findOneAndUpdate({ _id: req.params.id }, req.body, {
-      new: true,
-    })
-      .then((updatedAgenda) => res.status(200).json({ agenda: updatedAgenda }))
-      .catch((err) =>
-        res.status(400).json({ message: "Algo salió mal", error: err })
-      );
+  updateOneAgendaById: async (req, res) => {
+    try {
+      // Obtener el turno anterior para comparar cambios
+      const turnoAnterior = await AgendaModel.findById(req.params.id);
+
+      const updatedAgenda = await AgendaModel.findOneAndUpdate(
+        { _id: req.params.id },
+        req.body,
+        { new: true }
+      ).populate("barbero", "nombre foto");
+
+      // Detectar si el turno fue liberado (cambió a disponible)
+      const fueLibrado =
+        turnoAnterior.estado !== "disponible" &&
+        req.body.estado === "disponible";
+
+      // Detectar si el turno fue editado (cambió información del cliente)
+      const fueEditado =
+        turnoAnterior.nombreCliente &&
+        req.body.nombreCliente &&
+        turnoAnterior.nombreCliente !== req.body.nombreCliente;
+
+      // Enviar notificaciones según el tipo de cambio
+      if (fueLibrado) {
+        try {
+          await NotificationService.notificarTurnoLiberado(updatedAgenda);
+        } catch (notifError) {
+          console.error(
+            "Error al enviar notificación de turno liberado:",
+            notifError
+          );
+        }
+      } else if (fueEditado) {
+        try {
+          await NotificationService.notificarTurnoEditado(updatedAgenda);
+        } catch (notifError) {
+          console.error(
+            "Error al enviar notificación de turno editado:",
+            notifError
+          );
+        }
+      }
+
+      res.status(200).json({ agenda: updatedAgenda });
+    } catch (err) {
+      res.status(400).json({ message: "Algo salió mal", error: err });
+    }
   },
   deleteOneAgendaById: (req, res) => {
     AgendaModel.deleteOne({ _id: req.params.id })
@@ -986,6 +997,17 @@ module.exports = {
       // Populate el barbero para la respuesta
       await nuevoTurno.populate("barbero", "nombre foto");
 
+      // Enviar notificación de nueva reserva
+      try {
+        await NotificationService.notificarNuevaReserva(nuevoTurno);
+      } catch (notifError) {
+        console.error(
+          "Error al enviar notificación de nueva reserva:",
+          notifError
+        );
+        // No fallar la reserva por error de notificación
+      }
+
       res.status(200).json({
         message: "Turno reservado exitosamente",
         turno: nuevoTurno,
@@ -1040,7 +1062,6 @@ module.exports = {
       // Generar próximas 4 semanas
       const hoy = new Date();
 
-
       const semanas = [];
 
       for (let i = 0; i < 4; i++) {
@@ -1060,13 +1081,10 @@ module.exports = {
           diasHastaLunes = 1 - diaSemanaHoy; // Otros días: calcular diferencia
         }
 
-
-
         // Obtener el lunes de la semana actual
         const lunesActual = new Date(fechaBase);
         lunesActual.setDate(fechaBase.getDate() + diasHastaLunes);
         lunesActual.setHours(0, 0, 0, 0); // Reset tiempo a medianoche
-
 
         // Ahora sumar las semanas completas
         const inicioSemana = new Date(lunesActual);
@@ -1083,8 +1101,6 @@ module.exports = {
         const diaSemanaFin = finSemana.toLocaleDateString("es-ES", {
           weekday: "long",
         });
-
-
 
         // Verificar que inicioSemana sea lunes
         if (inicioSemana.getDay() !== 1) {

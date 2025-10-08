@@ -1,0 +1,6 @@
+
+// Ejemplo de configuración actualizada:
+const vapidKeys = {
+  publicKey: 'BMjlOUjChPSr5ovhDZvclCZxPO7ra3XEu8YkqvlSQvXx--sWrUlqtUbxcMNEATH-xdkvxSioPzXFrRri5FQe2Qc',
+  privateKey: '2d0yg4spyvkYkMHaz_bpRoa4nVkqZKII4vKay-8ULuU'
+};

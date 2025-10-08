@@ -11,6 +11,7 @@ import {
 } from "flowbite-react";
 import axios from "axios";
 import Dashboard from "./panel/Dashboard";
+import NotificationManager from "./NotificationManager";
 
 const AdminDashboard = () => {
   // Función para procesar número de teléfono para WhatsApp
@@ -1171,11 +1172,25 @@ const AdminDashboard = () => {
             >
               Barberos
             </Button>
+            <Button
+              size="sm"
+              color={activeView === "notificaciones" ? "purple" : "gray"}
+              onClick={() => setActiveView("notificaciones")}
+              className="text-xs md:text-sm"
+            >
+              🔔 Notificaciones
+            </Button>
           </div>
         </div>
       </Card>
 
       {activeView === "dashboard" && <Dashboard />}
+
+      {activeView === "notificaciones" && (
+        <div className="space-y-6">
+          <NotificationManager />
+        </div>
+      )}
 
       {activeView === "turnos" && (
         <div>
