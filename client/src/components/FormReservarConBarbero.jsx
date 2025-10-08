@@ -26,6 +26,7 @@ const FormReservarConBarbero = ({
           "http://localhost:8000/api/barberos/activos"
         );
         setBarberos(response.data);
+        console.log("👥 Barberos cargados:", response.data);
       } catch (error) {
         console.error("Error loading barberos:", error);
       }
@@ -39,7 +40,6 @@ const FormReservarConBarbero = ({
     const loadServices = async () => {
       try {
         const response = await axios.get("http://localhost:8000/api/servicios");
-        // La API devuelve directamente el array de servicios
         setServices(response.data || []);
       } catch (error) {
         console.error("Error loading services:", error);
@@ -55,27 +55,46 @@ const FormReservarConBarbero = ({
     loadServices();
   }, []);
 
-  // Cargar disponibilidad para la fecha del turno
+  // 🔧 SOLUCIÓN: Cargar disponibilidad mejorada
   useEffect(() => {
     const loadDisponibilidad = async () => {
-      if (!turno?.fecha) return;
+      if (!turno?.fecha || !turno?.hora) return;
 
       try {
         setLoading(true);
         const fechaISO = new Date(turno.fecha).toISOString().split("T")[0];
+        
+        console.log(`🔍 Cargando disponibilidad para ${fechaISO} a las ${turno.hora}`);
+
+        // Usar la ruta correcta para obtener disponibilidad por barbero
         const response = await axios.get(
-          `http://localhost:8000/api/agenda/disponibilidad/${fechaISO}`
+          `http://localhost:8000/api/agenda/disponibilidad-barberos/${fechaISO}`
         );
+
+        console.log("📥 Disponibilidad recibida:", response.data.disponibilidad);
+
+        // Verificar que tengamos data para la hora específica
+        const dispHora = response.data.disponibilidad[turno.hora];
+        if (dispHora) {
+          console.log(`✅ Para hora ${turno.hora}:`, {
+            disponibles: dispHora.barberosDisponibles?.length || 0,
+            ocupados: dispHora.barberosOcupados?.length || 0
+          });
+        } else {
+          console.warn(`⚠️ No hay datos de disponibilidad para hora ${turno.hora}`);
+        }
+
         setDisponibilidad(response.data.disponibilidad);
       } catch (error) {
-        console.error("Error loading disponibilidad:", error);
+        console.error("❌ Error loading disponibilidad:", error);
+        setError("Error al cargar la disponibilidad de barberos");
       } finally {
         setLoading(false);
       }
     };
 
     loadDisponibilidad();
-  }, [turno?.fecha]);
+  }, [turno?.fecha, turno?.hora]);
 
   const validationSchema = Yup.object().shape({
     nombreCliente: Yup.string()
@@ -101,12 +120,9 @@ const FormReservarConBarbero = ({
 
   const handleServiceChange = (service, isChecked, setFieldValue) => {
     let updatedServices;
-
-    // Usar el _id si existe, si no usar el nombre como identificador
     const serviceId = service._id || service.nombre;
 
     if (isChecked) {
-      // Verificar que no esté ya seleccionado para evitar duplicados
       const alreadySelected = selectedServices.some(
         (s) =>
           (s._id && s._id === serviceId) ||
@@ -148,19 +164,20 @@ const FormReservarConBarbero = ({
         nombreCliente: values.nombreCliente,
         numeroCliente: values.numeroCliente,
         servicios: selectedServices.map((s) => ({
-          servicioId: s._id || null, // Puede ser null para servicios de fallback
+          servicioId: s._id || null,
           nombre: s.nombre,
           precio: s.precio,
           duracion: s.duracion || 30,
         })),
       };
 
+      console.log("📤 Enviando reserva:", reservaData);
+
       const response = await axios.post(
         "http://localhost:8000/api/agenda/reservar-con-barbero",
         reservaData
       );
 
-      // Refresh data antes de mostrar el mensaje de éxito
       await refreshData();
 
       Swal.fire({
@@ -176,7 +193,7 @@ const FormReservarConBarbero = ({
 
       onCloseModal();
     } catch (error) {
-      console.error("Error al reservar:", error);
+      console.error("❌ Error al reservar:", error);
       const errorMessage =
         error.response?.data?.message || "Error al realizar la reserva";
 
@@ -195,17 +212,24 @@ const FormReservarConBarbero = ({
 
   if (!turno) return null;
 
+  // 🔧 SOLUCIÓN: Verificación mejorada de barberos disponibles/ocupados
   const horaDisponibilidad = disponibilidad[turno.hora];
   const barberosDisponibles = horaDisponibilidad?.barberosDisponibles || [];
   const barberosOcupados = horaDisponibilidad?.barberosOcupados || [];
 
-  // Debug logs
-  console.log("🔍 Debug FormReservarConBarbero:");
-  console.log("   - Turno:", turno);
-  console.log("   - Hora disponibilidad:", horaDisponibilidad);
-  console.log("   - Barberos disponibles:", barberosDisponibles);
-  console.log("   - Barberos ocupados:", barberosOcupados);
-  console.log("   - Disponibilidad completa:", disponibilidad);
+  // Crear un Set con IDs de barberos ocupados para búsqueda rápida
+  const barberosOcupadosIds = new Set(
+    barberosOcupados.map(bo => bo.barbero?._id?.toString()).filter(Boolean)
+  );
+
+  // Debug logs mejorados
+  console.log("🔍 DEBUG FormReservarConBarbero:");
+  console.log("   📅 Fecha:", turno.fecha);
+  console.log("   🕐 Hora:", turno.hora);
+  console.log("   📊 Disponibilidad hora:", horaDisponibilidad);
+  console.log("   ✅ Barberos disponibles:", barberosDisponibles.length);
+  console.log("   ❌ Barberos ocupados:", barberosOcupados.length);
+  console.log("   🔒 IDs ocupados:", Array.from(barberosOcupadosIds));
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -274,7 +298,7 @@ const FormReservarConBarbero = ({
                   </div>
                 </div>
 
-                {/* Selección de Barbero */}
+                {/* Selección de Barbero - CORREGIDO */}
                 <div>
                   <h3 className="text-lg font-medium text-gray-900 mb-4">
                     Seleccionar Barbero *
@@ -286,12 +310,14 @@ const FormReservarConBarbero = ({
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {barberos.map((barbero) => {
-                        const estaDisponible = barberosDisponibles.some(
-                          (b) => b._id === barbero._id
-                        );
-                        const estaOcupado = barberosOcupados.some(
-                          (bo) => bo.barbero && bo.barbero._id === barbero._id
-                        );
+                        // 🔧 SOLUCIÓN: Verificación correcta del estado del barbero
+                        const barberoIdStr = barbero._id.toString();
+                        const estaOcupado = barberosOcupadosIds.has(barberoIdStr);
+                        
+                        console.log(`🔍 Verificando barbero ${barbero.nombre} (${barberoIdStr}):`, {
+                          ocupado: estaOcupado,
+                          enSet: barberosOcupadosIds.has(barberoIdStr)
+                        });
 
                         return (
                           <div
@@ -311,6 +337,9 @@ const FormReservarConBarbero = ({
                                     : barbero._id;
                                 setSelectedBarbero(newSelected);
                                 setFieldValue("barberoId", newSelected || "");
+                                console.log("👆 Barbero seleccionado:", barbero.nombre);
+                              } else {
+                                console.log("🚫 Barbero ocupado, no se puede seleccionar");
                               }
                             }}
                           >
@@ -326,8 +355,8 @@ const FormReservarConBarbero = ({
                                 <h4 className="font-medium text-gray-900">
                                   {barbero.nombre}
                                 </h4>
-                                <p className="text-sm text-gray-500">
-                                  {estaOcupado ? "No disponible" : "Disponible"}
+                                <p className={`text-sm ${estaOcupado ? 'text-red-500' : 'text-green-500'}`}>
+                                  {estaOcupado ? "❌ No disponible" : "✅ Disponible"}
                                 </p>
                                 {barbero.descripcion && (
                                   <p className="text-xs text-gray-400 mt-1">
@@ -338,6 +367,9 @@ const FormReservarConBarbero = ({
                               <div className="flex-shrink-0">
                                 {selectedBarbero === barbero._id && (
                                   <div className="w-4 h-4 bg-purple-500 rounded-full"></div>
+                                )}
+                                {estaOcupado && (
+                                  <div className="text-red-500 text-xl">🔒</div>
                                 )}
                               </div>
                             </div>

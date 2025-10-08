@@ -9,10 +9,19 @@ AgendaRouter.get(
   "/disponibilidad",
   AgendaController.getTurnosConDisponibilidad
 );
+
+// ✅ RUTA PARA DISPONIBILIDAD GENERAL (sin barberos específicos)
 AgendaRouter.get(
   "/disponibilidad/:fecha",
   AgendaController.getDisponibilidadPorFecha
 );
+
+// ✅ NUEVA RUTA ESPECÍFICA PARA DISPONIBILIDAD POR BARBERO
+AgendaRouter.get(
+  "/disponibilidad-barberos/:fecha",
+  AgendaController.getDisponibilidadPorBarbero
+);
+
 AgendaRouter.get("/landing", AgendaController.getTurnosLanding);
 AgendaRouter.get("/horarios-semanas", AgendaController.getHorariosYSemanas);
 
@@ -37,11 +46,7 @@ AgendaRouter.post(
   AgendaController.migrarAgendaMultiBarbero
 );
 
-// Nuevas rutas para manejo de barberos
-AgendaRouter.get(
-  "/disponibilidad/:fecha",
-  AgendaController.getDisponibilidadPorBarbero
-);
+// Ruta para reservar con barbero específico
 AgendaRouter.post(
   "/reservar-con-barbero",
   AgendaController.reservarTurnoConBarbero
