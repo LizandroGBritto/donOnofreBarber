@@ -335,7 +335,7 @@ const AdminDashboard = () => {
 
   const filtrarManana = () => {
     const hoy = new Date();
-    hoy.setDate(hoy.getDate() + 1); 
+    hoy.setDate(hoy.getDate() + 1);
     const year = hoy.getFullYear();
     const month = String(hoy.getMonth() + 1).padStart(2, "0");
     const day = String(hoy.getDate()).padStart(2, "0");
@@ -1015,82 +1015,82 @@ const AdminDashboard = () => {
 
   // Componente responsivo para mostrar turnos en móvil
   const TurnoCard = ({ turno }) => (
-  <Card className="mb-4" style={{ backgroundColor: "#5B4373" }}>
-    <div className="p-4">
-      <div className="flex justify-between items-start mb-2">
-        <div>
-          <h3 className="font-semibold text-lg text-white">
-            {turno.nombreCliente || "Disponible"}
-          </h3>
-          <p className="text-sm text-gray-300">
-            {formatearFecha(turno.fecha)} - {turno.hora}
-          </p>
-          {/* 🆕 NUEVO: Mostrar barbero en móvil */}
-          {turno.barbero && (
-            <div className="flex items-center gap-2 mt-1">
-              {turno.barbero.foto && (
-                <img
-                  src={`http://localhost:8000/uploads/${turno.barbero.foto}`}
-                  alt={turno.barbero.nombre}
-                  className="w-5 h-5 rounded-full object-cover"
-                />
-              )}
-              <span className="text-xs text-purple-300">
-                Barbero: {turno.barbero.nombre || turno.nombreBarbero}
-              </span>
-            </div>
-          )}
-        </div>
-        <div className="text-right">{formatearEstado(turno.estado)}</div>
-      </div>
-      <div className="flex justify-between items-start">
-        <div className="text-sm text-gray-300 flex-1">
-          <p>Tel: {turno.numeroCliente || "N/A"}</p>
-          <p className="font-semibold text-green-400">
-            Costo: ${turno.costoTotal || 0}
-          </p>
-          {turno.servicios && turno.servicios.length > 0 && (
-            <div className="text-xs text-gray-400 mt-1">
-              <p className="font-medium mb-2">Servicios:</p>
-              <div className="flex flex-wrap gap-1">
-                {turno.servicios.map((servicio, index) => (
-                  <div
-                    key={index}
-                    className="bg-blue-100 text-blue-800 px-2 py-1 rounded-md text-xs"
-                  >
-                    {servicio.nombre} - $
-                    {servicio.precio?.toLocaleString() || 0}
-                  </div>
-                ))}
+    <Card className="mb-4" style={{ backgroundColor: "#5B4373" }}>
+      <div className="p-4">
+        <div className="flex justify-between items-start mb-2">
+          <div>
+            <h3 className="font-semibold text-lg text-white">
+              {turno.nombreCliente || "Disponible"}
+            </h3>
+            <p className="text-sm text-gray-300">
+              {formatearFecha(turno.fecha)} - {turno.hora}
+            </p>
+            {/* 🆕 NUEVO: Mostrar barbero en móvil */}
+            {turno.barbero && (
+              <div className="flex items-center gap-2 mt-1">
+                {turno.barbero.foto && (
+                  <img
+                    src={`http://localhost:8000/uploads/${turno.barbero.foto}`}
+                    alt={turno.barbero.nombre}
+                    className="w-5 h-5 rounded-full object-cover"
+                  />
+                )}
+                <span className="text-xs text-purple-300">
+                  Barbero: {turno.barbero.nombre || turno.nombreBarbero}
+                </span>
               </div>
-            </div>
-          )}
+            )}
+          </div>
+          <div className="text-right">{formatearEstado(turno.estado)}</div>
         </div>
-        <div className="flex gap-2 mt-2">
-          <Button
-            size="sm"
-            onClick={() => {
-              setSelectedTurno(turno);
-              setShowModal(true);
-            }}
-            className="flex-1"
-          >
-            Ver Detalles
-          </Button>
-          {turno.numeroCliente && turno.nombreCliente && (
+        <div className="flex justify-between items-start">
+          <div className="text-sm text-gray-300 flex-1">
+            <p>Tel: {turno.numeroCliente || "N/A"}</p>
+            <p className="font-semibold text-green-400">
+              Costo: ${turno.costoTotal || 0}
+            </p>
+            {turno.servicios && turno.servicios.length > 0 && (
+              <div className="text-xs text-gray-400 mt-1">
+                <p className="font-medium mb-2">Servicios:</p>
+                <div className="flex flex-wrap gap-1">
+                  {turno.servicios.map((servicio, index) => (
+                    <div
+                      key={index}
+                      className="bg-blue-100 text-blue-800 px-2 py-1 rounded-md text-xs"
+                    >
+                      {servicio.nombre} - $
+                      {servicio.precio?.toLocaleString() || 0}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="flex gap-2 mt-2">
             <Button
               size="sm"
-              color="success"
-              onClick={() => enviarMensajeWhatsApp(turno)}
+              onClick={() => {
+                setSelectedTurno(turno);
+                setShowModal(true);
+              }}
               className="flex-1"
             >
-              Contactar
+              Ver Detalles
             </Button>
-          )}
+            {turno.numeroCliente && turno.nombreCliente && (
+              <Button
+                size="sm"
+                color="success"
+                onClick={() => enviarMensajeWhatsApp(turno)}
+                className="flex-1"
+              >
+                Contactar
+              </Button>
+            )}
+          </div>
         </div>
       </div>
-    </div>
-  </Card>
+    </Card>
   );
 
   return (
@@ -1315,83 +1315,87 @@ const AdminDashboard = () => {
                     <Table.HeadCell>Costo</Table.HeadCell>
                     <Table.HeadCell>Acciones</Table.HeadCell>
                   </Table.Head>
-                 <Table.Body className="divide-y">
-  {filteredTurnos.map((turno) => (
-    <Table.Row
-      key={turno._id}
-      className="bg-white dark:border-gray-700 dark:bg-gray-800"
-    >
-      <Table.Cell>{formatearFecha(turno.fecha)}</Table.Cell>
-      <Table.Cell>{turno.hora}</Table.Cell>
-      <Table.Cell>
-        {turno.nombreCliente || "Disponible"}
-      </Table.Cell>
-      
-      {/* 🆕 NUEVA CELDA: Barbero */}
-      <Table.Cell>
-        {turno.barbero ? (
-          <div className="flex items-center gap-2">
-            {turno.barbero.foto && (
-              <img
-                src={`http://localhost:8000/uploads/${turno.barbero.foto}`}
-                alt={turno.barbero.nombre}
-                className="w-6 h-6 rounded-full object-cover"
-              />
-            )}
-            <span className="text-sm">{turno.barbero.nombre || turno.nombreBarbero}</span>
-          </div>
-        ) : (
-          <span className="text-gray-400 text-sm">Sin asignar</span>
-        )}
-      </Table.Cell>
-      
-      <Table.Cell>{turno.numeroCliente || "-"}</Table.Cell>
-      <Table.Cell>{formatearEstado(turno.estado)}</Table.Cell>
-      <Table.Cell>
-        <div className="text-sm">
-          <div className="font-semibold text-green-600">
-            Gs. {turno.costoTotal || 0}
-          </div>
-          {turno.servicios && turno.servicios.length > 0 && (
-            <div className="text-xs text-gray-600 mt-1 flex flex-wrap gap-1">
-              {turno.servicios.map((servicio, index) => (
-                <div
-                  key={index}
-                  className="bg-gray-100 text-gray-700 px-2 py-1 rounded-md text-xs border"
-                >
-                  {servicio.nombre} - $
-                  {servicio.precio?.toLocaleString() || 0}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </Table.Cell>
-      <Table.Cell>
-        <div className="flex gap-2">
-          <Button
-            size="sm"
-            onClick={() => {
-              setSelectedTurno(turno);
-              setShowModal(true);
-            }}
-          >
-            Ver Detalles
-          </Button>
-          {turno.numeroCliente && turno.nombreCliente && (
-            <Button
-              size="sm"
-              color="success"
-              onClick={() => enviarMensajeWhatsApp(turno)}
-            >
-              Contactar
-            </Button>
-          )}
-        </div>
-      </Table.Cell>
-    </Table.Row>
-  ))}
-</Table.Body>
+                  <Table.Body className="divide-y">
+                    {filteredTurnos.map((turno) => (
+                      <Table.Row
+                        key={turno._id}
+                        className="bg-white dark:border-gray-700 dark:bg-gray-800"
+                      >
+                        <Table.Cell>{formatearFecha(turno.fecha)}</Table.Cell>
+                        <Table.Cell>{turno.hora}</Table.Cell>
+                        <Table.Cell>
+                          {turno.nombreCliente || "Disponible"}
+                        </Table.Cell>
+
+                        {/* 🆕 NUEVA CELDA: Barbero */}
+                        <Table.Cell>
+                          {turno.barbero ? (
+                            <div className="flex items-center gap-2">
+                              {turno.barbero.foto && (
+                                <img
+                                  src={`http://localhost:8000/uploads/${turno.barbero.foto}`}
+                                  alt={turno.barbero.nombre}
+                                  className="w-6 h-6 rounded-full object-cover"
+                                />
+                              )}
+                              <span className="text-sm">
+                                {turno.barbero.nombre || turno.nombreBarbero}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-gray-400 text-sm">
+                              Sin asignar
+                            </span>
+                          )}
+                        </Table.Cell>
+
+                        <Table.Cell>{turno.numeroCliente || "-"}</Table.Cell>
+                        <Table.Cell>{formatearEstado(turno.estado)}</Table.Cell>
+                        <Table.Cell>
+                          <div className="text-sm">
+                            <div className="font-semibold text-green-600">
+                              Gs. {turno.costoTotal || 0}
+                            </div>
+                            {turno.servicios && turno.servicios.length > 0 && (
+                              <div className="text-xs text-gray-600 mt-1 flex flex-wrap gap-1">
+                                {turno.servicios.map((servicio, index) => (
+                                  <div
+                                    key={index}
+                                    className="bg-gray-100 text-gray-700 px-2 py-1 rounded-md text-xs border"
+                                  >
+                                    {servicio.nombre} - $
+                                    {servicio.precio?.toLocaleString() || 0}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </Table.Cell>
+                        <Table.Cell>
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              onClick={() => {
+                                setSelectedTurno(turno);
+                                setShowModal(true);
+                              }}
+                            >
+                              Ver Detalles
+                            </Button>
+                            {turno.numeroCliente && turno.nombreCliente && (
+                              <Button
+                                size="sm"
+                                color="success"
+                                onClick={() => enviarMensajeWhatsApp(turno)}
+                              >
+                                Contactar
+                              </Button>
+                            )}
+                          </div>
+                        </Table.Cell>
+                      </Table.Row>
+                    ))}
+                  </Table.Body>
                 </Table>
               )}
             </Card>
