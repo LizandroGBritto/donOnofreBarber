@@ -228,12 +228,7 @@ AgendaSchema.pre("save", function (next) {
 
   // Calcular costo total si hay servicios
   if (this.servicios && this.servicios.length > 0) {
-    console.log("=== PRE-SAVE MIDDLEWARE ===");
-    console.log("Servicios:", this.servicios);
-    console.log("Costo antes de calcular:", this.costoTotal);
     this.calcularCostoTotal();
-    console.log("Costo después de calcular:", this.costoTotal);
-    console.log("Costo servicios:", this.costoServicios);
   }
 
   next();

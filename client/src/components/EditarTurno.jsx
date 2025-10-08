@@ -30,9 +30,9 @@ const EditarTurno = () => {
     const fetchServicios = async () => {
       try {
         const response = await axios.get("http://localhost:8000/api/servicios");
-        setServiciosDisponibles(
-          response.data.filter((servicio) => servicio.activo) || []
-        );
+        const serviciosActivos = response.data.filter((servicio) => servicio.activo) || [];
+        console.log("Servicios disponibles cargados:", serviciosActivos);
+        setServiciosDisponibles(serviciosActivos);
       } catch (error) {
         console.error("Error al cargar servicios:", error);
       }
@@ -41,7 +41,27 @@ const EditarTurno = () => {
     fetchServicios();
   }, []);
 
-  // Cargar datos del turno
+  // Efecto para sincronizar servicios cuando se cargan ambos: disponibles y del turno
+  useEffect(() => {
+    if (turno && turno.servicios && serviciosDisponibles.length > 0) {
+      const serviciosIds = turno.servicios.map((s) => {
+        // En el modelo de agenda, los servicios tienen servicioId en lugar de _id
+        const servicioId = s.servicioId || s._id || s;
+        // Verificar que el servicio existe en la lista de disponibles
+        const existeServicio = serviciosDisponibles.find(disp => disp._id === servicioId);
+        if (existeServicio) {
+          return servicioId;
+        }
+        return null;
+      }).filter(Boolean);
+      
+      console.log("Sincronizando servicios - Turno:", turno.servicios);
+      console.log("Servicios disponibles:", serviciosDisponibles.map(s => s._id));
+      console.log("Servicios finales seleccionados:", serviciosIds);
+      
+      setServiciosSeleccionados(serviciosIds);
+    }
+  }, [turno, serviciosDisponibles]);
   useEffect(() => {
     const fetchTurno = async () => {
       try {
@@ -68,10 +88,8 @@ const EditarTurno = () => {
           numeroCliente: turnoData.numeroCliente || "",
         });
 
-        // Establecer servicios seleccionados
-        if (turnoData.servicios && turnoData.servicios.length > 0) {
-          setServiciosSeleccionados(turnoData.servicios.map((s) => s._id || s));
-        }
+        // Los servicios se sincronizarán en el useEffect dedicado
+        console.log("Turno cargado:", turnoData);
       } catch (error) {
         console.error("Error al cargar turno:", error);
         setError("Error al cargar la información del turno");
@@ -127,19 +145,30 @@ const EditarTurno = () => {
       return;
     }
 
+    if (serviciosSeleccionados.length === 0) {
+      setError("Debe seleccionar al menos un servicio");
+      return;
+    }
+
     try {
       setSaving(true);
       setError("");
 
       // Obtener datos completos de los servicios seleccionados
-      const serviciosCompletos = serviciosSeleccionados.map((servicioId) => {
-        const servicio = serviciosDisponibles.find((s) => s._id === servicioId);
-        return {
-          _id: servicio._id,
-          nombre: servicio.nombre,
-          precio: servicio.precio,
-        };
-      });
+      const serviciosCompletos = serviciosSeleccionados
+        .map((servicioId) => {
+          const servicio = serviciosDisponibles.find((s) => s._id === servicioId);
+          if (!servicio) {
+            console.warn(`Servicio con ID ${servicioId} no encontrado`);
+            return null;
+          }
+          return {
+            _id: servicio._id,
+            nombre: servicio.nombre,
+            precio: servicio.precio,
+          };
+        })
+        .filter(Boolean); // Remover servicios null/undefined
 
       const costoTotal = calcularCostoTotal();
 
@@ -372,10 +401,11 @@ const EditarTurno = () => {
                         <input
                           type="checkbox"
                           id={`servicio-${servicio._id}`}
-                          checked={serviciosSeleccionados.includes(
-                            servicio._id
-                          )}
-                          onChange={() => handleServicioChange(servicio._id)}
+                          checked={serviciosSeleccionados.includes(servicio._id)}
+                          onChange={() => {
+                            console.log("Cambiando servicio:", servicio._id, "Actuales:", serviciosSeleccionados);
+                            handleServicioChange(servicio._id);
+                          }}
                           className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
                         />
                         <label
