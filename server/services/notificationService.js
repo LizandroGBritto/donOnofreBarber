@@ -9,7 +9,6 @@ class NotificationService {
         "🔔 [NOTIFICATION SERVICE] Buscando suscripciones activas..."
       );
       const suscripciones = await Suscripcion.find({ activa: true });
- 
 
       if (suscripciones.length === 0) {
         console.log(

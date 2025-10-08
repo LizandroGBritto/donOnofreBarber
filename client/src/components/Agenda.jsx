@@ -32,14 +32,28 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
       );
       const data = response.data;
 
+      // Definir el orden correcto de los días
+      const ordenDias = [
+        "Lunes",
+        "Martes",
+        "Miercoles",
+        "Jueves",
+        "Viernes",
+        "Sabado",
+        "Domingo",
+      ];
+
       // Convertir días activos a formato capitalizado para mostrar
       const diasCapitalizados = data.diasActivos.map(
         (dia) => dia.charAt(0).toUpperCase() + dia.slice(1)
       );
 
+      // Ordenar los días según el orden predefinido
+      const diasOrdenados = ordenDias.filter((dia) =>
+        diasCapitalizados.includes(dia)
+      );
 
-
-      setDiasActivos(diasCapitalizados);
+      setDiasActivos(diasOrdenados);
       setSemanas(data.semanas);
 
       // Establecer semana actual por defecto
@@ -48,15 +62,14 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
       }
 
       // Establecer día actual si está en los días activos
-      if (diasCapitalizados.includes(diaHoyCapitalizado)) {
+      if (diasOrdenados.includes(diaHoyCapitalizado)) {
         setSelectedDay(diaHoyCapitalizado);
       } else {
-        setSelectedDay(diasCapitalizados[0] || null);
-
+        setSelectedDay(diasOrdenados[0] || null);
       }
     } catch (error) {
       console.error("❌ Error loading horarios y semanas:", error);
-      // Fallback a los días de toda la semana
+      // Fallback a los días de toda la semana en orden correcto
       setDiasActivos([
         "Lunes",
         "Martes",
@@ -64,6 +77,7 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
         "Jueves",
         "Viernes",
         "Sabado",
+        "Domingo"
       ]);
       setSelectedDay(diaHoyCapitalizado);
     }
@@ -156,7 +170,6 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
       const fechaAgenda = ParaguayDateUtil.toParaguayTime(agenda.fecha);
       const coincide = fechaAgenda.isSame(fechaObjetivo, "day");
 
-
       return coincide;
     })
     .sort((a, b) => {
@@ -164,7 +177,6 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
       const horaB = parseInt(b.hora.replace(":", ""), 10);
       return horaA - horaB; // Orden Ascendente
     });
-
 
   return (
     <div>
