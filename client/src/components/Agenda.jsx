@@ -77,7 +77,7 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
         "Jueves",
         "Viernes",
         "Sabado",
-        "Domingo"
+        "Domingo",
       ]);
       setSelectedDay(diaHoyCapitalizado);
     }
