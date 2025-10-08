@@ -9,7 +9,7 @@ module.exports = {
     }
 
     try {
-      const secret = "secretKey";
+      const secret = process.env.JWT_SECRET || "secretKey";
       const decoded = jwt.verify(token, secret);
       req.user = decoded;
       next();

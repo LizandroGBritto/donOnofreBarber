@@ -5,7 +5,9 @@ const axios = require("axios");
 const regenerarAgenda = async () => {
   try {
     await axios.post(
-      "http://localhost:8000/api/agenda/regenerar-por-horarios",
+      `${
+        process.env.SERVER_URL || "http://localhost:8000"
+      }/api/agenda/regenerar-por-horarios`,
       {}
     );
     console.log("Agenda regenerada exitosamente tras cambio de horario");

@@ -1,5 +1,10 @@
 require("dotenv").config();
-const PORT = process.env.PORT || 8000;
+const config = require("./config/app.config");
+
+// Validar configuración antes de iniciar
+config.validate();
+
+const PORT = config.port;
 const express = require("express");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
@@ -7,11 +12,7 @@ const app = express();
 
 app.use(cookieParser());
 
-const corsOptions = {
-  credentials: true,
-  origin: "http://localhost:5173",
-  methods: "GET, POST, PUT, DELETE",
-};
+const corsOptions = config.cors;
 app.use(cors(corsOptions));
 
 // Maneja solicitudes preflight para todos los endpoints

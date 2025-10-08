@@ -1,3 +1,18 @@
+# =================================
+# ARCHIVOS DE CONFIGURACIÓN SENSIBLES
+# =================================
+.env
+.env.local
+.env.production
+.env.staging
+vapid-keys-generated.txt
+
+# =================================
+# ARCHIVOS SUBIDOS POR USUARIOS
+# =================================
+uploads/
+!uploads/.gitkeep
+
 # Logs
 logs
 *.log
