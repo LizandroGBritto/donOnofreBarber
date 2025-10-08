@@ -1,4 +1,5 @@
 const BarberoModel = require("../models/barbero.model");
+const AgendaGeneratorService = require("../services/agendaGenerator.service");
 const {
   processMultipleImages,
   deleteImage,
@@ -148,6 +149,19 @@ module.exports = {
       };
 
       const barberoCreado = await BarberoModel.create(nuevoBarbero);
+
+      // Regenerar agenda después de crear barbero
+      try {
+        console.log("🔄 Regenerando agenda por creación de barbero...");
+        await AgendaGeneratorService.regenerarAgendaCompleta();
+        console.log(
+          "✅ Agenda regenerada exitosamente después de crear barbero"
+        );
+      } catch (regenerarError) {
+        console.error("❌ Error regenerando agenda:", regenerarError);
+        // No fallar la creación del barbero si hay error en la regeneración
+      }
+
       res.status(201).json(barberoCreado);
     } catch (error) {
       console.error("Error al crear barbero:", error);
@@ -217,6 +231,18 @@ module.exports = {
         { new: true, runValidators: true }
       );
 
+      // Regenerar agenda después de actualizar barbero
+      try {
+        console.log("🔄 Regenerando agenda por actualización de barbero...");
+        await AgendaGeneratorService.regenerarAgendaCompleta();
+        console.log(
+          "✅ Agenda regenerada exitosamente después de actualizar barbero"
+        );
+      } catch (regenerarError) {
+        console.error("❌ Error regenerando agenda:", regenerarError);
+        // No fallar la actualización del barbero si hay error en la regeneración
+      }
+
       res.status(200).json(barberoActualizado);
     } catch (error) {
       console.error("Error al actualizar barbero:", error);
@@ -247,6 +273,18 @@ module.exports = {
 
       await BarberoModel.findByIdAndDelete(id);
 
+      // Regenerar agenda después de eliminar barbero
+      try {
+        console.log("🔄 Regenerando agenda por eliminación de barbero...");
+        await AgendaGeneratorService.regenerarAgendaCompleta();
+        console.log(
+          "✅ Agenda regenerada exitosamente después de eliminar barbero"
+        );
+      } catch (regenerarError) {
+        console.error("❌ Error regenerando agenda:", regenerarError);
+        // No fallar la eliminación del barbero si hay error en la regeneración
+      }
+
       res.status(200).json({ message: "Barbero eliminado exitosamente" });
     } catch (error) {
       console.error("Error al eliminar barbero:", error);
@@ -261,16 +299,52 @@ module.exports = {
   toggleEstadoBarbero: async (req, res) => {
     try {
       const { id } = req.params;
-      const { activo } = req.body;
+      const { activo, incluirEnAgenda } = req.body;
 
-      const barbero = await BarberoModel.findByIdAndUpdate(
-        id,
-        { activo },
-        { new: true }
-      );
-
-      if (!barbero) {
+      // Obtener el barbero antes de la actualización para comparar
+      const barberoAnterior = await BarberoModel.findById(id);
+      if (!barberoAnterior) {
         return res.status(404).json({ message: "Barbero no encontrado" });
+      }
+
+      // Preparar los datos de actualización
+      const updateData = {};
+      if (activo !== undefined) updateData.activo = activo;
+      if (incluirEnAgenda !== undefined)
+        updateData.incluirEnAgenda = incluirEnAgenda;
+
+      // Actualizar el barbero
+      const barbero = await BarberoModel.findByIdAndUpdate(id, updateData, {
+        new: true,
+      });
+
+      // Verificar si cambió el estado de incluirEnAgenda o activo
+      const cambioIncluirEnAgenda =
+        incluirEnAgenda !== undefined &&
+        barberoAnterior.incluirEnAgenda !== incluirEnAgenda;
+      const cambioActivo =
+        activo !== undefined && barberoAnterior.activo !== activo;
+
+      // Si cambió incluirEnAgenda o activo, regenerar la agenda
+      if (cambioIncluirEnAgenda || cambioActivo) {
+        const tipoChangeio = cambioIncluirEnAgenda
+          ? "incluirEnAgenda"
+          : "activo";
+        console.log(
+          `🔄 Regenerando agenda debido a cambio en ${tipoChangeio} del barbero ${barbero.nombre}`
+        );
+
+        try {
+          // Regenerar agenda para los próximos 3 meses
+          const resultado =
+            await AgendaGeneratorService.regenerarAgendaCompleta();
+          console.log(
+            `✅ Agenda regenerada: ${resultado.turnosCreados} turnos creados`
+          );
+        } catch (agendaError) {
+          console.error("❌ Error al regenerar agenda:", agendaError);
+          // No fallar la actualización del barbero por error en agenda
+        }
       }
 
       res.status(200).json(barbero);

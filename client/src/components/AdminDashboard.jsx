@@ -931,23 +931,6 @@ const AdminDashboard = () => {
     }
   };
 
-  const toggleBarberoStatus = async (id) => {
-    try {
-      const barbero = barberos.find((b) => b._id === id);
-      await axios.patch(`http://localhost:8000/api/barberos/${id}/estado`, {
-        activo: !barbero.activo,
-      });
-      fetchBarberos();
-      showNotification(
-        `Barbero ${!barbero.activo ? "activado" : "desactivado"} exitosamente`,
-        "success"
-      );
-    } catch (error) {
-      console.error("Error al cambiar estado del barbero:", error);
-      showNotification("Error al cambiar estado del barbero", "error");
-    }
-  };
-
   useEffect(() => {
     fetchUbicacion();
   }, []);
@@ -2645,14 +2628,6 @@ const AdminDashboard = () => {
                             </Button>
                             <Button
                               size="xs"
-                              color={barbero.activo ? "yellow" : "green"}
-                              onClick={() => toggleBarberoStatus(barbero._id)}
-                              className="flex-1"
-                            >
-                              {barbero.activo ? "Desactivar" : "Activar"}
-                            </Button>
-                            <Button
-                              size="xs"
                               color="red"
                               onClick={() => deleteBarbero(barbero._id)}
                               className="flex-1"
@@ -2733,8 +2708,8 @@ const AdminDashboard = () => {
                               }`}
                             >
                               {barbero.incluirEnAgenda
-                                ? "Incluido"
-                                : "Excluido"}
+                                ? "✓ Incluido"
+                                : "✗ Excluido"}
                             </span>
                           </Table.Cell>
                           <Table.Cell>
@@ -2745,13 +2720,6 @@ const AdminDashboard = () => {
                                 onClick={() => editBarbero(barbero)}
                               >
                                 Editar
-                              </Button>
-                              <Button
-                                size="xs"
-                                color={barbero.activo ? "yellow" : "green"}
-                                onClick={() => toggleBarberoStatus(barbero._id)}
-                              >
-                                {barbero.activo ? "Desactivar" : "Activar"}
                               </Button>
                               <Button
                                 size="xs"
