@@ -24,6 +24,28 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
 
   const UserId = getUserId();
 
+  // Función para verificar si un turno ya pasó
+  const turnoYaPaso = (fecha, hora) => {
+    try {
+      const ahora = ParaguayDateUtil.now();
+      const fechaTurno = ParaguayDateUtil.toParaguayTime(fecha);
+
+      // Convertir la hora del turno (formato "HH:MM") a minutos
+      const [horas, minutos] = hora.split(":").map(Number);
+      const fechaTurnoConHora = fechaTurno
+        .clone()
+        .hour(horas)
+        .minute(minutos)
+        .second(0);
+
+      // Verificar si el turno ya pasó
+      return fechaTurnoConHora.isBefore(ahora);
+    } catch (error) {
+      console.error("Error verificando si turno ya pasó:", error);
+      return false; // En caso de error, permitir agendar
+    }
+  };
+
   // Cargar información de horarios y semanas
   const loadHorariosYSemanas = useCallback(async () => {
     try {
@@ -278,13 +300,22 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
                 <h3 className="flex justify-center mr-4 text-[#FF7D00]">
                   {agenda.nombreCliente === UserId ? (
                     <Button
-                      className="flex justify-center bg-orange-500 rounded-lg text-black text-lg items-center"
+                      disabled={turnoYaPaso(agenda.fecha, agenda.hora)}
+                      className={`flex justify-center ${
+                        turnoYaPaso(agenda.fecha, agenda.hora)
+                          ? "bg-gray-400"
+                          : "bg-orange-500"
+                      } rounded-lg text-black text-lg items-center`}
                       onClick={() => {
-                        setSelectedId(agenda._id);
-                        setOpenModal(true);
+                        if (!turnoYaPaso(agenda.fecha, agenda.hora)) {
+                          setSelectedId(agenda._id);
+                          setOpenModal(true);
+                        }
                       }}
                     >
-                      MODIFICAR
+                      {turnoYaPaso(agenda.fecha, agenda.hora)
+                        ? "EXPIRADO"
+                        : "MODIFICAR"}
                     </Button>
                   ) : (
                     <Button
@@ -300,16 +331,23 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
                   // Si el UserId es "Reservado", el botón cambia a "RESERVADO" y se deshabilita
                   disabled={
                     agenda.estado !== "disponible" ||
+                    turnoYaPaso(agenda.fecha, agenda.hora) ||
                     (userHasReservation &&
                       agenda.nombreCliente !== "" &&
                       agenda.nombreCliente !== UserId)
                   }
                   className={`flex justify-center mr-6 ${
-                    agenda.estado !== "disponible" ? "bg-gray-400" : "bg-white"
+                    agenda.estado !== "disponible" ||
+                    turnoYaPaso(agenda.fecha, agenda.hora)
+                      ? "bg-gray-400"
+                      : "bg-white"
                   } rounded-lg text-black text-lg items-center`}
                   onClick={() => {
                     // Para turnos disponibles, abrir modal de barberos
-                    if (agenda.estado === "disponible") {
+                    if (
+                      agenda.estado === "disponible" &&
+                      !turnoYaPaso(agenda.fecha, agenda.hora)
+                    ) {
                       setSelectedTurno({
                         _id: agenda._id,
                         fecha: agenda.fecha,
@@ -324,7 +362,11 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
                     }
                   }}
                 >
-                  {agenda.estado !== "disponible" ? "RESERVADO" : "AGENDAR"}
+                  {agenda.estado !== "disponible"
+                    ? "RESERVADO"
+                    : turnoYaPaso(agenda.fecha, agenda.hora)
+                    ? "NO DISPONIBLE"
+                    : "AGENDAR"}
                 </Button>
               )}
 

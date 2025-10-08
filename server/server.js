@@ -31,7 +31,8 @@ const AgendaRouter = require("./routes/agenda.route");
 app.use("/api/agenda", AgendaRouter);
 
 const UserRouter = require("./routes/user.route");
-app.use("/api/auth", UserRouter);
+app.use("/api/auth", UserRouter); // Para login/register
+app.use("/api/user", UserRouter); // Para CRUD de usuarios
 
 const BannerRouter = require("./routes/banner.route");
 app.use("/api/banners", BannerRouter);
@@ -61,9 +62,19 @@ app.use("/api/migracion", MigracionRouter);
 // Inicializar servicio de agenda
 const AgendaService = require("./services/agendaService");
 
+// Importar seeder de administrador
+const { createAdminUser } = require("./scripts/createAdminSeeder");
+
 // Iniciar servidor
 app.listen(PORT, async () => {
   console.log(`Server is running on port ${PORT}`);
+
+  // Crear usuario administrador si es necesario
+  try {
+    await createAdminUser();
+  } catch (error) {
+    console.error("❌ Error creando usuario administrador:", error);
+  }
 
   // Inicializar turnos si es necesario
   try {

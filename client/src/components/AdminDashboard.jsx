@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import {
   Card,
   Button,
@@ -9,11 +9,38 @@ import {
   Select,
   Textarea,
 } from "flowbite-react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import Dashboard from "./panel/Dashboard";
+import GestionUsuarios from "./panel/GestionUsuarios";
 import NotificationManager from "./NotificationManager";
+import UserContext from "../context/UserContext";
 
 const AdminDashboard = () => {
+  const { setUser } = useContext(UserContext);
+  const navigate = useNavigate();
+
+  // Función para cerrar sesión
+  const handleLogout = async () => {
+    try {
+      // Llamar al endpoint de logout si existe
+      await axios.post(
+        "http://localhost:8000/api/auth/logout",
+        {},
+        {
+          withCredentials: true,
+        }
+      );
+    } catch (error) {
+      console.log("Error al cerrar sesión:", error);
+    } finally {
+      // Limpiar el estado local independientemente del resultado del servidor
+      setUser(null);
+      localStorage.removeItem("user");
+      navigate("/admin");
+    }
+  };
+
   // Función para procesar número de teléfono para WhatsApp
   const [filtroBarbero, setFiltroBarbero] = useState("");
 
@@ -1000,9 +1027,9 @@ const AdminDashboard = () => {
   const formatearEstado = (estado) => {
     const colores = {
       "Sin Pagar": "text-red-600",
-      Pagado: "text-green-600",
-      Disponible: "text-gray-600",
-      Cancelado: "text-yellow-600",
+      pagado: "text-green-600",
+      disponible: "text-gray-600",
+      cancelado: "text-yellow-600",
     };
     return <span className={colores[estado] || "text-gray-600"}>{estado}</span>;
   };
@@ -1167,6 +1194,22 @@ const AdminDashboard = () => {
             >
               🔔 Notificaciones
             </Button>
+            <Button
+              size="sm"
+              color={activeView === "usuarios" ? "purple" : "gray"}
+              onClick={() => setActiveView("usuarios")}
+              className="text-xs md:text-sm"
+            >
+              👥 Usuarios
+            </Button>
+            <Button
+              size="sm"
+              color="failure"
+              onClick={handleLogout}
+              className="text-xs md:text-sm"
+            >
+              🚪 Cerrar Sesión
+            </Button>
           </div>
         </div>
       </Card>
@@ -1176,6 +1219,12 @@ const AdminDashboard = () => {
       {activeView === "notificaciones" && (
         <div className="space-y-6">
           <NotificationManager />
+        </div>
+      )}
+
+      {activeView === "usuarios" && (
+        <div className="space-y-6">
+          <GestionUsuarios />
         </div>
       )}
 
