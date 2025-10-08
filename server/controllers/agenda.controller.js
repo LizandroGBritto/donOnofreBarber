@@ -423,30 +423,20 @@ module.exports = {
   // Endpoint específico para la landing - Vista limpia con un turno por hora
   getTurnosLanding: async (req, res) => {
     try {
-      console.log("🚀 INICIANDO getTurnosLanding");
 
       // Obtener barberos activos para calcular disponibilidad
       const BarberoModel = require("../models/barbero.model");
       const barberosActivos = await BarberoModel.find({ activo: true });
       const totalBarberos = barberosActivos.length;
 
-      console.log(`👥 Total barberos activos: ${totalBarberos}`);
-
       // Obtener todos los turnos
       const allTurnos = await AgendaModel.find({})
         .populate("barbero", "nombre foto")
         .sort({ fecha: 1, hora: 1 });
 
-      console.log(`🔍 Total turnos encontrados en BD: ${allTurnos.length}`);
-
       // Log de primeros 5 turnos para análisis
       allTurnos.slice(0, 5).forEach((turno, index) => {
         const fechaString = new Date(turno.fecha).toISOString().split("T")[0];
-        console.log(
-          `📋 Turno ${index + 1}: ${fechaString} ${turno.hora} - Estado: ${
-            turno.estado
-          } - Cliente: "${turno.nombreCliente || "VACIO"}" - ID: ${turno._id}`
-        );
       });
 
       // Agrupar turnos por fecha y hora usando un Map para mejor control
@@ -458,14 +448,10 @@ module.exports = {
         const fechaString = fecha.toISOString().split("T")[0]; // YYYY-MM-DD
         const key = `${fechaString}|${turno.hora}`;
 
-        console.log(
-          `🔑 Procesando turno ${index + 1}: Key="${key}" - Estado: ${
-            turno.estado
-          } - Cliente: "${turno.nombreCliente || "VACIO"}"`
-        );
+
+
 
         if (!turnosPorFechaHora.has(key)) {
-          console.log(`✨ CREANDO nuevo grupo para key: ${key}`);
           turnosPorFechaHora.set(key, {
             fecha: turno.fecha,
             hora: turno.hora,
@@ -474,45 +460,25 @@ module.exports = {
             ocupados: [],
             usuarios: [], // Turnos con cliente asignado
           });
-        } else {
-          console.log(`📂 AGREGANDO a grupo existente: ${key}`);
-        }
-
+        } 
         const grupo = turnosPorFechaHora.get(key);
 
         if (turno.nombreCliente && turno.nombreCliente.trim() !== "") {
           grupo.usuarios.push(turno);
-          console.log(
-            `👤 -> Agregado a USUARIOS (${grupo.usuarios.length} total)`
-          );
+
         } else if (turno.estado === "disponible") {
           grupo.disponibles.push(turno);
-          console.log(
-            `✅ -> Agregado a DISPONIBLES (${grupo.disponibles.length} total)`
-          );
+
         } else {
           grupo.ocupados.push(turno);
-          console.log(
-            `❌ -> Agregado a OCUPADOS (${grupo.ocupados.length} total)`
-          );
         }
       });
 
-      console.log(`📊 RESUMEN AGRUPACIÓN:`);
-      console.log(`   - Total grupos únicos: ${turnosPorFechaHora.size}`);
-
-      // Log detallado de cada grupo
-      turnosPorFechaHora.forEach((grupo, key) => {
-        console.log(
-          `🏷️  Grupo "${key}": Disponibles=${grupo.disponibles.length}, Ocupados=${grupo.ocupados.length}, Usuarios=${grupo.usuarios.length}`
-        );
-      });
 
       // Crear vista limpia: un turno por hora, considerando disponibilidad de barberos
       const turnosLimpios = [];
 
       turnosPorFechaHora.forEach((grupo, key) => {
-        console.log(`🎯 PROCESANDO GRUPO: ${key}`);
 
         // Calcular barberos ocupados en esta hora
         const barberosOcupados =
@@ -520,12 +486,6 @@ module.exports = {
           grupo.ocupados.filter((t) => t.barbero).length;
         const hayDisponibilidadDeBarberos = barberosOcupados < totalBarberos;
 
-        console.log(
-          `   📊 Barberos ocupados: ${barberosOcupados}/${totalBarberos}`
-        );
-        console.log(
-          `   🆓 Hay disponibilidad de barberos: ${hayDisponibilidadDeBarberos}`
-        );
 
         let turnoRepresentativo;
 
@@ -543,9 +503,6 @@ module.exports = {
             // Mantener estado original del turno disponible
             estado: "disponible",
           };
-          console.log(
-            `✅ SELECCIONADO: Disponible (hay barberos libres) - ID: ${grupo.disponibles[0]._id}`
-          );
         }
         // Prioridad 2: Si hay turnos disponibles pero NO hay barberos disponibles, mostrar como reservado
         else if (grupo.disponibles.length > 0 && !hayDisponibilidadDeBarberos) {
@@ -561,9 +518,7 @@ module.exports = {
             // Cambiar estado a reservado porque no hay barberos disponibles
             estado: "reservado",
           };
-          console.log(
-            `🚫 SELECCIONADO: Disponible pero TODOS los barberos ocupados - ID: ${grupo.disponibles[0]._id}`
-          );
+
         }
         // Prioridad 3: Si NO hay disponibles pero hay usuarios, mostrar el primero
         else if (grupo.usuarios.length > 0) {
@@ -577,9 +532,7 @@ module.exports = {
             totalBarberos: totalBarberos,
             barberosOcupados: barberosOcupados,
           };
-          console.log(
-            `👤 SELECCIONADO: Usuario (sin disponibles) (${grupo.usuarios[0].nombreCliente}) - ID: ${grupo.usuarios[0]._id}`
-          );
+
         }
         // Prioridad 4: Si NO hay disponibles ni usuarios, mostrar ocupado
         else if (grupo.ocupados.length > 0) {
@@ -593,26 +546,18 @@ module.exports = {
             totalBarberos: totalBarberos,
             barberosOcupados: barberosOcupados,
           };
-          console.log(
-            `❌ SELECCIONADO: Ocupado (sin disponibles) - ID: ${grupo.ocupados[0]._id}`
-          );
+
         } else {
           console.log(`⚠️  NO HAY TURNOS para agregar en grupo: ${key}`);
         }
 
         if (turnoRepresentativo) {
           turnosLimpios.push(turnoRepresentativo);
-          console.log(
-            `✅ AGREGADO AL RESULTADO FINAL: ${key} - Total turnos limpios: ${turnosLimpios.length}`
-          );
+
         }
       });
 
-      console.log(`🎯 RESULTADO FINAL:`);
-      console.log(`   - Turnos limpios generados: ${turnosLimpios.length}`);
-      console.log(
-        `   - Debería ser igual a grupos únicos: ${turnosPorFechaHora.size}`
-      );
+
 
       // Log de turnos finales para verificar duplicados
       const keysFinal = turnosLimpios.map((t) => {
@@ -621,9 +566,7 @@ module.exports = {
       });
       const keysUnicas = [...new Set(keysFinal)];
 
-      console.log(`🔍 VERIFICACIÓN DUPLICADOS:`);
-      console.log(`   - Keys en resultado: ${keysFinal.length}`);
-      console.log(`   - Keys únicas: ${keysUnicas.length}`);
+
 
       if (keysFinal.length !== keysUnicas.length) {
         console.log(`❗ DUPLICADOS DETECTADOS:`);
@@ -647,9 +590,6 @@ module.exports = {
         return horaA - horaB;
       });
 
-      console.log(
-        `🏁 FINALIZANDO getTurnosLanding - Enviando ${turnosLimpios.length} turnos`
-      );
 
       res.status(200).json({
         agendas: turnosLimpios,
@@ -726,6 +666,7 @@ module.exports = {
   },
   getOneAgenda: (req, res) => {
     AgendaModel.findOne({ _id: req.params.id })
+      .populate("barbero", "nombre foto")
       .then((oneSingleAgenda) =>
         res.status(200).json({ agenda: oneSingleAgenda })
       )
@@ -1080,121 +1021,110 @@ module.exports = {
   },
 
   // Endpoint para obtener información de horarios y semanas para el frontend
-// Endpoint para obtener información de horarios y semanas para el frontend
-getHorariosYSemanas: async (req, res) => {
-  try {
-    // Obtener horarios activos
-    const horariosActivos = await HorarioModel.find({
-      estado: "activo",
-    }).lean();
-    console.log("🔍 Horarios encontrados:", horariosActivos.length);
+  // Endpoint para obtener información de horarios y semanas para el frontend
+  getHorariosYSemanas: async (req, res) => {
+    try {
+      // Obtener horarios activos
+      const horariosActivos = await HorarioModel.find({
+        estado: "activo",
+      }).lean();
 
-    // Mapear días de horarios activos
-    const diasActivosSet = new Set();
-    horariosActivos.forEach((horario) => {
-      console.log(
-        "📅 Procesando horario:",
-        horario.hora,
-        "días:",
-        horario.dias
-      );
-      horario.dias?.forEach((dia) => diasActivosSet.add(dia));
-    });
+      // Mapear días de horarios activos
+      const diasActivosSet = new Set();
+      horariosActivos.forEach((horario) => {
+        horario.dias?.forEach((dia) => diasActivosSet.add(dia));
+      });
 
-    const diasActivos = Array.from(diasActivosSet);
-    console.log("📋 Días activos finales:", diasActivos);
+      const diasActivos = Array.from(diasActivosSet);
 
-    // Generar próximas 4 semanas
-    const hoy = new Date();
-    console.log(
-      "📅 Fecha de hoy:",
-      hoy.toISOString().split("T")[0],
-      `(${hoy.toLocaleDateString("es-ES", { weekday: "long" })})`
-    );
-    
-    const semanas = [];
+      // Generar próximas 4 semanas
+      const hoy = new Date();
 
-    for (let i = 0; i < 4; i++) {
-      // 🔧 CORRECCIÓN: Calcular el lunes correctamente
-      const fechaBase = new Date();
-      const diaSemanaHoy = fechaBase.getDay(); // 0 = domingo, 1 = lunes, ..., 6 = sábado
-      
-      // Calcular días hasta el lunes más cercano
-      // Si es domingo (0), retroceder 6 días
-      // Si es lunes (1), no mover
-      // Si es martes (2), retroceder 1 día
-      // etc.
-      let diasHastaLunes;
-      if (diaSemanaHoy === 0) {
-        diasHastaLunes = -6; // Domingo: ir al lunes anterior
-      } else {
-        diasHastaLunes = 1 - diaSemanaHoy; // Otros días: calcular diferencia
+
+      const semanas = [];
+
+      for (let i = 0; i < 4; i++) {
+        // 🔧 CORRECCIÓN: Calcular el lunes correctamente
+        const fechaBase = new Date();
+        const diaSemanaHoy = fechaBase.getDay(); // 0 = domingo, 1 = lunes, ..., 6 = sábado
+
+        // Calcular días hasta el lunes más cercano
+        // Si es domingo (0), retroceder 6 días
+        // Si es lunes (1), no mover
+        // Si es martes (2), retroceder 1 día
+        // etc.
+        let diasHastaLunes;
+        if (diaSemanaHoy === 0) {
+          diasHastaLunes = -6; // Domingo: ir al lunes anterior
+        } else {
+          diasHastaLunes = 1 - diaSemanaHoy; // Otros días: calcular diferencia
+        }
+
+
+
+        // Obtener el lunes de la semana actual
+        const lunesActual = new Date(fechaBase);
+        lunesActual.setDate(fechaBase.getDate() + diasHastaLunes);
+        lunesActual.setHours(0, 0, 0, 0); // Reset tiempo a medianoche
+
+
+        // Ahora sumar las semanas completas
+        const inicioSemana = new Date(lunesActual);
+        inicioSemana.setDate(lunesActual.getDate() + i * 7);
+        inicioSemana.setHours(0, 0, 0, 0);
+
+        const finSemana = new Date(inicioSemana);
+        finSemana.setDate(inicioSemana.getDate() + 6);
+        finSemana.setHours(23, 59, 59, 999);
+
+        const diaSemanaInicio = inicioSemana.toLocaleDateString("es-ES", {
+          weekday: "long",
+        });
+        const diaSemanaFin = finSemana.toLocaleDateString("es-ES", {
+          weekday: "long",
+        });
+
+
+
+        // Verificar que inicioSemana sea lunes
+        if (inicioSemana.getDay() !== 1) {
+          console.error(
+            `❌ ERROR: inicioSemana NO es lunes! Es día ${inicioSemana.getDay()}`
+          );
+        }
+
+        semanas.push({
+          numero: i + 1,
+          inicioSemana: inicioSemana.toISOString().split("T")[0],
+          finSemana: finSemana.toISOString().split("T")[0],
+          label: `Semana del ${inicioSemana
+            .getDate()
+            .toString()
+            .padStart(2, "0")}/${(inicioSemana.getMonth() + 1)
+            .toString()
+            .padStart(2, "0")} - ${finSemana
+            .getDate()
+            .toString()
+            .padStart(2, "0")}/${(finSemana.getMonth() + 1)
+            .toString()
+            .padStart(2, "0")}`,
+        });
       }
-      
-      console.log(`📍 Hoy es día ${diaSemanaHoy}, días hasta lunes: ${diasHastaLunes}`);
-      
-      // Obtener el lunes de la semana actual
-      const lunesActual = new Date(fechaBase);
-      lunesActual.setDate(fechaBase.getDate() + diasHastaLunes);
-      lunesActual.setHours(0, 0, 0, 0); // Reset tiempo a medianoche
-      
-      console.log(
-        `📍 Lunes de la semana actual: ${lunesActual.toISOString().split("T")[0]} (${lunesActual.toLocaleDateString("es-ES", { weekday: "long" })})`
-      );
 
-      // Ahora sumar las semanas completas
-      const inicioSemana = new Date(lunesActual);
-      inicioSemana.setDate(lunesActual.getDate() + i * 7);
-      inicioSemana.setHours(0, 0, 0, 0);
-
-      const finSemana = new Date(inicioSemana);
-      finSemana.setDate(inicioSemana.getDate() + 6);
-      finSemana.setHours(23, 59, 59, 999);
-
-      const diaSemanaInicio = inicioSemana.toLocaleDateString("es-ES", { weekday: "long" });
-      const diaSemanaFin = finSemana.toLocaleDateString("es-ES", { weekday: "long" });
-
-      console.log(
-        `📆 Semana ${i + 1}: ${inicioSemana.toISOString().split("T")[0]} (${diaSemanaInicio}) - ${finSemana.toISOString().split("T")[0]} (${diaSemanaFin})`
-      );
-
-      // Verificar que inicioSemana sea lunes
-      if (inicioSemana.getDay() !== 1) {
-        console.error(`❌ ERROR: inicioSemana NO es lunes! Es día ${inicioSemana.getDay()}`);
-      }
-
-      semanas.push({
-        numero: i + 1,
-        inicioSemana: inicioSemana.toISOString().split("T")[0],
-        finSemana: finSemana.toISOString().split("T")[0],
-        label: `Semana del ${inicioSemana
-          .getDate()
-          .toString()
-          .padStart(2, "0")}/${(inicioSemana.getMonth() + 1)
-          .toString()
-          .padStart(2, "0")} - ${finSemana
-          .getDate()
-          .toString()
-          .padStart(2, "0")}/${(finSemana.getMonth() + 1)
-          .toString()
-          .padStart(2, "0")}`,
+      res.status(200).json({
+        diasActivos,
+        semanas,
+        horariosActivos: horariosActivos.map((h) => ({
+          hora: h.hora,
+          dias: h.dias || [],
+        })),
+      });
+    } catch (error) {
+      console.error("Error al obtener horarios y semanas:", error);
+      res.status(500).json({
+        message: "Error al obtener horarios y semanas",
+        error: error.message,
       });
     }
-
-    res.status(200).json({
-      diasActivos,
-      semanas,
-      horariosActivos: horariosActivos.map((h) => ({
-        hora: h.hora,
-        dias: h.dias || [],
-      })),
-    });
-  } catch (error) {
-    console.error("Error al obtener horarios y semanas:", error);
-    res.status(500).json({
-      message: "Error al obtener horarios y semanas",
-      error: error.message,
-    });
-  }
-},
+  },
 };

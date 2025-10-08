@@ -26,21 +26,18 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
 
   // Cargar información de horarios y semanas
   const loadHorariosYSemanas = useCallback(async () => {
-    console.log("🔄 Cargando horarios y semanas...");
     try {
       const response = await axios.get(
         "http://localhost:8000/api/agenda/horarios-semanas"
       );
       const data = response.data;
-      console.log("📥 Respuesta del servidor:", data);
 
       // Convertir días activos a formato capitalizado para mostrar
       const diasCapitalizados = data.diasActivos.map(
         (dia) => dia.charAt(0).toUpperCase() + dia.slice(1)
       );
 
-      console.log("📅 Días activos:", diasCapitalizados);
-      console.log("📆 Semanas:", data.semanas);
+
 
       setDiasActivos(diasCapitalizados);
       setSemanas(data.semanas);
@@ -48,19 +45,14 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
       // Establecer semana actual por defecto
       if (data.semanas.length > 0) {
         setSelectedWeek(data.semanas[0]);
-        console.log("✅ Semana seleccionada por defecto:", data.semanas[0]);
       }
 
       // Establecer día actual si está en los días activos
       if (diasCapitalizados.includes(diaHoyCapitalizado)) {
         setSelectedDay(diaHoyCapitalizado);
-        console.log("✅ Día seleccionado (hoy):", diaHoyCapitalizado);
       } else {
         setSelectedDay(diasCapitalizados[0] || null);
-        console.log(
-          "✅ Día seleccionado (primer disponible):",
-          diasCapitalizados[0] || null
-        );
+
       }
     } catch (error) {
       console.error("❌ Error loading horarios y semanas:", error);
@@ -88,9 +80,6 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
     axios
       .get("http://localhost:8000/api/agenda/landing")
       .then((res) => {
-        console.log("📅 TURNOS LANDING (LIMPIOS):", res.data.agendas);
-        console.log("📊 Total de turnos mostrados:", res.data.agendas.length);
-        console.log("ℹ️ Mensaje:", res.data.mensaje);
         setHorarios(res.data.agendas);
         setIsLoading(false);
 
@@ -152,15 +141,6 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
     );
     const fechaObjetivo = inicioSemana.add(diaIndex, "days");
 
-    console.log(`🎯 Calculando fecha objetivo:`);
-    console.log(`   - Día seleccionado: ${selectedDay} (índice: ${diaIndex})`);
-    console.log(
-      `   - Inicio semana: ${inicioSemana.format("YYYY-MM-DD dddd")}`
-    );
-    console.log(
-      `   - Fecha objetivo: ${fechaObjetivo.format("YYYY-MM-DD dddd")}`
-    );
-
     return fechaObjetivo;
   };
 
@@ -170,20 +150,12 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
     .filter((agenda) => {
       const fechaObjetivo = calcularFechaObjetivo();
       if (!fechaObjetivo) {
-        console.log("❌ No hay fecha objetivo calculada");
         return false;
       }
 
       const fechaAgenda = ParaguayDateUtil.toParaguayTime(agenda.fecha);
       const coincide = fechaAgenda.isSame(fechaObjetivo, "day");
 
-      if (coincide) {
-        console.log(
-          `✅ Turno coincide: ${agenda.hora} - ${fechaAgenda.format(
-            "YYYY-MM-DD"
-          )} === ${fechaObjetivo.format("YYYY-MM-DD")}`
-        );
-      }
 
       return coincide;
     })
@@ -193,17 +165,6 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
       return horaA - horaB; // Orden Ascendente
     });
 
-  console.log(
-    `📊 Horarios filtrados para mostrar: ${horariosFiltrados.length}`
-  );
-  console.log("📋 Datos del filtro:");
-  console.log("- Selected Week:", selectedWeek);
-  console.log("- Selected Day:", selectedDay);
-  console.log(
-    "- Fecha objetivo:",
-    calcularFechaObjetivo()?.format("YYYY-MM-DD")
-  );
-  console.log("- Total horarios disponibles:", horarios.length);
 
   return (
     <div>

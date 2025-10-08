@@ -34,7 +34,6 @@ const Landing = () => {
       const response = await axios.get(
         "http://localhost:8000/api/agenda/landing"
       );
-      console.log("Turnos obtenidos en Landing:", response.data.agendas);
       setHorarios(response.data.agendas || []);
     } catch (error) {
       console.error("Error al obtener turnos en Landing:", error);
@@ -43,8 +42,6 @@ const Landing = () => {
   }, []);
 
   useEffect(() => {
-    const userId = getUserId();
-    console.log("User ID:", userId);
 
     // Cargar turnos al montar el componente
     fetchTurnos();

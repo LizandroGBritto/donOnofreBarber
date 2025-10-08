@@ -54,6 +54,9 @@ const AdminDashboard = () => {
         ? turno.servicios.map((s) => s.nombre).join(", ")
         : "sus servicios";
 
+    // Crear enlace de edición del turno
+    const enlaceEdicion = `${window.location.origin}/editar-turno/${turno._id}`;
+
     // Construir mensaje base
     let mensaje =
       `¡Hola ${nombreCliente}! 👋\n\n` +
@@ -70,6 +73,9 @@ const AdminDashboard = () => {
         mensaje += `\n`;
       }
     }
+
+    // Agregar enlace de edición
+    mensaje += `✏️ Si necesitas modificar tu cita, puedes hacerlo desde este enlace:\n${enlaceEdicion}\n\n`;
 
     mensaje += `¡Te esperamos! 💈`;
 

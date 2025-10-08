@@ -5,6 +5,7 @@ import UserContext from "./context/UserContext";
 import { useState } from "react";
 import Admin from "./views/Admin";
 import Login from "./views/Login";
+import EditarTurno from "./components/EditarTurno";
 
 const App = () => {
   const userDetails = JSON.parse(localStorage.getItem("user"));
@@ -28,6 +29,7 @@ const App = () => {
       <UserContext.Provider value={objetContext}>
         <Routes>
           <Route path="/" element={<Landing />} />
+          <Route path="/editar-turno/:turnoId" element={<EditarTurno />} />
           <Route
             path="/admin"
             element={user ? <Navigate to="/admin/panel" /> : <Login />}

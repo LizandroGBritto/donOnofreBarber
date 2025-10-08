@@ -30,38 +30,20 @@ const AgendaAdmin = ({ horarios, setHorarios, getUserId, agendarRef }) => {
   }
 
   const refreshData = useCallback(() => {
-    console.log("🔄 Ejecutando refreshData...");
     setIsLoading(true);
     axios
       .get("http://localhost:8000/api/agenda")
       .then((res) => {
-        console.log("=== DATOS DE AGENDA RECIBIDOS ===");
-        console.log("Respuesta completa:", res.data);
+
 
         if (res.data.agendas && res.data.agendas.length > 0) {
-          console.log("Primera agenda completa:", res.data.agendas[0]);
-          console.log(
-            "Todas las propiedades de la primera agenda:",
-            Object.keys(res.data.agendas[0])
-          );
 
           // DEBUG: Verificar costos específicamente
           const agendasConCostos = res.data.agendas.filter(
             (agenda) => agenda.costoTotal > 0 || agenda.costoServicios > 0
           );
-          console.log(
-            `📊 Agendas con costos encontradas: ${agendasConCostos.length}`
-          );
 
-          agendasConCostos.slice(0, 3).forEach((agenda) => {
-            console.log(`💰 Agenda ${agenda._id}:`, {
-              costoTotal: agenda.costoTotal,
-              costoServicios: agenda.costoServicios,
-              servicios: agenda.servicios,
-              tipoCostoTotal: typeof agenda.costoTotal,
-              tipoCostoServicios: typeof agenda.costoServicios,
-            });
-          });
+
 
           // Normalizar los datos
           const agendasNormalizadas = res.data.agendas.map((agenda) => {
@@ -82,42 +64,17 @@ const AgendaAdmin = ({ horarios, setHorarios, getUserId, agendarRef }) => {
               ...agenda,
             };
 
-            // DEBUG para una agenda con costo
-            if (agenda.costoTotal > 0 || agenda.costoServicios > 0) {
-              console.log(`🔍 Normalizando agenda ${agenda._id}:`, {
-                original: {
-                  costoTotal: agenda.costoTotal,
-                  costoServicios: agenda.costoServicios,
-                },
-                normalizado: {
-                  costoTotal: normalized.costoTotal,
-                  costoServicios: normalized.costoServicios,
-                },
-              });
-            }
 
             return normalized;
           });
 
-          console.log(
-            "✅ Agendas normalizadas (primeras 3):",
-            agendasNormalizadas.slice(0, 3)
-          );
+
 
           // Verificar agendas con costo después de normalizar
           const agendasConCostoFinal = agendasNormalizadas.filter(
             (a) => a.costoTotal > 0
           );
-          console.log(
-            `🎯 Agendas con costo después de normalizar: ${agendasConCostoFinal.length}`
-          );
-
-          if (agendasConCostoFinal.length > 0) {
-            console.log(
-              "📈 Ejemplos finales con costo:",
-              agendasConCostoFinal.slice(0, 3)
-            );
-          }
+ 
 
           setHorarios(agendasNormalizadas);
         } else {
@@ -133,7 +90,6 @@ const AgendaAdmin = ({ horarios, setHorarios, getUserId, agendarRef }) => {
   }, [setHorarios]);
 
   useEffect(() => {
-    console.log("🎬 Montando componente AgendaAdmin");
     refreshData();
     setSelectedDay(diaHoy);
   }, [refreshData, diaHoy]); // Agregadas las dependencias
@@ -155,20 +111,7 @@ const AgendaAdmin = ({ horarios, setHorarios, getUserId, agendarRef }) => {
       return horaA - horaB;
     });
 
-  console.log(
-    `📅 Horarios filtrados para ${selectedDay}: ${horariosFiltrados.length}`
-  );
 
-  // DEBUG: Verificar costos en horarios filtrados
-  const horariosConCosto = horariosFiltrados.filter(
-    (agenda) => agenda.costoTotal > 0
-  );
-  console.log(`💰 Horarios filtrados con costo: ${horariosConCosto.length}`);
-  horariosConCosto.forEach((agenda) => {
-    console.log(
-      `🔍 En horarios filtrados - Agenda ${agenda._id}: costoTotal=${agenda.costoTotal}, servicios=${agenda.servicios?.length}`
-    );
-  });
 
   return (
     <>
@@ -187,7 +130,6 @@ const AgendaAdmin = ({ horarios, setHorarios, getUserId, agendarRef }) => {
               <Dropdown.Item
                 key={index}
                 onClick={() => {
-                  console.log(`📌 Cambiando día a: ${dia}`);
                   setSelectedDay(dia);
                 }}
               >
@@ -203,11 +145,6 @@ const AgendaAdmin = ({ horarios, setHorarios, getUserId, agendarRef }) => {
           </div>
         ) : (
           horariosFiltrados.map((agenda) => {
-            console.log(
-              `🎨 Renderizando agenda ${agenda._id}: costoTotal=${
-                agenda.costoTotal
-              }, mostrarCosto=${agenda.costoTotal > 0}`
-            );
             return (
               <div
                 className="flex justify-between border-b-2 border-gray-300 pb-2 pl-4 mt-8 ml-8 mr-8"

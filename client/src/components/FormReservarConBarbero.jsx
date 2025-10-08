@@ -26,7 +26,6 @@ const FormReservarConBarbero = ({
           "http://localhost:8000/api/barberos/activos"
         );
         setBarberos(response.data);
-        console.log("👥 Barberos cargados:", response.data);
       } catch (error) {
         console.error("Error loading barberos:", error);
       }
@@ -64,25 +63,12 @@ const FormReservarConBarbero = ({
         setLoading(true);
         const fechaISO = new Date(turno.fecha).toISOString().split("T")[0];
         
-        console.log(`🔍 Cargando disponibilidad para ${fechaISO} a las ${turno.hora}`);
 
         // Usar la ruta correcta para obtener disponibilidad por barbero
         const response = await axios.get(
           `http://localhost:8000/api/agenda/disponibilidad-barberos/${fechaISO}`
         );
 
-        console.log("📥 Disponibilidad recibida:", response.data.disponibilidad);
-
-        // Verificar que tengamos data para la hora específica
-        const dispHora = response.data.disponibilidad[turno.hora];
-        if (dispHora) {
-          console.log(`✅ Para hora ${turno.hora}:`, {
-            disponibles: dispHora.barberosDisponibles?.length || 0,
-            ocupados: dispHora.barberosOcupados?.length || 0
-          });
-        } else {
-          console.warn(`⚠️ No hay datos de disponibilidad para hora ${turno.hora}`);
-        }
 
         setDisponibilidad(response.data.disponibilidad);
       } catch (error) {
@@ -171,7 +157,6 @@ const FormReservarConBarbero = ({
         })),
       };
 
-      console.log("📤 Enviando reserva:", reservaData);
 
       const response = await axios.post(
         "http://localhost:8000/api/agenda/reservar-con-barbero",
@@ -222,14 +207,6 @@ const FormReservarConBarbero = ({
     barberosOcupados.map(bo => bo.barbero?._id?.toString()).filter(Boolean)
   );
 
-  // Debug logs mejorados
-  console.log("🔍 DEBUG FormReservarConBarbero:");
-  console.log("   📅 Fecha:", turno.fecha);
-  console.log("   🕐 Hora:", turno.hora);
-  console.log("   📊 Disponibilidad hora:", horaDisponibilidad);
-  console.log("   ✅ Barberos disponibles:", barberosDisponibles.length);
-  console.log("   ❌ Barberos ocupados:", barberosOcupados.length);
-  console.log("   🔒 IDs ocupados:", Array.from(barberosOcupadosIds));
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -313,11 +290,7 @@ const FormReservarConBarbero = ({
                         // 🔧 SOLUCIÓN: Verificación correcta del estado del barbero
                         const barberoIdStr = barbero._id.toString();
                         const estaOcupado = barberosOcupadosIds.has(barberoIdStr);
-                        
-                        console.log(`🔍 Verificando barbero ${barbero.nombre} (${barberoIdStr}):`, {
-                          ocupado: estaOcupado,
-                          enSet: barberosOcupadosIds.has(barberoIdStr)
-                        });
+                      
 
                         return (
                           <div
@@ -337,7 +310,6 @@ const FormReservarConBarbero = ({
                                     : barbero._id;
                                 setSelectedBarbero(newSelected);
                                 setFieldValue("barberoId", newSelected || "");
-                                console.log("👆 Barbero seleccionado:", barbero.nombre);
                               } else {
                                 console.log("🚫 Barbero ocupado, no se puede seleccionar");
                               }
