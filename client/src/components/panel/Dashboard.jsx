@@ -95,7 +95,7 @@ const Dashboard = () => {
           <h5 className="mb-2 text-xl font-medium text-white">{title}</h5>
           <div className="text-center">
             <div className="text-3xl font-bold text-green-300 mb-2">
-              {generated}
+              Gs. {generated}
             </div>
             <div className="text-sm text-gray-300 mb-3">
               Turnos pagados {period}
@@ -114,7 +114,7 @@ const Dashboard = () => {
     <div className="space-y-6">
       {/* Estadísticas de Turnos */}
       <div>
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+        <h3 className="text-lg font-semibold text-white-900 dark:text-white mb-4">
           Estadísticas de Turnos
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -150,7 +150,7 @@ const Dashboard = () => {
 
       {/* Estadísticas de Ingresos Generados */}
       <div>
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+        <h3 className="text-lg font-semibold text-white-900 dark:text-white mb-4">
           Ingresos Generados
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
