@@ -30,7 +30,8 @@ const EditarTurno = () => {
     const fetchServicios = async () => {
       try {
         const response = await axios.get("http://localhost:8000/api/servicios");
-        const serviciosActivos = response.data.filter((servicio) => servicio.activo) || [];
+        const serviciosActivos =
+          response.data.filter((servicio) => servicio.activo) || [];
         console.log("Servicios disponibles cargados:", serviciosActivos);
         setServiciosDisponibles(serviciosActivos);
       } catch (error) {
@@ -44,21 +45,28 @@ const EditarTurno = () => {
   // Efecto para sincronizar servicios cuando se cargan ambos: disponibles y del turno
   useEffect(() => {
     if (turno && turno.servicios && serviciosDisponibles.length > 0) {
-      const serviciosIds = turno.servicios.map((s) => {
-        // En el modelo de agenda, los servicios tienen servicioId en lugar de _id
-        const servicioId = s.servicioId || s._id || s;
-        // Verificar que el servicio existe en la lista de disponibles
-        const existeServicio = serviciosDisponibles.find(disp => disp._id === servicioId);
-        if (existeServicio) {
-          return servicioId;
-        }
-        return null;
-      }).filter(Boolean);
-      
+      const serviciosIds = turno.servicios
+        .map((s) => {
+          // En el modelo de agenda, los servicios tienen servicioId en lugar de _id
+          const servicioId = s.servicioId || s._id || s;
+          // Verificar que el servicio existe en la lista de disponibles
+          const existeServicio = serviciosDisponibles.find(
+            (disp) => disp._id === servicioId
+          );
+          if (existeServicio) {
+            return servicioId;
+          }
+          return null;
+        })
+        .filter(Boolean);
+
       console.log("Sincronizando servicios - Turno:", turno.servicios);
-      console.log("Servicios disponibles:", serviciosDisponibles.map(s => s._id));
+      console.log(
+        "Servicios disponibles:",
+        serviciosDisponibles.map((s) => s._id)
+      );
       console.log("Servicios finales seleccionados:", serviciosIds);
-      
+
       setServiciosSeleccionados(serviciosIds);
     }
   }, [turno, serviciosDisponibles]);
@@ -157,7 +165,9 @@ const EditarTurno = () => {
       // Obtener datos completos de los servicios seleccionados
       const serviciosCompletos = serviciosSeleccionados
         .map((servicioId) => {
-          const servicio = serviciosDisponibles.find((s) => s._id === servicioId);
+          const servicio = serviciosDisponibles.find(
+            (s) => s._id === servicioId
+          );
           if (!servicio) {
             console.warn(`Servicio con ID ${servicioId} no encontrado`);
             return null;
@@ -401,9 +411,16 @@ const EditarTurno = () => {
                         <input
                           type="checkbox"
                           id={`servicio-${servicio._id}`}
-                          checked={serviciosSeleccionados.includes(servicio._id)}
+                          checked={serviciosSeleccionados.includes(
+                            servicio._id
+                          )}
                           onChange={() => {
-                            console.log("Cambiando servicio:", servicio._id, "Actuales:", serviciosSeleccionados);
+                            console.log(
+                              "Cambiando servicio:",
+                              servicio._id,
+                              "Actuales:",
+                              serviciosSeleccionados
+                            );
                             handleServicioChange(servicio._id);
                           }}
                           className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
