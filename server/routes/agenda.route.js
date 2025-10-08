@@ -25,6 +25,12 @@ AgendaRouter.get(
 AgendaRouter.get("/landing", AgendaController.getTurnosLanding);
 AgendaRouter.get("/horarios-semanas", AgendaController.getHorariosYSemanas);
 
+// Ruta para verificar si un cliente ya tiene un turno abierto
+AgendaRouter.get(
+  "/verificar-turno/:numeroCliente",
+  AgendaController.verificarTurnoExistente
+);
+
 // Nuevas rutas para estadísticas y generación de turnos
 AgendaRouter.get("/diagnostico", AgendaController.diagnosticoHorarios);
 AgendaRouter.delete(

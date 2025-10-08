@@ -141,6 +141,27 @@ const FormReservarConBarbero = ({
 
   const handleSubmit = async (values, { setSubmitting }) => {
     try {
+      // Verificar si el usuario ya tiene un turno abierto
+      try {
+        const verificacionResponse = await axios.get(
+          `http://localhost:8000/api/agenda/verificar-turno/${values.numeroCliente}`
+        );
+
+        if (verificacionResponse.data.tieneTurno) {
+          const turno = verificacionResponse.data.turno;
+          Swal.fire({
+            icon: "warning",
+            title: "Ya tienes un turno abierto",
+            text: `Ya tienes un turno en ${turno.fecha} a las ${turno.hora} con ${turno.barbero}`,
+            confirmButtonText: "Entendido",
+          });
+          return; // No continuar con el agendamiento
+        }
+      } catch (error) {
+        console.error("Error verificando turno existente:", error);
+        // Si hay error en la verificación, continuar con el agendamiento
+      }
+
       const reservaData = {
         fecha: turno.fecha,
         hora: turno.hora,

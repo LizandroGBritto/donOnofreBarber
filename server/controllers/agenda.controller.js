@@ -1090,4 +1090,56 @@ module.exports = {
       });
     }
   },
+
+  // Verificar si un número de teléfono ya tiene un turno abierto (reservado o confirmado)
+  verificarTurnoExistente: async (req, res) => {
+    try {
+      const { numeroCliente } = req.params;
+
+      if (!numeroCliente) {
+        return res.status(400).json({
+          message: "Número de cliente es requerido",
+        });
+      }
+
+      // Buscar turnos que estén en estados activos (no disponible ni pagado)
+      const turnoExistente = await AgendaModel.findOne({
+        numeroCliente: numeroCliente,
+        estado: { $in: ["reservado", "confirmado"] }, // Solo reservado y confirmado
+      }).populate("barbero", "nombre");
+
+      if (turnoExistente) {
+        // Formatear la fecha para mostrar
+        const fechaFormateada = ParaguayDateUtil.toParaguayTime(
+          turnoExistente.fecha
+        ).format("DD/MM/YYYY");
+
+        const nombreBarbero =
+          turnoExistente.barbero?.nombre ||
+          turnoExistente.nombreBarbero ||
+          "Sin barbero asignado";
+
+        res.status(200).json({
+          tieneTurno: true,
+          turno: {
+            fecha: fechaFormateada,
+            hora: turnoExistente.hora,
+            barbero: nombreBarbero,
+            estado: turnoExistente.estado,
+          },
+        });
+      } else {
+        res.status(200).json({
+          tieneTurno: false,
+          turno: null,
+        });
+      }
+    } catch (error) {
+      console.error("Error al verificar turno existente:", error);
+      res.status(500).json({
+        message: "Error al verificar turno existente",
+        error: error.message,
+      });
+    }
+  },
 };

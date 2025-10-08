@@ -46,6 +46,19 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
     }
   };
 
+  // Función para verificar si el usuario ya tiene un turno abierto
+  const verificarTurnoExistente = useCallback(async (numeroCliente) => {
+    try {
+      const response = await axios.get(
+        `http://localhost:8000/api/agenda/verificar-turno/${numeroCliente}`
+      );
+      return response.data; // { tieneTurno: boolean, turno: objeto|null }
+    } catch (error) {
+      console.error("Error verificando turno existente:", error);
+      return { tieneTurno: false, turno: null };
+    }
+  }, []);
+
   // Cargar información de horarios y semanas
   const loadHorariosYSemanas = useCallback(async () => {
     try {
