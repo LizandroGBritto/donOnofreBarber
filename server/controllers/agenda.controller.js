@@ -1080,95 +1080,121 @@ module.exports = {
   },
 
   // Endpoint para obtener información de horarios y semanas para el frontend
-  getHorariosYSemanas: async (req, res) => {
-    try {
-      // Obtener horarios activos (corregir el campo estado)
-      const horariosActivos = await HorarioModel.find({
-        estado: "activo",
-      }).lean();
-      console.log("🔍 Horarios encontrados:", horariosActivos.length);
+// Endpoint para obtener información de horarios y semanas para el frontend
+getHorariosYSemanas: async (req, res) => {
+  try {
+    // Obtener horarios activos
+    const horariosActivos = await HorarioModel.find({
+      estado: "activo",
+    }).lean();
+    console.log("🔍 Horarios encontrados:", horariosActivos.length);
 
-      // Mapear días de horarios activos
-      const diasActivosSet = new Set();
-      horariosActivos.forEach((horario) => {
-        console.log(
-          "📅 Procesando horario:",
-          horario.hora,
-          "días:",
-          horario.dias
-        );
-        horario.dias?.forEach((dia) => diasActivosSet.add(dia));
-      });
-
-      const diasActivos = Array.from(diasActivosSet);
-      console.log("📋 Días activos finales:", diasActivos);
-
-      // Generar próximas 4 semanas
-      const hoy = new Date();
+    // Mapear días de horarios activos
+    const diasActivosSet = new Set();
+    horariosActivos.forEach((horario) => {
       console.log(
-        "📅 Fecha de hoy:",
-        hoy.toISOString().split("T")[0],
-        `(${hoy.toLocaleDateString("es-ES", { weekday: "long" })})`
+        "📅 Procesando horario:",
+        horario.hora,
+        "días:",
+        horario.dias
       );
-      const semanas = [];
+      horario.dias?.forEach((dia) => diasActivosSet.add(dia));
+    });
 
-      for (let i = 0; i < 4; i++) {
-        // Calcular el lunes de la semana actual primero
-        const fechaBase = new Date(hoy);
-        const diaSemanaHoy = fechaBase.getDay();
-        const diasHastaLunesActual = diaSemanaHoy === 0 ? -6 : 1 - diaSemanaHoy;
-        fechaBase.setDate(fechaBase.getDate() + diasHastaLunesActual);
-        console.log(
-          `📍 Lunes de la semana actual: ${
-            fechaBase.toISOString().split("T")[0]
-          }`
-        );
+    const diasActivos = Array.from(diasActivosSet);
+    console.log("📋 Días activos finales:", diasActivos);
 
-        // Ahora sumar las semanas completas
-        const inicioSemana = new Date(fechaBase);
-        inicioSemana.setDate(fechaBase.getDate() + i * 7);
+    // Generar próximas 4 semanas
+    const hoy = new Date();
+    console.log(
+      "📅 Fecha de hoy:",
+      hoy.toISOString().split("T")[0],
+      `(${hoy.toLocaleDateString("es-ES", { weekday: "long" })})`
+    );
+    
+    const semanas = [];
 
-        const finSemana = new Date(inicioSemana);
-        finSemana.setDate(inicioSemana.getDate() + 6);
+    for (let i = 0; i < 4; i++) {
+      // 🔧 CORRECCIÓN: Calcular el lunes correctamente
+      const fechaBase = new Date();
+      const diaSemanaHoy = fechaBase.getDay(); // 0 = domingo, 1 = lunes, ..., 6 = sábado
+      
+      // Calcular días hasta el lunes más cercano
+      // Si es domingo (0), retroceder 6 días
+      // Si es lunes (1), no mover
+      // Si es martes (2), retroceder 1 día
+      // etc.
+      let diasHastaLunes;
+      if (diaSemanaHoy === 0) {
+        diasHastaLunes = -6; // Domingo: ir al lunes anterior
+      } else {
+        diasHastaLunes = 1 - diaSemanaHoy; // Otros días: calcular diferencia
+      }
+      
+      console.log(`📍 Hoy es día ${diaSemanaHoy}, días hasta lunes: ${diasHastaLunes}`);
+      
+      // Obtener el lunes de la semana actual
+      const lunesActual = new Date(fechaBase);
+      lunesActual.setDate(fechaBase.getDate() + diasHastaLunes);
+      lunesActual.setHours(0, 0, 0, 0); // Reset tiempo a medianoche
+      
+      console.log(
+        `📍 Lunes de la semana actual: ${lunesActual.toISOString().split("T")[0]} (${lunesActual.toLocaleDateString("es-ES", { weekday: "long" })})`
+      );
 
-        console.log(
-          `📆 Semana ${i + 1}: ${inicioSemana.toISOString().split("T")[0]} - ${
-            finSemana.toISOString().split("T")[0]
-          }`
-        );
+      // Ahora sumar las semanas completas
+      const inicioSemana = new Date(lunesActual);
+      inicioSemana.setDate(lunesActual.getDate() + i * 7);
+      inicioSemana.setHours(0, 0, 0, 0);
 
-        semanas.push({
-          numero: i + 1,
-          inicioSemana: inicioSemana.toISOString().split("T")[0],
-          finSemana: finSemana.toISOString().split("T")[0],
-          label: `Semana del ${inicioSemana
-            .getDate()
-            .toString()
-            .padStart(2, "0")}/${(inicioSemana.getMonth() + 1)
-            .toString()
-            .padStart(2, "0")} - ${finSemana
-            .getDate()
-            .toString()
-            .padStart(2, "0")}/${(finSemana.getMonth() + 1)
-            .toString()
-            .padStart(2, "0")}`,
-        });
+      const finSemana = new Date(inicioSemana);
+      finSemana.setDate(inicioSemana.getDate() + 6);
+      finSemana.setHours(23, 59, 59, 999);
+
+      const diaSemanaInicio = inicioSemana.toLocaleDateString("es-ES", { weekday: "long" });
+      const diaSemanaFin = finSemana.toLocaleDateString("es-ES", { weekday: "long" });
+
+      console.log(
+        `📆 Semana ${i + 1}: ${inicioSemana.toISOString().split("T")[0]} (${diaSemanaInicio}) - ${finSemana.toISOString().split("T")[0]} (${diaSemanaFin})`
+      );
+
+      // Verificar que inicioSemana sea lunes
+      if (inicioSemana.getDay() !== 1) {
+        console.error(`❌ ERROR: inicioSemana NO es lunes! Es día ${inicioSemana.getDay()}`);
       }
 
-      res.status(200).json({
-        diasActivos,
-        semanas,
-        horariosActivos: horariosActivos.map((h) => ({
-          hora: h.hora,
-          dias: h.dias || [],
-        })),
-      });
-    } catch (error) {
-      console.error("Error al obtener horarios y semanas:", error);
-      res.status(500).json({
-        message: "Error al obtener horarios y semanas",
-        error: error.message,
+      semanas.push({
+        numero: i + 1,
+        inicioSemana: inicioSemana.toISOString().split("T")[0],
+        finSemana: finSemana.toISOString().split("T")[0],
+        label: `Semana del ${inicioSemana
+          .getDate()
+          .toString()
+          .padStart(2, "0")}/${(inicioSemana.getMonth() + 1)
+          .toString()
+          .padStart(2, "0")} - ${finSemana
+          .getDate()
+          .toString()
+          .padStart(2, "0")}/${(finSemana.getMonth() + 1)
+          .toString()
+          .padStart(2, "0")}`,
       });
     }
-  },
+
+    res.status(200).json({
+      diasActivos,
+      semanas,
+      horariosActivos: horariosActivos.map((h) => ({
+        hora: h.hora,
+        dias: h.dias || [],
+      })),
+    });
+  } catch (error) {
+    console.error("Error al obtener horarios y semanas:", error);
+    res.status(500).json({
+      message: "Error al obtener horarios y semanas",
+      error: error.message,
+    });
+  }
+},
 };
