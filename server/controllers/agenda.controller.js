@@ -839,7 +839,7 @@ module.exports = {
             (t) =>
               t.barbero &&
               t.barbero._id.toString() === barbero._id.toString() &&
-              ["reservado", "confirmado", "en_proceso"].includes(t.estado)
+              ["reservado", "pagado", "en_proceso"].includes(t.estado)
           );
 
           if (turnoOcupado) {
@@ -910,7 +910,7 @@ module.exports = {
         fecha: fechaObj,
         hora: hora,
         barbero: barberoId,
-        estado: { $in: ["reservado", "confirmado", "en_proceso"] },
+        estado: { $in: ["reservado", "pagado", "en_proceso"] },
       });
 
       if (turnoExistente) {

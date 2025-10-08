@@ -104,7 +104,7 @@ const migracionController = {
               case "sin pagar":
                 turnoNuevo.estadoPago = "pendiente";
                 if (turnoNuevo.nombreCliente) {
-                  turnoNuevo.estado = "confirmado";
+                  turnoNuevo.estado = "pagado";
                 }
                 break;
               default:

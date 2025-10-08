@@ -33,18 +33,64 @@ const Servicios = () => {
 
   const CarruselImagenes = ({ imagenes, nombre }) => {
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
+    const [isPaused, setIsPaused] = useState(false);
 
-    const nextImage = () => {
+    const nextImage = (e) => {
+      if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      setIsPaused(true);
       setCurrentImageIndex((prevIndex) =>
         prevIndex === imagenes.length - 1 ? 0 : prevIndex + 1
       );
+      // Resume auto-advance after 3 seconds
+      setTimeout(() => setIsPaused(false), 3000);
     };
 
-    const prevImage = () => {
+    const prevImage = (e) => {
+      if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      setIsPaused(true);
       setCurrentImageIndex((prevIndex) =>
         prevIndex === 0 ? imagenes.length - 1 : prevIndex - 1
       );
+      // Resume auto-advance after 3 seconds
+      setTimeout(() => setIsPaused(false), 3000);
     };
+
+    const goToImage = (e, index) => {
+      if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      setIsPaused(true);
+      setCurrentImageIndex(index);
+      // Resume auto-advance after 3 seconds
+      setTimeout(() => setIsPaused(false), 3000);
+    };
+
+    // Reset index if it's out of bounds
+    useEffect(() => {
+      if (currentImageIndex >= imagenes.length) {
+        setCurrentImageIndex(0);
+      }
+    }, [imagenes.length, currentImageIndex]);
+
+    // Auto-advance carousel every 5 seconds if there are multiple images and not paused
+    useEffect(() => {
+      if (imagenes.length > 1 && !isPaused) {
+        const interval = setInterval(() => {
+          setCurrentImageIndex((prevIndex) =>
+            prevIndex === imagenes.length - 1 ? 0 : prevIndex + 1
+          );
+        }, 5000);
+
+        return () => clearInterval(interval);
+      }
+    }, [imagenes.length, isPaused]);
 
     if (!imagenes || imagenes.length === 0) {
       return (
@@ -55,7 +101,10 @@ const Servicios = () => {
     }
 
     return (
-      <div className="relative w-full h-48 rounded-lg overflow-hidden group" id="servicios">
+      <div
+        className="relative w-full h-48 rounded-lg overflow-hidden group"
+        id="servicios"
+      >
         <img
           src={`http://localhost:8000/uploads/${imagenes[currentImageIndex]}`}
           alt={`${nombre} - ${currentImageIndex + 1}`}
@@ -66,11 +115,8 @@ const Servicios = () => {
           <>
             {/* Botón anterior */}
             <button
-              onClick={(e) => {
-                e.stopPropagation();
-                prevImage();
-              }}
-              className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-opacity-70"
+              onClick={prevImage}
+              className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-opacity-70 z-10"
             >
               <svg
                 className="w-4 h-4"
@@ -89,11 +135,8 @@ const Servicios = () => {
 
             {/* Botón siguiente */}
             <button
-              onClick={(e) => {
-                e.stopPropagation();
-                nextImage();
-              }}
-              className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-opacity-70"
+              onClick={nextImage}
+              className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-opacity-70 z-10"
             >
               <svg
                 className="w-4 h-4"
@@ -115,10 +158,7 @@ const Servicios = () => {
               {imagenes.map((_, index) => (
                 <button
                   key={index}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setCurrentImageIndex(index);
-                  }}
+                  onClick={(e) => goToImage(e, index)}
                   className={`w-2 h-2 rounded-full transition-all duration-200 ${
                     index === currentImageIndex
                       ? "bg-white"

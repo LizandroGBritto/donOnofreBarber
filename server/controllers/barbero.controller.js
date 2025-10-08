@@ -233,11 +233,7 @@ module.exports = {
 
       // Regenerar agenda después de actualizar barbero
       try {
-        console.log("🔄 Regenerando agenda por actualización de barbero...");
         await AgendaGeneratorService.regenerarAgendaCompleta();
-        console.log(
-          "✅ Agenda regenerada exitosamente después de actualizar barbero"
-        );
       } catch (regenerarError) {
         console.error("❌ Error regenerando agenda:", regenerarError);
         // No fallar la actualización del barbero si hay error en la regeneración

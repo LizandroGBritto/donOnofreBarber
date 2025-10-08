@@ -1041,7 +1041,7 @@ const AdminDashboard = () => {
           <div className="text-sm text-gray-300 flex-1">
             <p>Tel: {turno.numeroCliente || "N/A"}</p>
             <p className="font-semibold text-green-400">
-              Costo: ${turno.costoTotal || 0}
+              Costo: Gs.{turno.costoTotal || 0}
             </p>
             {turno.servicios && turno.servicios.length > 0 && (
               <div className="text-xs text-gray-400 mt-1">
@@ -1060,14 +1060,14 @@ const AdminDashboard = () => {
               </div>
             )}
           </div>
-          <div className="flex gap-2 mt-2">
+          <div className="flex flex-col gap-2 mt-2">
             <Button
               size="sm"
               onClick={() => {
                 setSelectedTurno(turno);
                 setShowModal(true);
               }}
-              className="flex-1"
+              className="w-full"
             >
               Ver Detalles
             </Button>
@@ -1076,7 +1076,7 @@ const AdminDashboard = () => {
                 size="sm"
                 color="success"
                 onClick={() => enviarMensajeWhatsApp(turno)}
-                className="flex-1"
+                className="w-full"
               >
                 Contactar
               </Button>
@@ -1227,9 +1227,7 @@ const AdminDashboard = () => {
                     <option value="">Todos los estados</option>
                     <option value="disponible">Disponible</option>
                     <option value="reservado">Reservado</option>
-                    <option value="confirmado">Confirmado</option>
-                    <option value="completado">Completado</option>
-                    <option value="cancelado">Cancelado</option>
+                    <option value="pagado">Pagado</option>
                   </Select>
                 </div>
 
@@ -1317,7 +1315,7 @@ const AdminDashboard = () => {
                     <Table.HeadCell>Fecha</Table.HeadCell>
                     <Table.HeadCell>Hora</Table.HeadCell>
                     <Table.HeadCell>Cliente</Table.HeadCell>
-                    <Table.HeadCell>Barbero</Table.HeadCell> {/* 🆕 NUEVO */}
+                    <Table.HeadCell>Barbero</Table.HeadCell>
                     <Table.HeadCell>Teléfono</Table.HeadCell>
                     <Table.HeadCell>Estado</Table.HeadCell>
                     <Table.HeadCell>Costo</Table.HeadCell>
@@ -1334,8 +1332,6 @@ const AdminDashboard = () => {
                         <Table.Cell>
                           {turno.nombreCliente || "Disponible"}
                         </Table.Cell>
-
-                        {/* 🆕 NUEVA CELDA: Barbero */}
                         <Table.Cell>
                           {turno.barbero ? (
                             <div className="flex items-center gap-2">
@@ -3049,7 +3045,7 @@ const AdminDashboard = () => {
                 <Label htmlFor="costo">Costo</Label>
                 <TextInput
                   id="costo"
-                  value={`$${selectedTurno.costoTotal || 0}`}
+                  value={`Gs.${selectedTurno.costoTotal || 0}`}
                   readOnly
                 />
               </div>
@@ -3062,10 +3058,10 @@ const AdminDashboard = () => {
                     actualizarEstadoTurno(selectedTurno._id, e.target.value)
                   }
                 >
-                  <option value="Sin Pagar">Sin Pagar</option>
-                  <option value="Pagado">Pagado</option>
-                  <option value="Disponible">Disponible</option>
-                  <option value="Cancelado">Cancelado</option>
+                  <option value="sin Pagar">Sin Pagar</option>
+                  <option value="pagado">Pagado</option>
+                  <option value="disponible">Disponible</option>
+                  <option value="cancelado">Cancelado</option>
                 </Select>
               </div>
               {selectedTurno.servicios &&

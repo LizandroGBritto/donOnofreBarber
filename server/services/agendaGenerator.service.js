@@ -162,6 +162,8 @@ class AgendaGeneratorService {
       const finSemana = ParaguayDateUtil.now().endOf("week").toDate();
       const inicioMes = ParaguayDateUtil.now().startOf("month").toDate();
       const finMes = ParaguayDateUtil.now().endOf("month").toDate();
+      const inicioAño = ParaguayDateUtil.now().startOf("year").toDate();
+      const finAño = ParaguayDateUtil.now().endOf("year").toDate();
 
       const [
         turnosAgendadosHoy,
@@ -170,6 +172,8 @@ class AgendaGeneratorService {
         turnosDisponiblesSemana,
         turnosAgendadosMes,
         turnosDisponiblesMes,
+        turnosAgendadosAño,
+        turnosDisponiblesAño,
       ] = await Promise.all([
         // Turnos agendados hoy
         Agenda.countDocuments({
@@ -207,20 +211,110 @@ class AgendaGeneratorService {
           fecha: { $gte: inicioMes, $lte: finMes },
           estado: "disponible",
         }),
+        // Turnos agendados este año
+        Agenda.countDocuments({
+          fecha: { $gte: inicioAño, $lte: finAño },
+          estado: { $ne: "disponible" },
+        }),
+        // Turnos disponibles este año
+        Agenda.countDocuments({
+          fecha: { $gte: inicioAño, $lte: finAño },
+          estado: "disponible",
+        }),
+      ]);
+
+      // Consultas separadas para calcular ingresos generados (suma de costoTotal)
+      const [
+        ingresosPagadosHoy,
+        ingresosPagadosSemana,
+        ingresosPagadosMes,
+        ingresosPagadosAño,
+      ] = await Promise.all([
+        // Ingresos generados hoy
+        Agenda.aggregate([
+          {
+            $match: {
+              fecha: {
+                $gte: ParaguayDateUtil.startOfDay(hoy).toDate(),
+                $lte: ParaguayDateUtil.endOfDay(hoy).toDate(),
+              },
+              estado: "pagado",
+            },
+          },
+          {
+            $group: {
+              _id: null,
+              total: { $sum: "$costoTotal" },
+            },
+          },
+        ]),
+        // Ingresos generados esta semana
+        Agenda.aggregate([
+          {
+            $match: {
+              fecha: { $gte: inicioSemana, $lte: finSemana },
+              estado: "pagado",
+            },
+          },
+          {
+            $group: {
+              _id: null,
+              total: { $sum: "$costoTotal" },
+            },
+          },
+        ]),
+        // Ingresos generados este mes
+        Agenda.aggregate([
+          {
+            $match: {
+              fecha: { $gte: inicioMes, $lte: finMes },
+              estado: "pagado",
+            },
+          },
+          {
+            $group: {
+              _id: null,
+              total: { $sum: "$costoTotal" },
+            },
+          },
+        ]),
+        // Ingresos generados este año
+        Agenda.aggregate([
+          {
+            $match: {
+              fecha: { $gte: inicioAño, $lte: finAño },
+              estado: "pagado",
+            },
+          },
+          {
+            $group: {
+              _id: null,
+              total: { $sum: "$costoTotal" },
+            },
+          },
+        ]),
       ]);
 
       return {
         hoy: {
           agendados: turnosAgendadosHoy,
           disponibles: turnosDisponiblesHoy,
+          generado: ingresosPagadosHoy[0]?.total || 0,
         },
         semana: {
           agendados: turnosAgendadosSemana,
           disponibles: turnosDisponiblesSemana,
+          generado: ingresosPagadosSemana[0]?.total || 0,
         },
         mes: {
           agendados: turnosAgendadosMes,
           disponibles: turnosDisponiblesMes,
+          generado: ingresosPagadosMes[0]?.total || 0,
+        },
+        año: {
+          agendados: turnosAgendadosAño,
+          disponibles: turnosDisponiblesAño,
+          generado: ingresosPagadosAño[0]?.total || 0,
         },
       };
     } catch (error) {
@@ -241,12 +335,6 @@ class AgendaGeneratorService {
       const fin = fechaFin
         ? ParaguayDateUtil.toParaguayTime(fechaFin)
         : ParaguayDateUtil.now().add(3, "months");
-
-      console.log(
-        `🔄 Regenerando agenda desde ${inicio.format(
-          "YYYY-MM-DD"
-        )} hasta ${fin.format("YYYY-MM-DD")}`
-      );
 
       // Obtener barberos que NO están incluidos en agenda
       const barberosExcluidos = await BarberoModel.find({

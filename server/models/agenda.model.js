@@ -73,10 +73,9 @@ const AgendaSchema = new mongoose.Schema(
       enum: [
         "disponible",
         "reservado",
-        "confirmado",
+        "pagado",
         "en_proceso",
         "completado",
-        "cancelado",
         "no_show",
       ],
       default: "disponible",
@@ -153,7 +152,7 @@ AgendaSchema.statics.isBarberoDisponible = function (fecha, hora, barberoId) {
     fecha: fecha,
     hora: hora,
     barbero: barberoId,
-    estado: { $in: ["reservado", "confirmado", "en_proceso"] },
+    estado: { $in: ["reservado", "pagado", "en_proceso"] },
   }).then((turno) => !turno); // Retorna true si NO encuentra turno ocupado
 };
 
