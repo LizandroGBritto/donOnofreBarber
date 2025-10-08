@@ -14,6 +14,8 @@ import Dashboard from "./panel/Dashboard";
 
 const AdminDashboard = () => {
   // Función para procesar número de teléfono para WhatsApp
+  const [filtroBarbero, setFiltroBarbero] = useState("");
+
   const procesarNumeroWhatsApp = (numero) => {
     if (!numero) return null;
 
@@ -40,7 +42,6 @@ const AdminDashboard = () => {
       alert("No hay número de teléfono disponible para este cliente.");
       return;
     }
-
     const nombreCliente = turno.nombreCliente || "Cliente";
     const fecha = formatearFecha(turno.fecha);
     const dia = new Date(turno.fecha).toLocaleDateString("es-PY", {
@@ -180,6 +181,7 @@ const AdminDashboard = () => {
   // Función para obtener fecha de hoy
   const obtenerFechaHoy = () => {
     const hoy = new Date();
+    // 🔧 FIX: Usar UTC para evitar desfases de zona horaria
     const year = hoy.getFullYear();
     const month = String(hoy.getMonth() + 1).padStart(2, "0");
     const day = String(hoy.getDate()).padStart(2, "0");
@@ -189,6 +191,7 @@ const AdminDashboard = () => {
   // Función para obtener fecha de mañana
   const obtenerFechaManana = () => {
     const manana = new Date();
+    // 🔧 FIX: Sumar SOLO 1 día, no 2
     manana.setDate(manana.getDate() + 1);
     const year = manana.getFullYear();
     const month = String(manana.getMonth() + 1).padStart(2, "0");
@@ -251,19 +254,28 @@ const AdminDashboard = () => {
     // Filtro por fecha
     if (fechaDesde) {
       filtered = filtered.filter((turno) => {
-        const fechaTurno = new Date(turno.fecha); // Nuevo campo
-        const fechaDesdeObj = new Date(fechaDesde);
-        fechaDesdeObj.setHours(0, 0, 0, 0); // Inicio del día
+        const fechaTurno = new Date(turno.fecha);
+        const fechaDesdeObj = new Date(fechaDesde + "T00:00:00");
         return fechaTurno >= fechaDesdeObj;
       });
     }
 
     if (fechaHasta) {
       filtered = filtered.filter((turno) => {
-        const fechaTurno = new Date(turno.fecha); // Nuevo campo
-        const fechaHastaObj = new Date(fechaHasta);
-        fechaHastaObj.setHours(23, 59, 59, 999); // Final del día
+        const fechaTurno = new Date(turno.fecha);
+        const fechaHastaObj = new Date(fechaHasta + "T23:59:59");
         return fechaTurno <= fechaHastaObj;
+      });
+    }
+
+    // 🆕 Filtro por barbero
+    if (filtroBarbero) {
+      filtered = filtered.filter((turno) => {
+        if (!turno.barbero) return false;
+        return (
+          turno.barbero._id === filtroBarbero ||
+          turno.barbero.toString() === filtroBarbero
+        );
       });
     }
 
@@ -272,7 +284,7 @@ const AdminDashboard = () => {
       filtered = filtered.filter((turno) => turno.estado === filtroEstado);
     }
 
-    // Filtro por búsqueda (cliente, día, teléfono, estado)
+    // Filtro por búsqueda
     if (busqueda) {
       const searchTerm = busqueda.toLowerCase();
       filtered = filtered.filter(
@@ -283,7 +295,9 @@ const AdminDashboard = () => {
             turno.numeroCliente.toLowerCase().includes(searchTerm)) ||
           (turno.diaSemana &&
             turno.diaSemana.toLowerCase().includes(searchTerm)) ||
-          (turno.estado && turno.estado.toLowerCase().includes(searchTerm))
+          (turno.estado && turno.estado.toLowerCase().includes(searchTerm)) ||
+          (turno.barbero?.nombre &&
+            turno.barbero.nombre.toLowerCase().includes(searchTerm))
       );
     }
 
@@ -345,6 +359,7 @@ const AdminDashboard = () => {
     setFechaDesde("");
     setFechaHasta("");
     setFiltroEstado("");
+    setFiltroBarbero(""); // 🆕 NUEVO
     setBusqueda("");
   };
 
@@ -981,7 +996,7 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     filtrarTurnos();
-  }, [fechaDesde, fechaHasta, filtroEstado, busqueda, turnos]);
+  }, [fechaDesde, fechaHasta, filtroEstado, filtroBarbero, busqueda, turnos]);
 
   const formatearFecha = (fecha) => {
     return new Date(fecha).toLocaleDateString("es-ES");
@@ -999,67 +1014,82 @@ const AdminDashboard = () => {
 
   // Componente responsivo para mostrar turnos en móvil
   const TurnoCard = ({ turno }) => (
-    <Card className="mb-4" style={{ backgroundColor: "#5B4373" }}>
-      <div className="p-4">
-        <div className="flex justify-between items-start mb-2">
-          <div>
-            <h3 className="font-semibold text-lg text-white">
-              {turno.nombreCliente || "Disponible"}
-            </h3>
-            <p className="text-sm text-gray-300">
-              {formatearFecha(turno.fecha)} - {turno.hora}
-            </p>
-          </div>
-          <div className="text-right">{formatearEstado(turno.estado)}</div>
+  <Card className="mb-4" style={{ backgroundColor: "#5B4373" }}>
+    <div className="p-4">
+      <div className="flex justify-between items-start mb-2">
+        <div>
+          <h3 className="font-semibold text-lg text-white">
+            {turno.nombreCliente || "Disponible"}
+          </h3>
+          <p className="text-sm text-gray-300">
+            {formatearFecha(turno.fecha)} - {turno.hora}
+          </p>
+          {/* 🆕 NUEVO: Mostrar barbero en móvil */}
+          {turno.barbero && (
+            <div className="flex items-center gap-2 mt-1">
+              {turno.barbero.foto && (
+                <img
+                  src={`http://localhost:8000/uploads/${turno.barbero.foto}`}
+                  alt={turno.barbero.nombre}
+                  className="w-5 h-5 rounded-full object-cover"
+                />
+              )}
+              <span className="text-xs text-purple-300">
+                Barbero: {turno.barbero.nombre || turno.nombreBarbero}
+              </span>
+            </div>
+          )}
         </div>
-        <div className="flex justify-between items-start">
-          <div className="text-sm text-gray-300 flex-1">
-            <p>Tel: {turno.numeroCliente || "N/A"}</p>
-            <p className="font-semibold text-green-400">
-              Costo: ${turno.costoTotal || 0}
-            </p>
-            {turno.servicios && turno.servicios.length > 0 && (
-              <div className="text-xs text-gray-400 mt-1">
-                <p className="font-medium mb-2">Servicios:</p>
-                <div className="flex flex-wrap gap-1">
-                  {turno.servicios.map((servicio, index) => (
-                    <div
-                      key={index}
-                      className="bg-blue-100 text-blue-800 px-2 py-1 rounded-md text-xs"
-                    >
-                      {servicio.nombre} - $
-                      {servicio.precio?.toLocaleString() || 0}
-                    </div>
-                  ))}
-                </div>
+        <div className="text-right">{formatearEstado(turno.estado)}</div>
+      </div>
+      <div className="flex justify-between items-start">
+        <div className="text-sm text-gray-300 flex-1">
+          <p>Tel: {turno.numeroCliente || "N/A"}</p>
+          <p className="font-semibold text-green-400">
+            Costo: ${turno.costoTotal || 0}
+          </p>
+          {turno.servicios && turno.servicios.length > 0 && (
+            <div className="text-xs text-gray-400 mt-1">
+              <p className="font-medium mb-2">Servicios:</p>
+              <div className="flex flex-wrap gap-1">
+                {turno.servicios.map((servicio, index) => (
+                  <div
+                    key={index}
+                    className="bg-blue-100 text-blue-800 px-2 py-1 rounded-md text-xs"
+                  >
+                    {servicio.nombre} - $
+                    {servicio.precio?.toLocaleString() || 0}
+                  </div>
+                ))}
               </div>
-            )}
-          </div>
-          <div className="flex gap-2 mt-2">
+            </div>
+          )}
+        </div>
+        <div className="flex gap-2 mt-2">
+          <Button
+            size="sm"
+            onClick={() => {
+              setSelectedTurno(turno);
+              setShowModal(true);
+            }}
+            className="flex-1"
+          >
+            Ver Detalles
+          </Button>
+          {turno.numeroCliente && turno.nombreCliente && (
             <Button
               size="sm"
-              onClick={() => {
-                setSelectedTurno(turno);
-                setShowModal(true);
-              }}
+              color="success"
+              onClick={() => enviarMensajeWhatsApp(turno)}
               className="flex-1"
             >
-              Ver Detalles
+              Contactar
             </Button>
-            {turno.numeroCliente && turno.nombreCliente && (
-              <Button
-                size="sm"
-                color="success"
-                onClick={() => enviarMensajeWhatsApp(turno)}
-                className="flex-1"
-              >
-                Contactar
-              </Button>
-            )}
-          </div>
+          )}
         </div>
       </div>
-    </Card>
+    </div>
+  </Card>
   );
 
   return (
@@ -1174,8 +1204,8 @@ const AdminDashboard = () => {
                 </div>
               </div>
 
-              {/* Fila 2: Estado y búsqueda */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Fila 2: Estado, Barbero y búsqueda */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <Label htmlFor="filtroEstado" className="text-white">
                     Estado
@@ -1186,12 +1216,33 @@ const AdminDashboard = () => {
                     onChange={(e) => setFiltroEstado(e.target.value)}
                   >
                     <option value="">Todos los estados</option>
-                    <option value="Sin Pagar">Sin Pagar</option>
-                    <option value="Pagado">Pagado</option>
-                    <option value="Disponible">Disponible</option>
-                    <option value="Cancelado">Cancelado</option>
+                    <option value="disponible">Disponible</option>
+                    <option value="reservado">Reservado</option>
+                    <option value="confirmado">Confirmado</option>
+                    <option value="completado">Completado</option>
+                    <option value="cancelado">Cancelado</option>
                   </Select>
                 </div>
+
+                {/* 🆕 NUEVO: Select de Barbero */}
+                <div>
+                  <Label htmlFor="filtroBarbero" className="text-white">
+                    Barbero
+                  </Label>
+                  <Select
+                    id="filtroBarbero"
+                    value={filtroBarbero}
+                    onChange={(e) => setFiltroBarbero(e.target.value)}
+                  >
+                    <option value="">Todos los barberos</option>
+                    {barberos.map((barbero) => (
+                      <option key={barbero._id} value={barbero._id}>
+                        {barbero.nombre}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+
                 <div>
                   <Label htmlFor="busqueda" className="text-white">
                     Buscar
@@ -1199,7 +1250,7 @@ const AdminDashboard = () => {
                   <TextInput
                     id="busqueda"
                     type="text"
-                    placeholder="Cliente, teléfono, día, estado..."
+                    placeholder="Cliente, teléfono, barbero..."
                     value={busqueda}
                     onChange={(e) => setBusqueda(e.target.value)}
                   />
@@ -1207,7 +1258,7 @@ const AdminDashboard = () => {
               </div>
 
               {/* Fila 3: Botones de filtrado rápido */}
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                 <Button
                   onClick={filtrarHoy}
                   style={{ backgroundColor: "var(--primary-color)" }}
@@ -1229,10 +1280,12 @@ const AdminDashboard = () => {
                 >
                   Esta Semana
                 </Button>
+                <Button onClick={limpiarFiltros} color="gray" size="sm">
+                  Limpiar Filtros
+                </Button>
               </div>
             </div>
           </Card>
-
           {/* Tabla de Turnos - Desktop */}
           <div className="hidden md:block">
             <Card style={{ backgroundColor: "#5B4373" }}>
@@ -1255,69 +1308,89 @@ const AdminDashboard = () => {
                     <Table.HeadCell>Fecha</Table.HeadCell>
                     <Table.HeadCell>Hora</Table.HeadCell>
                     <Table.HeadCell>Cliente</Table.HeadCell>
+                    <Table.HeadCell>Barbero</Table.HeadCell> {/* 🆕 NUEVO */}
                     <Table.HeadCell>Teléfono</Table.HeadCell>
                     <Table.HeadCell>Estado</Table.HeadCell>
                     <Table.HeadCell>Costo</Table.HeadCell>
                     <Table.HeadCell>Acciones</Table.HeadCell>
                   </Table.Head>
-                  <Table.Body className="divide-y">
-                    {filteredTurnos.map((turno) => (
-                      <Table.Row
-                        key={turno._id}
-                        className="bg-white dark:border-gray-700 dark:bg-gray-800"
-                      >
-                        <Table.Cell>{formatearFecha(turno.fecha)}</Table.Cell>
-                        <Table.Cell>{turno.hora}</Table.Cell>
-                        <Table.Cell>
-                          {turno.nombreCliente || "Disponible"}
-                        </Table.Cell>
-                        <Table.Cell>{turno.numeroCliente || "-"}</Table.Cell>
-                        <Table.Cell>{formatearEstado(turno.estado)}</Table.Cell>
-                        <Table.Cell>
-                          <div className="text-sm">
-                            <div className="font-semibold text-green-600">
-                              Gs. {turno.costoTotal || 0}
-                            </div>
-                            {turno.servicios && turno.servicios.length > 0 && (
-                              <div className="text-xs text-gray-600 mt-1 flex flex-wrap gap-1">
-                                {turno.servicios.map((servicio, index) => (
-                                  <div
-                                    key={index}
-                                    className="bg-gray-100 text-gray-700 px-2 py-1 rounded-md text-xs border"
-                                  >
-                                    {servicio.nombre} - $
-                                    {servicio.precio?.toLocaleString() || 0}
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        </Table.Cell>
-                        <Table.Cell>
-                          <div className="flex gap-2">
-                            <Button
-                              size="sm"
-                              onClick={() => {
-                                setSelectedTurno(turno);
-                                setShowModal(true);
-                              }}
-                            >
-                              Ver Detalles
-                            </Button>
-                            {turno.numeroCliente && turno.nombreCliente && (
-                              <Button
-                                size="sm"
-                                color="success"
-                                onClick={() => enviarMensajeWhatsApp(turno)}
-                              >
-                                Contactar
-                              </Button>
-                            )}
-                          </div>
-                        </Table.Cell>
-                      </Table.Row>
-                    ))}
-                  </Table.Body>
+                 <Table.Body className="divide-y">
+  {filteredTurnos.map((turno) => (
+    <Table.Row
+      key={turno._id}
+      className="bg-white dark:border-gray-700 dark:bg-gray-800"
+    >
+      <Table.Cell>{formatearFecha(turno.fecha)}</Table.Cell>
+      <Table.Cell>{turno.hora}</Table.Cell>
+      <Table.Cell>
+        {turno.nombreCliente || "Disponible"}
+      </Table.Cell>
+      
+      {/* 🆕 NUEVA CELDA: Barbero */}
+      <Table.Cell>
+        {turno.barbero ? (
+          <div className="flex items-center gap-2">
+            {turno.barbero.foto && (
+              <img
+                src={`http://localhost:8000/uploads/${turno.barbero.foto}`}
+                alt={turno.barbero.nombre}
+                className="w-6 h-6 rounded-full object-cover"
+              />
+            )}
+            <span className="text-sm">{turno.barbero.nombre || turno.nombreBarbero}</span>
+          </div>
+        ) : (
+          <span className="text-gray-400 text-sm">Sin asignar</span>
+        )}
+      </Table.Cell>
+      
+      <Table.Cell>{turno.numeroCliente || "-"}</Table.Cell>
+      <Table.Cell>{formatearEstado(turno.estado)}</Table.Cell>
+      <Table.Cell>
+        <div className="text-sm">
+          <div className="font-semibold text-green-600">
+            Gs. {turno.costoTotal || 0}
+          </div>
+          {turno.servicios && turno.servicios.length > 0 && (
+            <div className="text-xs text-gray-600 mt-1 flex flex-wrap gap-1">
+              {turno.servicios.map((servicio, index) => (
+                <div
+                  key={index}
+                  className="bg-gray-100 text-gray-700 px-2 py-1 rounded-md text-xs border"
+                >
+                  {servicio.nombre} - $
+                  {servicio.precio?.toLocaleString() || 0}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </Table.Cell>
+      <Table.Cell>
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            onClick={() => {
+              setSelectedTurno(turno);
+              setShowModal(true);
+            }}
+          >
+            Ver Detalles
+          </Button>
+          {turno.numeroCliente && turno.nombreCliente && (
+            <Button
+              size="sm"
+              color="success"
+              onClick={() => enviarMensajeWhatsApp(turno)}
+            >
+              Contactar
+            </Button>
+          )}
+        </div>
+      </Table.Cell>
+    </Table.Row>
+  ))}
+</Table.Body>
                 </Table>
               )}
             </Card>
