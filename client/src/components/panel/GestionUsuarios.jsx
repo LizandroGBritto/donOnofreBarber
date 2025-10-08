@@ -122,10 +122,10 @@ const GestionUsuarios = () => {
       fetchUsuarios();
     } catch (error) {
       console.error("Error al guardar usuario:", error);
-      
+
       // Manejo más específico de errores
       let errorMessage = "Error al guardar usuario";
-      
+
       if (error.response?.data?.errors) {
         // Errores de validación de Mongoose
         const validationErrors = error.response.data.errors;
@@ -140,7 +140,7 @@ const GestionUsuarios = () => {
       } else if (error.message) {
         errorMessage = error.message;
       }
-      
+
       showAlert(errorMessage, "failure");
     }
   };
