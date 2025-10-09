@@ -1,14 +1,55 @@
 class NotificationService {
   constructor() {
-    this.isSupported = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
-    this.permission = this.isSupported ? Notification.permission : "denied";
+    // Detectar iOS
+    this.isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    this.isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+    
+    // Para iOS, verificar versión mínima (iOS 16.4+)
+    this.isIOSSupported = this.isIOS ? this.checkIOSVersion() : true;
+    
+    // Verificación de soporte base
+    this.hasServiceWorker = "serviceWorker" in navigator;
+    this.hasPushManager = "PushManager" in window;
+    this.hasNotification = "Notification" in window;
+    
+    // Soporte completo considerando iOS
+    this.isSupported = this.hasServiceWorker && this.hasPushManager && this.hasNotification && this.isIOSSupported;
+    
+    this.permission = this.hasNotification ? Notification.permission : "denied";
     this.subscription = null;
     this.vapidPublicKey = null;
+  }
+
+  // Verificar versión de iOS
+  checkIOSVersion() {
+    const match = navigator.userAgent.match(/OS (\d+)_(\d+)/);
+    if (match) {
+      const major = parseInt(match[1]);
+      const minor = parseInt(match[2]);
+      // iOS 16.4+ soporta Web Push
+      return major > 16 || (major === 16 && minor >= 4);
+    }
+    // Si no podemos detectar la versión, asumir que sí soporta
+    return true;
   }
 
   // Verificar si las notificaciones están soportadas
   isNotificationSupported() {
     return this.isSupported;
+  }
+
+  // Obtener información detallada de soporte
+  getSupportInfo() {
+    return {
+      isSupported: this.isSupported,
+      isIOS: this.isIOS,
+      isSafari: this.isSafari,
+      isIOSSupported: this.isIOSSupported,
+      hasServiceWorker: this.hasServiceWorker,
+      hasPushManager: this.hasPushManager,
+      hasNotification: this.hasNotification,
+      userAgent: navigator.userAgent
+    };
   }
 
   // Obtener el estado actual de permisos
