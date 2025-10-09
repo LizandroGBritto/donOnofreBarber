@@ -3,18 +3,22 @@ class NotificationService {
     // Detectar iOS
     this.isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
     this.isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-    
+
     // Para iOS, verificar versión mínima (iOS 16.4+)
     this.isIOSSupported = this.isIOS ? this.checkIOSVersion() : true;
-    
+
     // Verificación de soporte base
     this.hasServiceWorker = "serviceWorker" in navigator;
     this.hasPushManager = "PushManager" in window;
     this.hasNotification = "Notification" in window;
-    
+
     // Soporte completo considerando iOS
-    this.isSupported = this.hasServiceWorker && this.hasPushManager && this.hasNotification && this.isIOSSupported;
-    
+    this.isSupported =
+      this.hasServiceWorker &&
+      this.hasPushManager &&
+      this.hasNotification &&
+      this.isIOSSupported;
+
     this.permission = this.hasNotification ? Notification.permission : "denied";
     this.subscription = null;
     this.vapidPublicKey = null;
@@ -48,13 +52,15 @@ class NotificationService {
       hasServiceWorker: this.hasServiceWorker,
       hasPushManager: this.hasPushManager,
       hasNotification: this.hasNotification,
-      userAgent: navigator.userAgent
+      userAgent: navigator.userAgent,
     };
   }
 
   // Obtener el estado actual de permisos
   getPermissionStatus() {
-    return this.isSupported && "Notification" in window ? Notification.permission : "denied";
+    return this.isSupported && "Notification" in window
+      ? Notification.permission
+      : "denied";
   }
 
   // Registrar service worker
@@ -122,7 +128,9 @@ class NotificationService {
     }
 
     if (!("Notification" in window)) {
-      throw new Error("Las notificaciones no están disponibles en este navegador");
+      throw new Error(
+        "Las notificaciones no están disponibles en este navegador"
+      );
     }
 
     if (this.permission === "granted") {
@@ -218,15 +226,18 @@ class NotificationService {
         await this.subscription.unsubscribe();
 
         // Notificar al servidor
-        await fetch(`${import.meta.env.VITE_API_URL}/api/notifications/unsubscribe`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            endpoint: this.subscription.endpoint,
-          }),
-        });
+        await fetch(
+          `${import.meta.env.VITE_API_URL}/api/notifications/unsubscribe`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              endpoint: this.subscription.endpoint,
+            }),
+          }
+        );
 
         this.subscription = null;
         console.log("Desuscripción exitosa");

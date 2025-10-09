@@ -111,40 +111,43 @@ const NotificationManager = () => {
 
   if (!isSupported) {
     const supportInfo = notificationService.getSupportInfo();
-    
+
     return (
       <Card>
         <div className="text-center">
           <h3 className="text-lg font-semibold text-gray-900 mb-2">
             Notificaciones Push
           </h3>
-          
+
           {supportInfo.isIOS && !supportInfo.isIOSSupported ? (
             <Alert color="warning">
-              <span className="font-medium">iOS no compatible:</span> 
-              Se requiere iOS 16.4 o superior para notificaciones push. 
+              <span className="font-medium">iOS no compatible:</span>
+              Se requiere iOS 16.4 o superior para notificaciones push.
               Actualiza tu dispositivo para usar esta función.
             </Alert>
           ) : supportInfo.isIOS ? (
             <Alert color="info">
-              <span className="font-medium">Configuración iOS:</span> 
+              <span className="font-medium">Configuración iOS:</span>
               Para habilitar notificaciones en Safari:
               <ol className="list-decimal list-inside mt-2 text-left">
-                <li>Ve a Configuración → Safari → Avanzado → Funciones experimentales</li>
+                <li>
+                  Ve a Configuración → Safari → Avanzado → Funciones
+                  experimentales
+                </li>
                 <li>Activa &ldquo;Notificaciones&rdquo;</li>
                 <li>Recarga esta página</li>
               </ol>
             </Alert>
           ) : (
             <Alert color="warning">
-              <span className="font-medium">No soportado:</span> 
+              <span className="font-medium">No soportado:</span>
               Tu navegador no soporta notificaciones push.
               {!supportInfo.hasServiceWorker && " (Falta Service Worker)"}
               {!supportInfo.hasPushManager && " (Falta Push Manager)"}
               {!supportInfo.hasNotification && " (Falta API Notification)"}
             </Alert>
           )}
-          
+
           {import.meta.env.DEV && (
             <details className="mt-4 text-left">
               <summary className="cursor-pointer text-sm text-gray-500">
