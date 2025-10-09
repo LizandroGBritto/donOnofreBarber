@@ -1,7 +1,7 @@
 class NotificationService {
   constructor() {
-    this.isSupported = "serviceWorker" in navigator && "PushManager" in window;
-    this.permission = Notification.permission;
+    this.isSupported = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+    this.permission = this.isSupported ? Notification.permission : "denied";
     this.subscription = null;
     this.vapidPublicKey = null;
   }
@@ -13,7 +13,7 @@ class NotificationService {
 
   // Obtener el estado actual de permisos
   getPermissionStatus() {
-    return Notification.permission;
+    return this.isSupported && "Notification" in window ? Notification.permission : "denied";
   }
 
   // Registrar service worker
@@ -78,6 +78,10 @@ class NotificationService {
   async requestPermission() {
     if (!this.isSupported) {
       throw new Error("Las notificaciones no están soportadas");
+    }
+
+    if (!("Notification" in window)) {
+      throw new Error("Las notificaciones no están disponibles en este navegador");
     }
 
     if (this.permission === "granted") {
