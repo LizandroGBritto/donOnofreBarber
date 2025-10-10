@@ -5,15 +5,20 @@ const webpush = require("web-push");
 // console.log('Public Key:', vapidKeys.publicKey);
 // console.log('Private Key:', vapidKeys.privateKey);
 
-// Claves VAPID (en producción, usar variables de entorno)
+// Claves VAPID desde variables de entorno
 const vapidKeys = {
   publicKey:
-    "BMjlOUjChPSr5ovhDZvclCZxPO7ra3XEu8YkqvlSQvXx--sWrUlqtUbxcMNEATH-xdkvxSioPzXFrRri5FQe2Qc",
-  privateKey: "2d0yg4spyvkYkMHaz_bpRoa4nVkqZKII4vKay-8ULuU",
+    process.env.VAPID_PUBLIC_KEY ||
+    "0",
+  privateKey:
+    process.env.VAPID_PRIVATE_KEY ||
+    "0",
 };
 
+const vapidEmail = process.env.VAPID_EMAIL || "donOnofre.barberia@gmail.com";
+
 webpush.setVapidDetails(
-  "mailto:donOnofre.barberia@gmail.com",
+  `mailto:${vapidEmail}`,
   vapidKeys.publicKey,
   vapidKeys.privateKey
 );

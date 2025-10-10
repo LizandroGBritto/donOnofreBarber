@@ -17,7 +17,7 @@ const Footer = ({ footerRef }) => {
       try {
         // Obtener información de contacto
         const contactoResponse = await axios.get(
-          "http://localhost:8000/api/contacto"
+          `${import.meta.env.VITE_API_URL}/api/contacto`
         );
         if (contactoResponse.data.contacto) {
           setContacto(contactoResponse.data.contacto);
@@ -25,7 +25,7 @@ const Footer = ({ footerRef }) => {
 
         // Obtener información de ubicación
         const ubicacionResponse = await axios.get(
-          "http://localhost:8000/api/ubicacion"
+          `${import.meta.env.VITE_API_URL}/api/ubicacion`
         );
         if (ubicacionResponse.data.ubicacion) {
           setUbicacion(ubicacionResponse.data.ubicacion);
@@ -199,12 +199,12 @@ const Footer = ({ footerRef }) => {
 
                   <div className="space-y-3 text-gray-300">
                     <div className="flex justify-between items-center py-2 border-b border-gray-700">
-                      <span className="font-medium">Lunes - Viernes</span>
-                      <span className="text-purple-400">8:00 - 19:00</span>
+                      <span className="font-medium">Lunes</span>
+                      <span className="text-purple-400">14:00 - 20:00</span>
                     </div>
                     <div className="flex justify-between items-center py-2 border-b border-gray-700">
-                      <span className="font-medium">Sábados</span>
-                      <span className="text-purple-400">8:00 - 17:00</span>
+                      <span className="font-medium">Martes - Sábado</span>
+                      <span className="text-purple-400">8:00 - 20:00</span>
                     </div>
                     <div className="flex justify-between items-center py-2">
                       <span className="font-medium">Domingos</span>

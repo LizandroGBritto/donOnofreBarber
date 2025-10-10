@@ -21,7 +21,7 @@ const FormAgendar = ({ id, onCloseModal, refreshData, getUserId }) => {
   useEffect(() => {
     if (id) {
       axios
-        .get(`http://localhost:8000/api/agenda/${id}`)
+        .get(`${import.meta.env.VITE_API_URL}/api/agenda/${id}`)
         .then((res) => {
           if (res.data && res.data.agenda) {
             const { servicios, costoTotal, ...agendaData } = res.data.agenda;
@@ -61,7 +61,11 @@ const FormAgendar = ({ id, onCloseModal, refreshData, getUserId }) => {
       }).then((result) => {
         if (result.isConfirmed) {
           axios
-            .post(`http://localhost:8000/api/agenda/delete-and-create/${id}`) // Llamar a la nueva ruta
+            .post(
+              `${
+                import.meta.env.VITE_API_URL
+              }/api/agenda/delete-and-create/${id}`
+            ) // Llamar a la nueva ruta
             .then((res) => {
               Swal.fire(
                 "Cancelado!",
@@ -82,7 +86,9 @@ const FormAgendar = ({ id, onCloseModal, refreshData, getUserId }) => {
       // Verificar si el usuario ya tiene un turno abierto
       try {
         const verificacionResponse = await axios.get(
-          `http://localhost:8000/api/agenda/verificar-turno/${values.numeroCliente}`
+          `${import.meta.env.VITE_API_URL}/api/agenda/verificar-turno/${
+            values.numeroCliente
+          }`
         );
 
         if (verificacionResponse.data.tieneTurno) {
@@ -107,7 +113,7 @@ const FormAgendar = ({ id, onCloseModal, refreshData, getUserId }) => {
       };
 
       axios
-        .put(`http://localhost:8000/api/agenda/${id}`, dataToSend)
+        .put(`${import.meta.env.VITE_API_URL}/api/agenda/${id}`, dataToSend)
         .then((res) => {
           setError("");
           Swal.fire({

@@ -32,7 +32,7 @@ const AgendaAdmin = ({ horarios, setHorarios, getUserId, agendarRef }) => {
   const refreshData = useCallback(() => {
     setIsLoading(true);
     axios
-      .get("http://localhost:8000/api/agenda")
+      .get(`${import.meta.env.VITE_API_URL}/api/agenda`)
       .then((res) => {
         if (res.data.agendas && res.data.agendas.length > 0) {
           // Normalizar los datos
@@ -49,7 +49,7 @@ const AgendaAdmin = ({ horarios, setHorarios, getUserId, agendarRef }) => {
             estado: agenda.estado,
             barbero: agenda.barbero,
             UserId: agenda.UserId,
-            ...agenda
+            ...agenda,
           }));
 
           setHorarios(agendasNormalizadas);
@@ -123,9 +123,7 @@ const AgendaAdmin = ({ horarios, setHorarios, getUserId, agendarRef }) => {
               key={agenda._id}
             >
               <div className="flex-col">
-                <h3 className="flex justify-start font-bold">
-                  {agenda.hora}
-                </h3>
+                <h3 className="flex justify-start font-bold">{agenda.hora}</h3>
                 <div className="text-sm">
                   <p className="font-medium">
                     {agenda.nombreCliente === ""
@@ -157,7 +155,8 @@ const AgendaAdmin = ({ horarios, setHorarios, getUserId, agendarRef }) => {
                     {agenda.servicios.map((servicio, index) => (
                       <div key={index} className="mb-1">
                         • {servicio.nombre}
-                        {servicio.precio && ` - ₲${servicio.precio.toLocaleString()}`}
+                        {servicio.precio &&
+                          ` - ₲${servicio.precio.toLocaleString()}`}
                       </div>
                     ))}
                   </div>
@@ -209,7 +208,9 @@ const AgendaAdmin = ({ horarios, setHorarios, getUserId, agendarRef }) => {
                         if (e.target.checked) {
                           axios
                             .put(
-                              `http://localhost:8000/api/agenda/${agenda._id}`,
+                              `${import.meta.env.VITE_API_URL}/api/agenda/${
+                                agenda._id
+                              }`,
                               {
                                 NombreCliente: "",
                                 NumeroCliente: "",
@@ -225,7 +226,9 @@ const AgendaAdmin = ({ horarios, setHorarios, getUserId, agendarRef }) => {
                         } else {
                           axios
                             .put(
-                              `http://localhost:8000/api/agenda/${agenda._id}`,
+                              `${import.meta.env.VITE_API_URL}/api/agenda/${
+                                agenda._id
+                              }`,
                               {
                                 NombreCliente: "",
                                 NumeroCliente: "",

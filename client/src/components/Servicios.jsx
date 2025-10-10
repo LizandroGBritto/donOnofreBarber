@@ -13,7 +13,9 @@ const Servicios = () => {
   const fetchServicios = async () => {
     try {
       setLoading(true);
-      const response = await axios.get("http://localhost:8000/api/servicios");
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_URL}/api/servicios`
+      );
       // La API ya devuelve solo servicios activos
       setServicios(response.data || []);
     } catch (error) {
@@ -106,7 +108,9 @@ const Servicios = () => {
         id="servicios"
       >
         <img
-          src={`http://localhost:8000/uploads/${imagenes[currentImageIndex]}`}
+          src={`${import.meta.env.VITE_API_URL}/uploads/${
+            imagenes[currentImageIndex]
+          }`}
           alt={`${nombre} - ${currentImageIndex + 1}`}
           className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
         />

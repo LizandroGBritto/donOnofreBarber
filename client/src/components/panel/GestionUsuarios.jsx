@@ -39,9 +39,12 @@ const GestionUsuarios = () => {
   const fetchUsuarios = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await axios.get("http://localhost:8000/api/user/", {
-        withCredentials: true,
-      });
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_URL}/api/user/`,
+        {
+          withCredentials: true,
+        }
+      );
       setUsuarios(response.data);
     } catch (error) {
       console.error("Error al obtener usuarios:", error);
@@ -102,7 +105,7 @@ const GestionUsuarios = () => {
       if (selectedUsuario) {
         // Actualizar
         await axios.put(
-          `http://localhost:8000/api/user/${selectedUsuario._id}`,
+          `${import.meta.env.VITE_API_URL}/api/user/${selectedUsuario._id}`,
           userData,
           { withCredentials: true }
         );
@@ -111,9 +114,13 @@ const GestionUsuarios = () => {
         // Crear
         userData.password = usuarioForm.password; // Password es requerido para crear
         userData.confirmPassword = usuarioForm.confirmPassword; // confirmPassword es requerido para crear
-        await axios.post("http://localhost:8000/api/user/register", userData, {
-          withCredentials: true,
-        });
+        await axios.post(
+          `${import.meta.env.VITE_API_URL}/api/user/register`,
+          userData,
+          {
+            withCredentials: true,
+          }
+        );
         showAlert("Usuario creado exitosamente");
       }
 
@@ -154,7 +161,7 @@ const GestionUsuarios = () => {
     }
 
     try {
-      await axios.delete(`http://localhost:8000/api/user/${id}`, {
+      await axios.delete(`${import.meta.env.VITE_API_URL}/api/user/${id}`, {
         withCredentials: true,
       });
       showAlert("Usuario eliminado exitosamente");

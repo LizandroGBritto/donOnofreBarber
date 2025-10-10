@@ -29,7 +29,9 @@ const NavBar = ({ agendarRef, footerRef }) => {
   useEffect(() => {
     const fetchBanners = async () => {
       try {
-        const response = await axios.get("http://localhost:8000/api/banners");
+        const response = await axios.get(
+          `${import.meta.env.VITE_API_URL}/api/banners`
+        );
         const activeBanners = response.data.banners.filter(
           (banner) => banner.estado === "activo"
         );
@@ -113,7 +115,7 @@ const NavBar = ({ agendarRef, footerRef }) => {
   const currentBanner =
     appropriateBanners[currentBannerIndex % appropriateBanners.length];
   const backgroundImage = currentBanner?.imagen
-    ? `http://localhost:8000/uploads/${currentBanner.imagen}`
+    ? `${import.meta.env.VITE_API_URL}/uploads/${currentBanner.imagen}`
     : backImg;
 
   const scrollToAgendar = () => {

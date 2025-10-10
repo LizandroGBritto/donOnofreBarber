@@ -44,8 +44,7 @@ module.exports = {
               userName: user.userName,
             };
 
-
-            const secret = "secretKey";
+            const secret = process.env.JWT_SECRET || "secretKey";
             try {
               const newJWT = jwt.sign(userInfo, secret);
               res

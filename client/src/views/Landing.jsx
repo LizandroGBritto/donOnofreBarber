@@ -32,7 +32,7 @@ const Landing = () => {
   const fetchTurnos = useCallback(async () => {
     try {
       const response = await axios.get(
-        "http://localhost:8000/api/agenda/landing"
+        `${import.meta.env.VITE_API_URL}/api/agenda/landing`
       );
       setHorarios(response.data.agendas || []);
     } catch (error) {
@@ -42,7 +42,6 @@ const Landing = () => {
   }, []);
 
   useEffect(() => {
-
     // Cargar turnos al montar el componente
     fetchTurnos();
 
@@ -64,7 +63,7 @@ const Landing = () => {
     <>
       <div className="space-y-6">
         <NavBar agendarRef={agendarRef} footerRef={footerRef} />
-        <div className="px-4" id="agenda">
+        <div className="px-2 md:px-4" id="agenda">
           <Agenda
             horarios={horarios}
             setHorarios={setHorarios}

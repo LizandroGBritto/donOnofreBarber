@@ -1,9 +1,40 @@
 class NotificationService {
   constructor() {
-    this.isSupported = "serviceWorker" in navigator && "PushManager" in window;
-    this.permission = Notification.permission;
+    // Detectar iOS
+    this.isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    this.isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+
+    // Para iOS, verificar versión mínima (iOS 16.4+)
+    this.isIOSSupported = this.isIOS ? this.checkIOSVersion() : true;
+
+    // Verificación de soporte base
+    this.hasServiceWorker = "serviceWorker" in navigator;
+    this.hasPushManager = "PushManager" in window;
+    this.hasNotification = "Notification" in window;
+
+    // Soporte completo considerando iOS
+    this.isSupported =
+      this.hasServiceWorker &&
+      this.hasPushManager &&
+      this.hasNotification &&
+      this.isIOSSupported;
+
+    this.permission = this.hasNotification ? Notification.permission : "denied";
     this.subscription = null;
     this.vapidPublicKey = null;
+  }
+
+  // Verificar versión de iOS
+  checkIOSVersion() {
+    const match = navigator.userAgent.match(/OS (\d+)_(\d+)/);
+    if (match) {
+      const major = parseInt(match[1]);
+      const minor = parseInt(match[2]);
+      // iOS 16.4+ soporta Web Push
+      return major > 16 || (major === 16 && minor >= 4);
+    }
+    // Si no podemos detectar la versión, asumir que sí soporta
+    return true;
   }
 
   // Verificar si las notificaciones están soportadas
@@ -11,9 +42,25 @@ class NotificationService {
     return this.isSupported;
   }
 
+  // Obtener información detallada de soporte
+  getSupportInfo() {
+    return {
+      isSupported: this.isSupported,
+      isIOS: this.isIOS,
+      isSafari: this.isSafari,
+      isIOSSupported: this.isIOSSupported,
+      hasServiceWorker: this.hasServiceWorker,
+      hasPushManager: this.hasPushManager,
+      hasNotification: this.hasNotification,
+      userAgent: navigator.userAgent,
+    };
+  }
+
   // Obtener el estado actual de permisos
   getPermissionStatus() {
-    return Notification.permission;
+    return this.isSupported && "Notification" in window
+      ? Notification.permission
+      : "denied";
   }
 
   // Registrar service worker
@@ -63,7 +110,7 @@ class NotificationService {
   async getVapidPublicKey() {
     try {
       const response = await fetch(
-        "http://localhost:8000/api/notifications/vapid-public-key"
+        `${import.meta.env.VITE_API_URL}/api/notifications/vapid-public-key`
       );
       const data = await response.json();
       this.vapidPublicKey = data.publicKey;
@@ -78,6 +125,12 @@ class NotificationService {
   async requestPermission() {
     if (!this.isSupported) {
       throw new Error("Las notificaciones no están soportadas");
+    }
+
+    if (!("Notification" in window)) {
+      throw new Error(
+        "Las notificaciones no están disponibles en este navegador"
+      );
     }
 
     if (this.permission === "granted") {
@@ -135,7 +188,7 @@ class NotificationService {
   async sendSubscriptionToServer(subscription, userId) {
     try {
       const response = await fetch(
-        "http://localhost:8000/api/notifications/subscribe",
+        `${import.meta.env.VITE_API_URL}/api/notifications/subscribe`,
         {
           method: "POST",
           headers: {
@@ -173,15 +226,18 @@ class NotificationService {
         await this.subscription.unsubscribe();
 
         // Notificar al servidor
-        await fetch("http://localhost:8000/api/notifications/unsubscribe", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            endpoint: this.subscription.endpoint,
-          }),
-        });
+        await fetch(
+          `${import.meta.env.VITE_API_URL}/api/notifications/unsubscribe`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              endpoint: this.subscription.endpoint,
+            }),
+          }
+        );
 
         this.subscription = null;
         console.log("Desuscripción exitosa");
@@ -214,7 +270,7 @@ class NotificationService {
   async sendTestNotification() {
     try {
       const response = await fetch(
-        "http://localhost:8000/api/notifications/test",
+        `${import.meta.env.VITE_API_URL}/api/notifications/test`,
         {
           method: "POST",
           headers: {

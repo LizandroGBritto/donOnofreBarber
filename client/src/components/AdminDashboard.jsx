@@ -11,6 +11,8 @@ import {
 } from "flowbite-react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import config from "../config/api.config";
+import { useApi } from "../hooks/useApi";
 import Dashboard from "./panel/Dashboard";
 import GestionUsuarios from "./panel/GestionUsuarios";
 import NotificationManager from "./NotificationManager";
@@ -19,13 +21,14 @@ import UserContext from "../context/UserContext";
 const AdminDashboard = () => {
   const { setUser } = useContext(UserContext);
   const navigate = useNavigate();
+  const api = useApi();
 
   // Función para cerrar sesión
   const handleLogout = async () => {
     try {
       // Llamar al endpoint de logout si existe
       await axios.post(
-        "http://localhost:8000/api/auth/logout",
+        config.getApiUrl(config.api.auth.logout),
         {},
         {
           withCredentials: true,
@@ -264,8 +267,8 @@ const AdminDashboard = () => {
   const fetchTurnos = async () => {
     try {
       setLoading(true);
-      const response = await axios.get("http://localhost:8000/api/agenda");
-      setTurnos(response.data.agendas || []);
+      const agendas = await api.agenda.getAll();
+      setTurnos(agendas || []);
 
       // Si no hay filtros establecidos, usar el día de hoy
       if (!fechaDesde && !fechaHasta) {
@@ -273,7 +276,7 @@ const AdminDashboard = () => {
         setFechaDesde(hoy);
         setFechaHasta(hoy);
       } else {
-        setFilteredTurnos(response.data.agendas || []);
+        setFilteredTurnos(agendas || []);
       }
     } catch (error) {
       console.error("Error al obtener turnos:", error);
@@ -342,7 +345,7 @@ const AdminDashboard = () => {
   // Actualizar estado del turno
   const actualizarEstadoTurno = async (id, nuevoEstado) => {
     try {
-      await axios.put(`http://localhost:8000/api/agenda/${id}`, {
+      await api.agenda.update(id, {
         ...selectedTurno,
         estado: nuevoEstado, // Nuevo campo
       });
@@ -402,10 +405,8 @@ const AdminDashboard = () => {
   const fetchBanners = async () => {
     try {
       setLoading(true);
-      const response = await axios.get("http://localhost:8000/api/banners", {
-        params: bannerFilters,
-      });
-      setBanners(response.data.banners || []);
+      const response = await api.banners.getAll(bannerFilters);
+      setBanners(response.banners || []);
     } catch (error) {
       console.error("Error al obtener banners:", error);
     } finally {
@@ -448,22 +449,10 @@ const AdminDashboard = () => {
 
       if (selectedBanner) {
         // Actualizar banner existente
-        await axios.put(
-          `http://localhost:8000/api/banners/${selectedBanner._id}`,
-          formData,
-          {
-            headers: {
-              "Content-Type": "multipart/form-data",
-            },
-          }
-        );
+        await api.banners.update(selectedBanner._id, formData);
       } else {
         // Crear nuevo banner
-        await axios.post("http://localhost:8000/api/banners", formData, {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        });
+        await api.banners.create(formData);
       }
 
       fetchBanners();
@@ -479,7 +468,7 @@ const AdminDashboard = () => {
   const deleteBanner = async (id) => {
     if (window.confirm("¿Estás seguro de que quieres eliminar este banner?")) {
       try {
-        await axios.delete(`http://localhost:8000/api/banners/${id}`);
+        await api.banners.delete(id);
         fetchBanners();
       } catch (error) {
         console.error("Error al eliminar banner:", error);
@@ -490,9 +479,12 @@ const AdminDashboard = () => {
   const toggleBannerStatus = async (id, currentStatus) => {
     try {
       const newStatus = currentStatus === "activo" ? "inactivo" : "activo";
-      await axios.patch(`http://localhost:8000/api/banners/${id}/estado`, {
-        estado: newStatus,
-      });
+      await axios.patch(
+        `${import.meta.env.VITE_API_URL}/api/banners/${id}/estado`,
+        {
+          estado: newStatus,
+        }
+      );
       fetchBanners();
     } catch (error) {
       console.error("Error al cambiar estado del banner:", error);
@@ -520,7 +512,7 @@ const AdminDashboard = () => {
     setBannerForm({ ...banner });
     // Si el banner tiene imagen, mostrarla en el preview
     if (banner.imagen) {
-      setImagePreview(`http://localhost:8000/uploads/${banner.imagen}`);
+      setImagePreview(config.getUploadUrl(banner.imagen));
     } else {
       setImagePreview("");
     }
@@ -531,8 +523,8 @@ const AdminDashboard = () => {
   // ===== FUNCIONES PARA CONTACTO =====
   const fetchContacto = async () => {
     try {
-      const response = await axios.get("http://localhost:8000/api/contacto");
-      setContacto(response.data.contacto);
+      const contacto = await api.contacto.get();
+      setContacto(contacto);
     } catch (error) {
       console.error("Error al obtener contacto:", error);
     }
@@ -542,13 +534,10 @@ const AdminDashboard = () => {
     try {
       if (contacto) {
         // Actualizar contacto existente
-        await axios.put(
-          `http://localhost:8000/api/contacto/${contacto._id}`,
-          contactoForm
-        );
+        await api.contacto.update(contacto._id, contactoForm);
       } else {
         // Crear nuevo contacto
-        await axios.post("http://localhost:8000/api/contacto", contactoForm);
+        await api.contacto.create(contactoForm);
       }
       fetchContacto();
       setShowContactoModal(false);
@@ -581,8 +570,8 @@ const AdminDashboard = () => {
   // ===== FUNCIONES PARA UBICACIÓN =====
   const fetchUbicacion = async () => {
     try {
-      const response = await axios.get("http://localhost:8000/api/ubicacion");
-      setUbicacion(response.data.ubicacion);
+      const ubicacion = await api.ubicacion.get();
+      setUbicacion(ubicacion);
     } catch (error) {
       console.error("Error al obtener ubicación:", error);
     }
@@ -592,13 +581,10 @@ const AdminDashboard = () => {
     try {
       if (ubicacion) {
         // Actualizar ubicación existente
-        await axios.put(
-          `http://localhost:8000/api/ubicacion/${ubicacion._id}`,
-          ubicacionForm
-        );
+        await api.ubicacion.update(ubicacion._id, ubicacionForm);
       } else {
         // Crear nueva ubicación
-        await axios.post("http://localhost:8000/api/ubicacion", ubicacionForm);
+        await api.ubicacion.create(ubicacionForm);
       }
       fetchUbicacion();
       setShowUbicacionModal(false);
@@ -627,8 +613,8 @@ const AdminDashboard = () => {
   // ===== FUNCIONES PARA HORARIOS =====
   const fetchHorarios = async () => {
     try {
-      const response = await axios.get("http://localhost:8000/api/horarios");
-      setHorarios(response.data.horarios || []);
+      const horarios = await api.horarios.getAll();
+      setHorarios(horarios || []);
     } catch (error) {
       console.error("Error al obtener horarios:", error);
     }
@@ -638,13 +624,10 @@ const AdminDashboard = () => {
     try {
       if (selectedHorario) {
         // Actualizar horario existente
-        await axios.put(
-          `http://localhost:8000/api/horarios/${selectedHorario._id}`,
-          horarioForm
-        );
+        await api.horarios.update(selectedHorario._id, horarioForm);
       } else {
         // Crear nuevo horario
-        await axios.post("http://localhost:8000/api/horarios", horarioForm);
+        await api.horarios.create(horarioForm);
       }
       fetchHorarios();
       resetHorarioForm();
@@ -657,7 +640,7 @@ const AdminDashboard = () => {
   const deleteHorario = async (id) => {
     if (window.confirm("¿Estás seguro de que quieres eliminar este horario?")) {
       try {
-        await axios.delete(`http://localhost:8000/api/horarios/${id}`);
+        await api.horarios.delete(id);
         fetchHorarios();
       } catch (error) {
         console.error("Error al eliminar horario:", error);
@@ -667,7 +650,7 @@ const AdminDashboard = () => {
 
   const toggleHorarioStatus = async (id, currentStatus) => {
     try {
-      await axios.patch(`http://localhost:8000/api/horarios/${id}/estado`);
+      await api.horarios.toggle(id);
       fetchHorarios();
     } catch (error) {
       console.error("Error al cambiar estado del horario:", error);
@@ -707,12 +690,9 @@ const AdminDashboard = () => {
   const regenerarAgendaPorHorarios = async () => {
     try {
       setLoading(true);
-      const response = await axios.post(
-        "http://localhost:8000/api/agenda/regenerar-por-horarios",
-        {}
-      );
+      const response = await api.agenda.regenerar();
       alert(
-        `Agenda regenerada exitosamente. ${response.data.turnosCreados} turnos creados, ${response.data.turnosEliminados} turnos eliminados.`
+        `Agenda regenerada exitosamente. ${response.turnosCreados} turnos creados, ${response.turnosEliminados} turnos eliminados.`
       );
     } catch (error) {
       console.error("Error al regenerar agenda:", error);
@@ -725,10 +705,8 @@ const AdminDashboard = () => {
   // ===== FUNCIONES PARA SERVICIOS =====
   const fetchServicios = async () => {
     try {
-      const response = await axios.get(
-        "http://localhost:8000/api/servicios/admin/all"
-      );
-      setServicios(response.data || []);
+      const servicios = await api.servicios.getAll();
+      setServicios(servicios || []);
     } catch (error) {
       console.error("Error al obtener servicios:", error);
     }
@@ -760,17 +738,9 @@ const AdminDashboard = () => {
       };
 
       if (selectedServicio) {
-        await axios.put(
-          `http://localhost:8000/api/servicios/${selectedServicio._id}`,
-          formData,
-          config
-        );
+        await api.servicios.update(selectedServicio._id, formData);
       } else {
-        await axios.post(
-          "http://localhost:8000/api/servicios",
-          formData,
-          config
-        );
+        await api.servicios.create(formData);
       }
       fetchServicios();
       setShowServicioModal(false);
@@ -784,7 +754,7 @@ const AdminDashboard = () => {
   const deleteServicio = async (id) => {
     if (confirm("¿Estás seguro de que deseas eliminar este servicio?")) {
       try {
-        await axios.delete(`http://localhost:8000/api/servicios/${id}`);
+        await api.servicios.delete(id);
         fetchServicios();
       } catch (error) {
         console.error("Error al eliminar servicio:", error);
@@ -794,7 +764,7 @@ const AdminDashboard = () => {
 
   const toggleServicioStatus = async (id, currentStatus) => {
     try {
-      await axios.patch(`http://localhost:8000/api/servicios/${id}/toggle`);
+      await api.servicios.toggle(id);
       fetchServicios();
     } catch (error) {
       console.error("Error al cambiar estado del servicio:", error);
@@ -854,7 +824,9 @@ const AdminDashboard = () => {
     if (selectedServicio) {
       try {
         await axios.delete(
-          `http://localhost:8000/api/servicios/${selectedServicio._id}/imagen/${imagenNombre}`
+          `${import.meta.env.VITE_API_URL}/api/servicios/${
+            selectedServicio._id
+          }/imagen/${imagenNombre}`
         );
         setImagenesServicio((prev) =>
           prev.filter((img) => img !== imagenNombre)
@@ -875,8 +847,8 @@ const AdminDashboard = () => {
 
   const fetchBarberos = async () => {
     try {
-      const response = await axios.get("http://localhost:8000/api/barberos");
-      setBarberos(response.data || []);
+      const barberos = await api.barberos.getAll();
+      setBarberos(barberos || []);
     } catch (error) {
       console.error("Error al obtener barberos:", error);
       showNotification("Error al cargar barberos", "error");
@@ -900,16 +872,10 @@ const AdminDashboard = () => {
       }
 
       if (selectedBarbero) {
-        await axios.put(
-          `http://localhost:8000/api/barberos/${selectedBarbero._id}`,
-          formData,
-          { headers: { "Content-Type": "multipart/form-data" } }
-        );
+        await api.barberos.update(selectedBarbero._id, formData);
         showNotification("Barbero actualizado exitosamente", "success");
       } else {
-        await axios.post("http://localhost:8000/api/barberos", formData, {
-          headers: { "Content-Type": "multipart/form-data" },
-        });
+        await api.barberos.create(formData);
         showNotification("Barbero creado exitosamente", "success");
       }
 
@@ -948,7 +914,7 @@ const AdminDashboard = () => {
   const deleteBarbero = async (id) => {
     if (window.confirm("¿Estás seguro de que quieres eliminar este barbero?")) {
       try {
-        await axios.delete(`http://localhost:8000/api/barberos/${id}`);
+        await api.barberos.delete(id);
         fetchBarberos();
         showNotification("Barbero eliminado exitosamente", "success");
       } catch (error) {
@@ -978,7 +944,9 @@ const AdminDashboard = () => {
   const deleteImageFromModal = async (imagenNombre) => {
     try {
       await axios.delete(
-        `http://localhost:8000/api/servicios/${currentServicioId}/imagen/${imagenNombre}`
+        `${
+          import.meta.env.VITE_API_URL
+        }/api/servicios/${currentServicioId}/imagen/${imagenNombre}`
       );
 
       // Actualizar la lista actual de imágenes
@@ -1051,7 +1019,7 @@ const AdminDashboard = () => {
               <div className="flex items-center gap-2 mt-1">
                 {turno.barbero.foto && (
                   <img
-                    src={`http://localhost:8000/uploads/${turno.barbero.foto}`}
+                    src={config.getUploadUrl(turno.barbero.foto)}
                     alt={turno.barbero.nombre}
                     className="w-5 h-5 rounded-full object-cover"
                   />
@@ -1386,7 +1354,9 @@ const AdminDashboard = () => {
                             <div className="flex items-center gap-2">
                               {turno.barbero.foto && (
                                 <img
-                                  src={`http://localhost:8000/uploads/${turno.barbero.foto}`}
+                                  src={`${
+                                    import.meta.env.VITE_API_URL
+                                  }/uploads/${turno.barbero.foto}`}
                                   alt={turno.barbero.nombre}
                                   className="w-6 h-6 rounded-full object-cover"
                                 />
@@ -1590,7 +1560,9 @@ const AdminDashboard = () => {
                       >
                         <Table.Cell>
                           <img
-                            src={`http://localhost:8000/uploads/${banner.imagen}`}
+                            src={`${import.meta.env.VITE_API_URL}/uploads/${
+                              banner.imagen
+                            }`}
                             alt={banner.titulo}
                             className="w-16 h-10 object-cover rounded"
                           />
@@ -1666,7 +1638,9 @@ const AdminDashboard = () => {
                     <div className="p-4">
                       <div className="flex gap-4">
                         <img
-                          src={`http://localhost:8000/uploads/${banner.imagen}`}
+                          src={`${import.meta.env.VITE_API_URL}/uploads/${
+                            banner.imagen
+                          }`}
                           alt={banner.titulo}
                           className="w-20 h-12 object-cover rounded"
                         />
@@ -1916,7 +1890,7 @@ const AdminDashboard = () => {
                 <div className="bg-yellow-100/10 border border-yellow-400/30 p-4 rounded-lg">
                   <p className="text-yellow-200">
                     No hay información de contacto configurada. Haz clic en
-                    "Crear Contacto" para agregar.
+                    Crear Contacto para agregar.
                   </p>
                 </div>
               )}
@@ -1973,7 +1947,7 @@ const AdminDashboard = () => {
                 <div className="bg-yellow-100/10 border border-yellow-400/30 p-4 rounded-lg">
                   <p className="text-yellow-200">
                     No hay información de ubicación configurada. Haz clic en
-                    "Crear Ubicación" para agregar.
+                    Crear Ubicación para agregar.
                   </p>
                 </div>
               )}
@@ -2351,7 +2325,7 @@ const AdminDashboard = () => {
                   No hay servicios registrados.
                 </p>
                 <p className="text-sm text-gray-400">
-                  Haz clic en "Nuevo Servicio" para agregar.
+                  Haz clic en Nuevo Servicio para agregar.
                 </p>
               </div>
             ) : (
@@ -2394,7 +2368,9 @@ const AdminDashboard = () => {
                             {servicio.imagenes.map((imagen, index) => (
                               <img
                                 key={index}
-                                src={`http://localhost:8000/uploads/${imagen}`}
+                                src={`${
+                                  import.meta.env.VITE_API_URL
+                                }/uploads/${imagen}`}
                                 alt={`${servicio.nombre} - ${index + 1}`}
                                 className="w-16 h-16 object-cover rounded-lg flex-shrink-0 hover:opacity-80"
                               />
@@ -2496,7 +2472,9 @@ const AdminDashboard = () => {
                                   .map((imagen, index) => (
                                     <img
                                       key={index}
-                                      src={`http://localhost:8000/uploads/${imagen}`}
+                                      src={`${
+                                        import.meta.env.VITE_API_URL
+                                      }/uploads/${imagen}`}
                                       alt={`${servicio.nombre} - ${index + 1}`}
                                       className="w-8 h-8 object-cover rounded flex-shrink-0 hover:opacity-80"
                                     />
@@ -2614,7 +2592,7 @@ const AdminDashboard = () => {
                   No hay barberos registrados aún.
                 </p>
                 <p className="text-sm text-gray-400 dark:text-gray-500">
-                  Haz clic en "Nuevo Barbero" para agregar.
+                  Haz clic en Nuevo Barbero para agregar.
                 </p>
               </div>
             ) : (
@@ -2628,7 +2606,9 @@ const AdminDashboard = () => {
                     >
                       <div className="flex items-start gap-4">
                         <img
-                          src={`http://localhost:8000/uploads/${barbero.foto}`}
+                          src={`${import.meta.env.VITE_API_URL}/uploads/${
+                            barbero.foto
+                          }`}
                           alt={barbero.nombre}
                           className="w-16 h-16 object-cover rounded-lg flex-shrink-0"
                         />
@@ -2651,7 +2631,9 @@ const AdminDashboard = () => {
                           {barbero.logo && (
                             <div className="mb-2">
                               <img
-                                src={`http://localhost:8000/uploads/${barbero.logo}`}
+                                src={`${import.meta.env.VITE_API_URL}/uploads/${
+                                  barbero.logo
+                                }`}
                                 alt={`Logo de ${barbero.nombre}`}
                                 className="w-8 h-8 object-contain"
                               />
@@ -2706,7 +2688,9 @@ const AdminDashboard = () => {
                           <Table.Cell className="font-medium">
                             <div className="flex items-center gap-3">
                               <img
-                                src={`http://localhost:8000/uploads/${barbero.foto}`}
+                                src={`${import.meta.env.VITE_API_URL}/uploads/${
+                                  barbero.foto
+                                }`}
                                 alt={barbero.nombre}
                                 className="w-12 h-12 object-cover rounded-lg"
                               />
@@ -2718,7 +2702,9 @@ const AdminDashboard = () => {
                           <Table.Cell>
                             {barbero.logo ? (
                               <img
-                                src={`http://localhost:8000/uploads/${barbero.logo}`}
+                                src={`${import.meta.env.VITE_API_URL}/uploads/${
+                                  barbero.logo
+                                }`}
                                 alt={`Logo de ${barbero.nombre}`}
                                 className="w-8 h-8 object-contain"
                               />
@@ -2840,7 +2826,9 @@ const AdminDashboard = () => {
               {selectedBarbero && selectedBarbero.foto && (
                 <div className="mt-2">
                   <img
-                    src={`http://localhost:8000/uploads/${selectedBarbero.foto}`}
+                    src={`${import.meta.env.VITE_API_URL}/uploads/${
+                      selectedBarbero.foto
+                    }`}
                     alt="Foto actual"
                     className="w-20 h-20 object-cover rounded-lg"
                   />
@@ -2864,7 +2852,9 @@ const AdminDashboard = () => {
               {selectedBarbero && selectedBarbero.logo && (
                 <div className="mt-2">
                   <img
-                    src={`http://localhost:8000/uploads/${selectedBarbero.logo}`}
+                    src={`${import.meta.env.VITE_API_URL}/uploads/${
+                      selectedBarbero.logo
+                    }`}
                     alt="Logo actual"
                     className="w-16 h-16 object-contain"
                   />
@@ -2983,7 +2973,9 @@ const AdminDashboard = () => {
                   {imagenesServicio.map((imagen, index) => (
                     <div key={index} className="relative">
                       <img
-                        src={`http://localhost:8000/uploads/${imagen}`}
+                        src={`${
+                          import.meta.env.VITE_API_URL
+                        }/uploads/${imagen}`}
                         alt={`${servicioForm.nombre} - ${index + 1}`}
                         className="w-full h-20 object-cover rounded border cursor-pointer"
                         onClick={() =>
@@ -3159,7 +3151,7 @@ const AdminDashboard = () => {
             {currentImagenes.map((imagen, index) => (
               <div key={index} className="relative group">
                 <img
-                  src={`http://localhost:8000/uploads/${imagen}`}
+                  src={`${import.meta.env.VITE_API_URL}/uploads/${imagen}`}
                   alt={`Imagen ${index + 1}`}
                   className="w-full h-48 object-cover rounded-lg"
                 />
