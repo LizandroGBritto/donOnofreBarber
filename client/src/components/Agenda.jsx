@@ -217,11 +217,11 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
 
   return (
     <div>
-      {/* Estilos personalizados para dropdown */}
+      {/* Estilos personalizados para dropdown y mobile fixes */}
       <style>
         {`
           .agenda-dropdown [data-testid="flowbite-dropdown"] {
-            width: 20% !important;
+            width: 30% !important;
             min-width: 120px !important;
             text-align: center !important;
           }
@@ -236,30 +236,62 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
             justify-content: center !important;
             display: flex !important;
           }
+          
+          /* Mobile specific fixes */
+          @media (max-width: 768px) {
+            .agenda-dropdown [data-testid="flowbite-dropdown"] {
+              min-width: 120px !important;
+            }
+            .agenda-dropdown [data-testid="flowbite-dropdown"] button {
+              font-size: 0.75rem !important;
+              padding: 0.5rem !important;
+              white-space: nowrap !important;
+              overflow: hidden !important;
+              text-overflow: ellipsis !important;
+            }
+            .agenda-container {
+              padding: 0.5rem !important;
+              margin: 0.5rem !important;
+            }
+            .agenda-header {
+              flex-direction: column !important;
+              gap: 1rem !important;
+              align-items: stretch !important;
+            }
+            .agenda-controls {
+              flex-direction: row !important;
+              gap: 0.5rem !important;
+              justify-content: space-between !important;
+            }
+            .dropdown-mobile {
+              flex: 1 !important;
+              min-width: 0 !important;
+            }
+          }
         `}
       </style>
 
       <div
-        className="max-w-11/12 mx-auto bg-black bg-opacity-80 rounded-lg p-4 agenda-dropdown"
+        className="max-w-full mx-auto bg-black bg-opacity-80 rounded-lg agenda-container p-2 md:p-4 agenda-dropdown"
         ref={agendarRef}
         id="agendar"
       >
-        <h3 className="flex justify-center mt-8 ml-8 mr-8 border-b-2 border-gray-300 pb-2">
+        <h3 className="flex justify-center mt-4 md:mt-8 mx-2 md:mx-8 border-b-2 border-gray-300 pb-2">
           AGENDA
         </h3>
 
         {/* Selectores de Semana y Día */}
-        <div className="flex flex-col md:flex-row justify-between items-center border-b-2 border-gray-300 ml-8 mr-8 pb-4 pt-4 gap-4">
+        <div className="agenda-header flex flex-col md:flex-row justify-between items-center border-b-2 border-gray-300 mx-2 md:mx-8 pb-4 pt-4 gap-2 md:gap-4">
           <h3 className="justify-start mt-2 ml-3 hidden md:flex">HORA</h3>
 
-          <div className="flex flex-row gap-3 px-4 md:px-0 w-full md:w-auto justify-center md:justify-end">
+          <div className="agenda-controls flex flex-row gap-2 md:gap-3 px-2 md:px-4 w-full md:w-auto justify-center md:justify-end">
             {/* Select de Semana */}
-            <div className="w-36 md:w-auto min-w-0">
+            <div className="dropdown-mobile w-full md:w-auto min-w-0">
               <Dropdown
                 color=""
-                label={selectedWeek ? selectedWeek.label : "Seleccionar Semana"}
+                label={selectedWeek ? selectedWeek.label : "Semana"}
                 dismissOnClick={true}
-                className="w-full [&>button]:text-center [&>button]:justify-center [&>button]:text-xs [&>button]:px-2"
+                className="w-full [&>button]:text-center [&>button]:justify-center [&>button]:text-xs [&>button]:px-2 [&>button]:py-1"
               >
                 {semanas.map((semana, index) => (
                   <Dropdown.Item
@@ -275,12 +307,12 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
             </div>
 
             {/* Select de Día */}
-            <div className="w-24 md:w-auto min-w-0">
+            <div className="dropdown-mobile w-full md:w-auto min-w-0">
               <Dropdown
                 color=""
                 label={`${selectedDay || "Día"}`}
                 dismissOnClick={true}
-                className="w-full [&>button]:text-center [&>button]:justify-center [&>button]:text-xs [&>button]:px-2"
+                className="w-full [&>button]:text-center [&>button]:justify-center [&>button]:text-xs [&>button]:px-2 [&>button]:py-1"
               >
                 {diasActivos.map((dia, index) => (
                   <Dropdown.Item
@@ -288,7 +320,7 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
                     onClick={() => {
                       setSelectedDay(dia);
                     }}
-                    style={{ width: "20%" }}
+                    style={{ width: "50%" }}
                   >
                     {dia}
                   </Dropdown.Item>
@@ -301,26 +333,26 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
         {horariosFiltrados.map((agenda) => {
           return (
             <div
-              className="flex justify-between border-b-2 border-gray-300 pb-2 pl-4 mt-8 ml-8 mr-8"
+              className="flex flex-col md:flex-row justify-between items-center md:items-start border-b-2 border-gray-300 pb-2 px-2 md:px-4 mt-4 md:mt-8 mx-2 md:mx-8 gap-2 md:gap-0"
               key={agenda._id}
             >
               <h3
-                className={`flex justify-start ${
+                className={`flex justify-center md:justify-start text-lg md:text-base font-medium ${
                   agenda.estado !== "disponible" ? "line-through" : ""
                 }`}
               >
                 {agenda.hora}
               </h3>
               {agenda.estado !== "disponible" ? (
-                <h3 className="flex justify-center mr-4 text-[#FF7D00]">
+                <div className="flex justify-center w-full md:w-auto">
                   {agenda.nombreCliente === UserId ? (
                     <Button
                       disabled={turnoYaPaso(agenda.fecha, agenda.hora)}
-                      className={`flex justify-center ${
+                      className={`flex justify-center w-full md:w-auto ${
                         turnoYaPaso(agenda.fecha, agenda.hora)
                           ? "bg-gray-400"
                           : "bg-orange-500"
-                      } rounded-lg text-black text-lg items-center`}
+                      } rounded-lg text-black text-sm md:text-lg items-center px-4 py-2`}
                       onClick={() => {
                         if (!turnoYaPaso(agenda.fecha, agenda.hora)) {
                           setSelectedId(agenda._id);
@@ -335,12 +367,12 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
                   ) : (
                     <Button
                       disabled
-                      className="flex justify-center bg-gray-400 rounded-lg text-black text-lg items-center"
+                      className="flex justify-center w-full md:w-auto bg-gray-400 rounded-lg text-black text-sm md:text-lg items-center px-4 py-2"
                     >
                       RESERVADO
                     </Button>
                   )}
-                </h3>
+                </div>
               ) : (
                 <Button
                   // Si el UserId es "Reservado", el botón cambia a "RESERVADO" y se deshabilita
@@ -351,12 +383,12 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
                       agenda.nombreCliente !== "" &&
                       agenda.nombreCliente !== UserId)
                   }
-                  className={`flex justify-center mr-6 ${
+                  className={`flex justify-center w-full md:w-auto ${
                     agenda.estado !== "disponible" ||
                     turnoYaPaso(agenda.fecha, agenda.hora)
                       ? "bg-gray-400"
                       : "bg-white"
-                  } rounded-lg text-black text-lg items-center`}
+                  } rounded-lg text-black text-sm md:text-lg items-center px-4 py-2`}
                   onClick={() => {
                     // Para turnos disponibles, abrir modal de barberos
                     if (
@@ -386,11 +418,12 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
               )}
 
               <Modal
-                className="flex justify-center items-center bg-black bg-opacity-15"
+                className="flex justify-center items-center bg-black bg-opacity-50 p-4 md:p-0"
                 show={openModal}
-                size="sm"
+                size="lg"
                 onClose={onCloseModal}
                 popup
+                position="center"
               >
                 <Modal.Header />
                 <Modal.Body>

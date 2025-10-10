@@ -199,12 +199,12 @@ const Footer = ({ footerRef }) => {
 
                   <div className="space-y-3 text-gray-300">
                     <div className="flex justify-between items-center py-2 border-b border-gray-700">
-                      <span className="font-medium">Lunes - Viernes</span>
-                      <span className="text-purple-400">8:00 - 19:00</span>
+                      <span className="font-medium">Lunes</span>
+                      <span className="text-purple-400">14:00 - 20:00</span>
                     </div>
                     <div className="flex justify-between items-center py-2 border-b border-gray-700">
-                      <span className="font-medium">Sábados</span>
-                      <span className="text-purple-400">8:00 - 17:00</span>
+                      <span className="font-medium">Martes - Sábado</span>
+                      <span className="text-purple-400">8:00 - 20:00</span>
                     </div>
                     <div className="flex justify-between items-center py-2">
                       <span className="font-medium">Domingos</span>

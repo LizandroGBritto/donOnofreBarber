@@ -64,7 +64,7 @@ const Landing = () => {
     <>
       <div className="space-y-6">
         <NavBar agendarRef={agendarRef} footerRef={footerRef} />
-        <div className="px-4" id="agenda">
+        <div className="px-2 md:px-4" id="agenda">
           <Agenda
             horarios={horarios}
             setHorarios={setHorarios}
