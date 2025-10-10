@@ -147,7 +147,7 @@ const FormReservarConBarbero = ({
   const handleSubmit = async (values, { setSubmitting }) => {
     try {
       setSubmitting(true);
-      
+
       // Verificar si el usuario ya tiene un turno abierto
       try {
         const verificacionResponse = await axios.get(
@@ -159,11 +159,13 @@ const FormReservarConBarbero = ({
         if (verificacionResponse.data.tieneTurno) {
           const turnoExistente = verificacionResponse.data.turno;
           setTurnoExistenteInfo(turnoExistente);
-          setError(`Ya tienes un turno abierto para el ${turnoExistente.fecha} a las ${turnoExistente.hora} con ${turnoExistente.barbero}`);
+          setError(
+            `Ya tienes un turno abierto para el ${turnoExistente.fecha} a las ${turnoExistente.hora} con ${turnoExistente.barbero}`
+          );
           setSubmitting(false);
           return;
         }
-        
+
         // Limpiar error si no hay turno existente
         setError("");
         setTurnoExistenteInfo(null);
@@ -207,7 +209,7 @@ const FormReservarConBarbero = ({
       onCloseModal();
     } catch (error) {
       console.error("Error al reservar:", error);
-      
+
       const errorMessage =
         error.response?.data?.message || "Error al realizar la reserva";
 
@@ -254,16 +256,20 @@ const FormReservarConBarbero = ({
           </div>
 
           {error && (
-            <div className={`mb-4 p-4 rounded ${
-              turnoExistenteInfo 
-                ? 'bg-yellow-100 border border-yellow-400 text-yellow-700' 
-                : 'bg-red-100 border border-red-400 text-red-700'
-            }`}>
+            <div
+              className={`mb-4 p-4 rounded ${
+                turnoExistenteInfo
+                  ? "bg-yellow-100 border border-yellow-400 text-yellow-700"
+                  : "bg-red-100 border border-red-400 text-red-700"
+              }`}
+            >
               {turnoExistenteInfo ? (
                 <div>
                   <strong>⚠️ Ya tienes un turno reservado</strong>
                   <p className="mt-1">{error}</p>
-                  <p className="mt-2 text-sm">Debes cancelar tu turno actual antes de agendar uno nuevo.</p>
+                  <p className="mt-2 text-sm">
+                    Debes cancelar tu turno actual antes de agendar uno nuevo.
+                  </p>
                 </div>
               ) : (
                 error
@@ -279,216 +285,222 @@ const FormReservarConBarbero = ({
           >
             {({ isSubmitting, setFieldValue, values, errors }) => {
               return (
-              <FormikForm className={`space-y-6 ${turnoExistenteInfo ? 'opacity-50 pointer-events-none' : ''}`}>
-                {/* Información del Cliente */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Nombre Completo *
-                    </label>
-                    <Field
-                      name="nombreCliente"
-                      type="text"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 text-black"
-                      placeholder="Tu nombre completo"
-                    />
-                    <ErrorMessage
-                      name="nombreCliente"
-                      component="div"
-                      className="text-red-500 text-sm mt-1"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Número de Celular *
-                    </label>
-                    <Field
-                      name="numeroCliente"
-                      type="text"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 text-black"
-                      placeholder="09XXXXXXXX"
-                    />
-                    <ErrorMessage
-                      name="numeroCliente"
-                      component="div"
-                      className="text-red-500 text-sm mt-1"
-                    />
-                  </div>
-                </div>
-
-                {/* Selección de Barbero - CORREGIDO */}
-                <div>
-                  <h3 className="text-base md:text-lg font-medium text-gray-900 mb-3 md:mb-4">
-                    Seleccionar Barbero *
-                  </h3>
-                  {loading ? (
-                    <div className="text-center py-4">
-                      Cargando disponibilidad...
+                <FormikForm
+                  className={`space-y-6 ${
+                    turnoExistenteInfo ? "opacity-50 pointer-events-none" : ""
+                  }`}
+                >
+                  {/* Información del Cliente */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Nombre Completo *
+                      </label>
+                      <Field
+                        name="nombreCliente"
+                        type="text"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 text-black"
+                        placeholder="Tu nombre completo"
+                      />
+                      <ErrorMessage
+                        name="nombreCliente"
+                        component="div"
+                        className="text-red-500 text-sm mt-1"
+                      />
                     </div>
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
-                      {barberos.map((barbero) => {
-                        // 🔧 SOLUCIÓN: Verificación correcta del estado del barbero
-                        const barberoIdStr = barbero._id.toString();
-                        const estaOcupado =
-                          barberosOcupadosIds.has(barberoIdStr);
 
-                        return (
-                          <div
-                            key={barbero._id}
-                            className={`border rounded-lg p-3 md:p-4 cursor-pointer transition-all ${
-                              values.barberoId === barbero._id
-                                ? "border-purple-500 bg-purple-50"
-                                : estaOcupado
-                                ? "border-red-300 bg-red-50 opacity-50 cursor-not-allowed"
-                                : "border-gray-300 hover:border-purple-300"
-                            }`}
-                            onClick={() => {
-                              if (!estaOcupado) {
-                                const newSelected =
-                                  values.barberoId === barbero._id
-                                    ? ""
-                                    : barbero._id;
-                                setSelectedBarbero(newSelected);
-                                setFieldValue("barberoId", newSelected);
-                              }
-                            }}
-                          >
-                            <div className="flex items-center space-x-3">
-                              <div className="flex-shrink-0">
-                                <img
-                                  src={`${
-                                    import.meta.env.VITE_API_URL
-                                  }/uploads/${barbero.foto}`}
-                                  alt={barbero.nombre}
-                                  className="w-10 h-10 md:w-12 md:h-12 rounded-full object-cover"
-                                />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <h4 className="font-medium text-gray-900 text-sm md:text-base truncate">
-                                  {barbero.nombre}
-                                </h4>
-                                <p
-                                  className={`text-xs md:text-sm ${
-                                    estaOcupado
-                                      ? "text-red-500"
-                                      : "text-green-500"
-                                  }`}
-                                >
-                                  {estaOcupado
-                                    ? "❌ No disponible"
-                                    : "✅ Disponible"}
-                                </p>
-                                {barbero.descripcion && (
-                                  <p className="text-xs text-gray-400 mt-1 hidden md:block">
-                                    {barbero.descripcion.substring(0, 50)}...
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Número de Celular *
+                      </label>
+                      <Field
+                        name="numeroCliente"
+                        type="text"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 text-black"
+                        placeholder="09XXXXXXXX"
+                      />
+                      <ErrorMessage
+                        name="numeroCliente"
+                        component="div"
+                        className="text-red-500 text-sm mt-1"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Selección de Barbero - CORREGIDO */}
+                  <div>
+                    <h3 className="text-base md:text-lg font-medium text-gray-900 mb-3 md:mb-4">
+                      Seleccionar Barbero *
+                    </h3>
+                    {loading ? (
+                      <div className="text-center py-4">
+                        Cargando disponibilidad...
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+                        {barberos.map((barbero) => {
+                          // 🔧 SOLUCIÓN: Verificación correcta del estado del barbero
+                          const barberoIdStr = barbero._id.toString();
+                          const estaOcupado =
+                            barberosOcupadosIds.has(barberoIdStr);
+
+                          return (
+                            <div
+                              key={barbero._id}
+                              className={`border rounded-lg p-3 md:p-4 cursor-pointer transition-all ${
+                                values.barberoId === barbero._id
+                                  ? "border-purple-500 bg-purple-50"
+                                  : estaOcupado
+                                  ? "border-red-300 bg-red-50 opacity-50 cursor-not-allowed"
+                                  : "border-gray-300 hover:border-purple-300"
+                              }`}
+                              onClick={() => {
+                                if (!estaOcupado) {
+                                  const newSelected =
+                                    values.barberoId === barbero._id
+                                      ? ""
+                                      : barbero._id;
+                                  setSelectedBarbero(newSelected);
+                                  setFieldValue("barberoId", newSelected);
+                                }
+                              }}
+                            >
+                              <div className="flex items-center space-x-3">
+                                <div className="flex-shrink-0">
+                                  <img
+                                    src={`${
+                                      import.meta.env.VITE_API_URL
+                                    }/uploads/${barbero.foto}`}
+                                    alt={barbero.nombre}
+                                    className="w-10 h-10 md:w-12 md:h-12 rounded-full object-cover"
+                                  />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <h4 className="font-medium text-gray-900 text-sm md:text-base truncate">
+                                    {barbero.nombre}
+                                  </h4>
+                                  <p
+                                    className={`text-xs md:text-sm ${
+                                      estaOcupado
+                                        ? "text-red-500"
+                                        : "text-green-500"
+                                    }`}
+                                  >
+                                    {estaOcupado
+                                      ? "❌ No disponible"
+                                      : "✅ Disponible"}
                                   </p>
-                                )}
-                              </div>
-                              <div className="flex-shrink-0">
-                                {values.barberoId === barbero._id && (
-                                  <div className="w-3 h-3 md:w-4 md:h-4 bg-purple-500 rounded-full"></div>
-                                )}
-                                {estaOcupado && (
-                                  <div className="text-red-500 text-lg md:text-xl">🔒</div>
-                                )}
+                                  {barbero.descripcion && (
+                                    <p className="text-xs text-gray-400 mt-1 hidden md:block">
+                                      {barbero.descripcion.substring(0, 50)}...
+                                    </p>
+                                  )}
+                                </div>
+                                <div className="flex-shrink-0">
+                                  {values.barberoId === barbero._id && (
+                                    <div className="w-3 h-3 md:w-4 md:h-4 bg-purple-500 rounded-full"></div>
+                                  )}
+                                  {estaOcupado && (
+                                    <div className="text-red-500 text-lg md:text-xl">
+                                      🔒
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                  <ErrorMessage
-                    name="barberoId"
-                    component="div"
-                    className="text-red-500 text-sm mt-1"
-                  />
-                </div>
-
-                {/* Selección de Servicios */}
-                <div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">
-                    Seleccionar Servicios *
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {services.map((service) => (
-                      <label
-                        key={service._id || service.nombre}
-                        className="flex items-center space-x-3 p-2 md:p-3 border rounded-lg hover:bg-gray-50 cursor-pointer"
-                      >
-                        <Field
-                          type="checkbox"
-                          name="servicios"
-                          value={service._id || service.nombre}
-                          checked={selectedServices.some(
-                            (s) =>
-                              (s._id && s._id === service._id) ||
-                              (!s._id && s.nombre === service.nombre)
-                          )}
-                          className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500 flex-shrink-0"
-                          onChange={(e) =>
-                            handleServiceChange(
-                              service,
-                              e.target.checked,
-                              setFieldValue
-                            )
-                          }
-                        />
-                        <div className="flex-1 min-w-0">
-                          <div className="font-medium text-gray-900 text-sm md:text-base">
-                            {service.nombre}
-                          </div>
-                          <div className="text-xs md:text-sm text-gray-500">
-                            ₲{service.precio?.toLocaleString()}
-                          </div>
-                        </div>
-                      </label>
-                    ))}
+                          );
+                        })}
+                      </div>
+                    )}
+                    <ErrorMessage
+                      name="barberoId"
+                      component="div"
+                      className="text-red-500 text-sm mt-1"
+                    />
                   </div>
-                  <ErrorMessage
-                    name="servicios"
-                    component="div"
-                    className="text-red-500 text-sm mt-1"
-                  />
 
-                  {selectedServices.length > 0 && (
-                    <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-                      <div className="font-medium text-gray-900">
-                        Total: ₲{calculateTotalCost().toLocaleString()}
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        Servicios seleccionados:{" "}
-                        {selectedServices.map((s) => s.nombre).join(", ")}
-                      </div>
+                  {/* Selección de Servicios */}
+                  <div>
+                    <h3 className="text-lg font-medium text-gray-900 mb-4">
+                      Seleccionar Servicios *
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {services.map((service) => (
+                        <label
+                          key={service._id || service.nombre}
+                          className="flex items-center space-x-3 p-2 md:p-3 border rounded-lg hover:bg-gray-50 cursor-pointer"
+                        >
+                          <Field
+                            type="checkbox"
+                            name="servicios"
+                            value={service._id || service.nombre}
+                            checked={selectedServices.some(
+                              (s) =>
+                                (s._id && s._id === service._id) ||
+                                (!s._id && s.nombre === service.nombre)
+                            )}
+                            className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500 flex-shrink-0"
+                            onChange={(e) =>
+                              handleServiceChange(
+                                service,
+                                e.target.checked,
+                                setFieldValue
+                              )
+                            }
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium text-gray-900 text-sm md:text-base">
+                              {service.nombre}
+                            </div>
+                            <div className="text-xs md:text-sm text-gray-500">
+                              ₲{service.precio?.toLocaleString()}
+                            </div>
+                          </div>
+                        </label>
+                      ))}
                     </div>
-                  )}
-                </div>
+                    <ErrorMessage
+                      name="servicios"
+                      component="div"
+                      className="text-red-500 text-sm mt-1"
+                    />
 
-                {/* Botones */}
-                <div className="flex flex-col md:flex-row justify-end space-y-2 md:space-y-0 md:space-x-4 pt-4 md:pt-6 border-t">
-                  <button
-                    type="button"
-                    onClick={onCloseModal}
-                    className="w-full md:w-auto px-4 md:px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={
-                      isSubmitting ||
-                      !values.barberoId ||
-                      values.servicios.length === 0 ||
-                      turnoExistenteInfo
-                    }
-                    className="w-full md:w-auto px-4 md:px-6 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-                  >
-                    {isSubmitting ? "Reservando..." : "Confirmar Reserva"}
-                  </button>
-                </div>
-              </FormikForm>
+                    {selectedServices.length > 0 && (
+                      <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                        <div className="font-medium text-gray-900">
+                          Total: ₲{calculateTotalCost().toLocaleString()}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          Servicios seleccionados:{" "}
+                          {selectedServices.map((s) => s.nombre).join(", ")}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Botones */}
+                  <div className="flex flex-col md:flex-row justify-end space-y-2 md:space-y-0 md:space-x-4 pt-4 md:pt-6 border-t">
+                    <button
+                      type="button"
+                      onClick={onCloseModal}
+                      className="w-full md:w-auto px-4 md:px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={
+                        isSubmitting ||
+                        !values.barberoId ||
+                        values.servicios.length === 0 ||
+                        turnoExistenteInfo
+                      }
+                      className="w-full md:w-auto px-4 md:px-6 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {isSubmitting ? "Reservando..." : "Confirmar Reserva"}
+                    </button>
+                  </div>
+                </FormikForm>
               );
             }}
           </Formik>

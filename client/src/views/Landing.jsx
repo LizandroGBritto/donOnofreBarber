@@ -42,7 +42,6 @@ const Landing = () => {
   }, []);
 
   useEffect(() => {
-
     // Cargar turnos al montar el componente
     fetchTurnos();
 
