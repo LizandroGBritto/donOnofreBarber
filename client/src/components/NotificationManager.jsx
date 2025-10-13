@@ -10,10 +10,12 @@ const NotificationManager = () => {
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState("info");
   const [subscriptionInfo, setSubscriptionInfo] = useState(null);
+  const [debugInfo, setDebugInfo] = useState(null);
 
   useEffect(() => {
     checkNotificationStatus();
     setupMessageListener();
+    updateDebugInfo();
   }, []);
 
   const checkNotificationStatus = async () => {
@@ -29,6 +31,24 @@ const NotificationManager = () => {
         setSubscriptionInfo(subscription);
       }
     }
+  };
+
+  const updateDebugInfo = () => {
+    const supportInfo = notificationService.getSupportInfo();
+    const currentPermission = notificationService.getPermissionStatus();
+    
+    const debugData = {
+      ...supportInfo,
+      currentPermission,
+      notificationAPI: 'Notification' in window,
+      notificationPermission: 'Notification' in window ? Notification.permission : 'no disponible',
+      isStandalone: window.navigator.standalone,
+      isInSafari: /^((?!chrome|android).)*safari/i.test(navigator.userAgent),
+      timestamp: new Date().toISOString()
+    };
+    
+    setDebugInfo(debugData);
+    console.log('🔍 Debug Info iOS Notifications:', debugData);
   };
 
   const setupMessageListener = () => {
@@ -125,7 +145,7 @@ const NotificationManager = () => {
               Se requiere iOS 16.4 o superior para notificaciones push.
               Actualiza tu dispositivo para usar esta función.
             </Alert>
-          ) : supportInfo.isIOS ? (
+          ) : supportInfo.isIOS && supportInfo.isIOSSupported && (!supportInfo.hasNotification || Notification.permission === 'default') ? (
             <Alert color="info">
               <span className="font-medium">Configuración iOS:</span>
               Para habilitar notificaciones en Safari:
@@ -148,16 +168,37 @@ const NotificationManager = () => {
             </Alert>
           )}
 
-          {import.meta.env.DEV && (
-            <details className="mt-4 text-left">
-              <summary className="cursor-pointer text-sm text-gray-500">
-                Información de depuración
-              </summary>
-              <pre className="text-xs bg-gray-100 p-2 mt-2 rounded overflow-auto">
-                {JSON.stringify(supportInfo, null, 2)}
-              </pre>
-            </details>
-          )}
+          {/* Debug Info siempre visible */}
+          <details className="mt-4 text-left">
+            <summary className="cursor-pointer text-sm text-blue-600 hover:text-blue-800">
+              🔍 Información de depuración (Debug)
+            </summary>
+            <div className="mt-2 p-3 bg-gray-50 rounded-lg text-black">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
+                <div><strong>Es iOS:</strong> {supportInfo.isIOS ? '✅ Sí' : '❌ No'}</div>
+                <div><strong>Versión iOS:</strong> {supportInfo.iosVersion || 'N/A'}</div>
+                <div><strong>Es Safari:</strong> {supportInfo.isSafari ? '✅ Sí' : '❌ No'}</div>
+                <div><strong>iOS Soportado:</strong> {supportInfo.isIOSSupported ? '✅ Sí' : '❌ No'}</div>
+                <div><strong>Service Worker:</strong> {supportInfo.hasServiceWorker ? '✅ Sí' : '❌ No'}</div>
+                <div><strong>Push Manager:</strong> {supportInfo.hasPushManager ? '✅ Sí' : '❌ No'}</div>
+                <div><strong>API Notification:</strong> {supportInfo.hasNotification ? '✅ Sí' : '❌ No'}</div>
+                <div><strong>Permiso Notification:</strong> {supportInfo.notificationPermission}</div>
+                <div><strong>Soporte Real:</strong> {supportInfo.realSupport ? '✅ Sí' : '❌ No'}</div>
+                <div><strong>Standalone App:</strong> {supportInfo.isStandalone ? '✅ Sí' : '❌ No'}</div>
+                <div><strong>Permiso Estado:</strong> {permission}</div>
+                <div><strong>Está Suscrito:</strong> {isSubscribed ? '✅ Sí' : '❌ No'}</div>
+              </div>
+              <div className="mt-2 pt-2 border-t border-gray-200">
+                <strong>User Agent:</strong>
+                <div className="text-xs bg-white p-2 rounded border mt-1 break-all text-black">
+                  {supportInfo.userAgent}
+                </div>
+              </div>
+              <div className="mt-2 pt-2 border-t border-gray-200">
+                <strong>Timestamp:</strong> {new Date().toLocaleString()}
+              </div>
+            </div>
+          </details>
         </div>
       </Card>
     );
@@ -236,12 +277,51 @@ const NotificationManager = () => {
                 <li>
                   Haz clic en el ícono del candado en la barra de direcciones
                 </li>
-                <li>Cambia las notificaciones de "Bloquear" a "Permitir"</li>
+                <li>Cambia las notificaciones de &ldquo;Bloquear&rdquo; a &ldquo;Permitir&rdquo;</li>
                 <li>Recarga la página</li>
               </ol>
             </div>
           </Alert>
         )}
+
+        {/* Debug Info también disponible cuando está soportado */}
+        <details className="mt-4">
+          <summary className="cursor-pointer text-sm text-blue-600 hover:text-blue-800">
+            🔍 Información de depuración (Debug)
+          </summary>
+          <div className="mt-2 p-3 bg-gray-50 rounded-lg text-black">
+            {(() => {
+              const supportInfo = notificationService.getSupportInfo();
+              return (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
+                    <div><strong>Es iOS:</strong> {supportInfo.isIOS ? '✅ Sí' : '❌ No'}</div>
+                    <div><strong>Versión iOS:</strong> {supportInfo.iosVersion || 'N/A'}</div>
+                    <div><strong>Es Safari:</strong> {supportInfo.isSafari ? '✅ Sí' : '❌ No'}</div>
+                    <div><strong>iOS Soportado:</strong> {supportInfo.isIOSSupported ? '✅ Sí' : '❌ No'}</div>
+                    <div><strong>Service Worker:</strong> {supportInfo.hasServiceWorker ? '✅ Sí' : '❌ No'}</div>
+                    <div><strong>Push Manager:</strong> {supportInfo.hasPushManager ? '✅ Sí' : '❌ No'}</div>
+                    <div><strong>API Notification:</strong> {supportInfo.hasNotification ? '✅ Sí' : '❌ No'}</div>
+                    <div><strong>Permiso Notification:</strong> {supportInfo.notificationPermission}</div>
+                    <div><strong>Soporte Real:</strong> {supportInfo.realSupport ? '✅ Sí' : '❌ No'}</div>
+                    <div><strong>Standalone App:</strong> {supportInfo.isStandalone ? '✅ Sí' : '❌ No'}</div>
+                    <div><strong>Permiso Estado:</strong> {permission}</div>
+                    <div><strong>Está Suscrito:</strong> {isSubscribed ? '✅ Sí' : '❌ No'}</div>
+                  </div>
+                  <div className="mt-2 pt-2 border-t border-gray-200">
+                    <strong>User Agent:</strong>
+                    <div className="text-xs bg-white p-2 rounded border mt-1 break-all text-black">
+                      {supportInfo.userAgent}
+                    </div>
+                  </div>
+                  <div className="mt-2 pt-2 border-t border-gray-200">
+                    <strong>Timestamp:</strong> {new Date().toLocaleString()}
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        </details>
       </div>
     </Card>
   );

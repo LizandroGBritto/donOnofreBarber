@@ -39,11 +39,23 @@ class NotificationService {
 
   // Verificar si las notificaciones están soportadas
   isNotificationSupported() {
+    // Para iOS, verificar si las notificaciones están realmente disponibles
+    if (this.isIOS) {
+      // Verificar si la API está disponible después de habilitar las funciones experimentales
+      const hasNotificationAPI = 'Notification' in window;
+      const hasPushManager = 'PushManager' in window;
+      const hasServiceWorker = 'serviceWorker' in navigator;
+      
+      return hasNotificationAPI && hasPushManager && hasServiceWorker && this.isIOSSupported;
+    }
+    
     return this.isSupported;
   }
 
   // Obtener información detallada de soporte
   getSupportInfo() {
+    const notificationPermission = 'Notification' in window ? Notification.permission : 'no disponible';
+    
     return {
       isSupported: this.isSupported,
       isIOS: this.isIOS,
@@ -52,8 +64,23 @@ class NotificationService {
       hasServiceWorker: this.hasServiceWorker,
       hasPushManager: this.hasPushManager,
       hasNotification: this.hasNotification,
+      notificationPermission,
       userAgent: navigator.userAgent,
+      isStandalone: window.navigator.standalone || false,
+      // Información adicional para iOS
+      iosVersion: this.isIOS ? this.getIOSVersion() : null,
+      // Estado actual de soporte real
+      realSupport: this.isNotificationSupported(),
     };
+  }
+
+  // Obtener versión específica de iOS
+  getIOSVersion() {
+    const match = navigator.userAgent.match(/OS (\d+)_(\d+)/);
+    if (match) {
+      return `${match[1]}.${match[2]}`;
+    }
+    return 'desconocida';
   }
 
   // Obtener el estado actual de permisos
