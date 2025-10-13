@@ -47,8 +47,8 @@ self.addEventListener("push", (event) => {
   const title = data.title || "Don Onofre Barbería";
   const options = {
     body: data.body || "Nueva notificación disponible",
-    icon: data.icon || "/logoCenter.webp",
-    badge: data.badge || "/logoCenter.webp",
+    icon: data.icon || "/AlonzoStylev2.webp",
+    badge: data.badge || "/AlonzoStylev2.webp",
     image: data.image,
     data: data.data || {},
     actions: data.actions || [],

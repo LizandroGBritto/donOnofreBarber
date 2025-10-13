@@ -15,8 +15,6 @@ const getVapidPublicKey = (req, res) => {
 // Suscribirse a notificaciones
 const suscribirse = async (req, res) => {
   try {
-
-
     const { subscription, userId } = req.body;
 
     if (!subscription || !subscription.endpoint) {
@@ -32,7 +30,6 @@ const suscribirse = async (req, res) => {
       endpoint: subscription.endpoint,
     });
 
-
     if (suscripcionExistente) {
       // Actualizar suscripción existente
       suscripcionExistente.keys = subscription.keys;
@@ -40,7 +37,6 @@ const suscribirse = async (req, res) => {
       suscripcionExistente.userId = finalUserId;
       suscripcionExistente.userAgent = req.headers["user-agent"];
       await suscripcionExistente.save();
-
 
       return res.json({
         message: "Suscripción actualizada exitosamente",
@@ -103,8 +99,8 @@ const enviarNotificacionPrueba = async (req, res) => {
     const payload = {
       title: "🧪 Notificación de Prueba",
       body: "Las notificaciones están funcionando correctamente",
-      icon: "/logoCenter.webp",
-      badge: "/logoCenter.webp",
+      icon: "/AlonzoStylev2.webp",
+      badge: "/AlonzoStylev2.webp",
       data: {
         type: "test",
         url: "/admin",

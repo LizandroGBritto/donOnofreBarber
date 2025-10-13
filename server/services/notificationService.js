@@ -73,8 +73,8 @@ class NotificationService {
     const payload = {
       title: "🆕 Nueva Reserva",
       body: `${turno.nombreCliente} reservó una cita para ${turno.fecha} a las ${turno.hora}`,
-      icon: "/logoCenter.webp",
-      badge: "/logoCenter.webp",
+      icon: "/AlonzoStylev2.webp",
+      badge: "/AlonzoStylev2.webp",
       data: {
         type: "nueva_reserva",
         turnoId: turno._id,
@@ -101,8 +101,8 @@ class NotificationService {
     const payload = {
       title: "✏️ Turno Modificado",
       body: `${turno.nombreCliente} modificó su cita del ${turno.fecha} a las ${turno.hora}`,
-      icon: "/logoCenter.webp",
-      badge: "/logoCenter.webp",
+      icon: "/AlonzoStylev2.webp",
+      badge: "/AlonzoStylev2.webp",
       data: {
         type: "turno_editado",
         turnoId: turno._id,
@@ -124,8 +124,8 @@ class NotificationService {
     const payload = {
       title: "🚫 Turno Liberado",
       body: `El turno del ${turno.fecha} a las ${turno.hora} ha sido liberado`,
-      icon: "/logoCenter.webp",
-      badge: "/logoCenter.webp",
+      icon: "/AlonzoStylev2.webp",
+      badge: "/AlonzoStylev2.webp",
       data: {
         type: "turno_liberado",
         turnoId: turno._id,
@@ -147,8 +147,8 @@ class NotificationService {
     const payload = {
       title: "⏰ Próximas Citas",
       body: `Tienes ${citas.length} cita(s) próxima(s) en las próximas 2 horas`,
-      icon: "/logoCenter.webp",
-      badge: "/logoCenter.webp",
+      icon: "/AlonzoStylev2.webp",
+      badge: "/AlonzoStylev2.webp",
       data: {
         type: "recordatorio_citas",
         citasCount: citas.length,
