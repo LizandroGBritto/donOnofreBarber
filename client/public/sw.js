@@ -1,9 +1,27 @@
-// Service Worker para manejar notificaciones push
-const CACHE_NAME = "don-onofre-v1";
+// Service Worker para manejar notificaciones push y funcionalidad PWA
+const CACHE_NAME = "alonso-style-v1";
+const urlsToCache = ["/", "/manifest.json", "/icon-192.png", "/icon-512.png"];
 
 // Instalar service worker
 self.addEventListener("install", (event) => {
   console.log("Service Worker: Instalado");
+
+  event.waitUntil(
+    caches
+      .open(CACHE_NAME)
+      .then((cache) => {
+        console.log("Cacheando archivos");
+        return cache.addAll(
+          urlsToCache.filter(
+            (url) => url !== "/icon-192.png" && url !== "/icon-512.png"
+          )
+        );
+      })
+      .catch((error) => {
+        console.log("Error al cachear:", error);
+      })
+  );
+
   self.skipWaiting();
 });
 
