@@ -214,7 +214,7 @@ const EditarTurno = () => {
     }
   };
 
-  // Cancelar turno - Cambiar estado a disponible y limpiar datos
+  // Cancelar turno - Cambiar estado a disponible y limpiar datos del cliente
   const handleCancelTurno = async () => {
     try {
       setSaving(true);
@@ -230,12 +230,13 @@ const EditarTurno = () => {
         servicios: [],
         costoTotal: 0,
         costoServicios: 0,
-        barbero: null, // Limpiar barbero asignado también
-        nombreBarbero: "",
+        // Mantener barbero y nombreBarbero asignados
+        // barbero: turno.barbero, // Se mantiene el barbero
+        // nombreBarbero: turno.nombreBarbero, // Se mantiene el nombre del barbero
       });
 
       setSuccess(
-        "Turno liberado exitosamente. Ahora está disponible para nuevas reservas."
+        "Turno liberado exitosamente. Ahora está disponible para nuevas reservas con el mismo barbero."
       );
       setShowCancelModal(false);
 
@@ -313,12 +314,12 @@ const EditarTurno = () => {
                   <p className="text-gray-700">{formatearFecha(turno.fecha)}</p>
                 </div>
                 <div>
-                  <span className="font-medium">Hora:</span>
+                  <span className="font-medium text-gray-900">Hora:</span>
                   <p className="text-gray-700">{turno.hora}</p>
                 </div>
                 {turno.barbero && (
                   <div className="md:col-span-2">
-                    <span className="font-medium">Barbero:</span>
+                    <span className="font-medium text-gray-900">Barbero:</span>
                     <div className="flex items-center gap-2 mt-1">
                       {turno.barbero.foto && (
                         <img
@@ -337,7 +338,7 @@ const EditarTurno = () => {
                 )}
                 {turno.servicios && turno.servicios.length > 0 && (
                   <div className="md:col-span-2">
-                    <span className="font-medium">Servicios:</span>
+                    <span className="font-medium text-gray-900">Servicios:</span>
                     <div className="flex flex-wrap gap-2 mt-1">
                       {turno.servicios.map((servicio, index) => (
                         <span

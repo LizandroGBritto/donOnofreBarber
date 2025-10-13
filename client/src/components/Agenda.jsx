@@ -146,6 +146,50 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
       });
   }, [setHorarios, UserId]);
 
+  // Función para avanzar al siguiente día disponible
+  const avanzarAlSiguienteDia = useCallback(() => {
+    if (!selectedDay || !selectedWeek || !diasActivos.length) return;
+
+    const ordenDias = [
+      "Lunes",
+      "Martes",
+      "Miercoles",
+      "Jueves",
+      "Viernes",
+      "Sabado",
+      "Domingo",
+    ];
+
+    const currentDayIndex = ordenDias.indexOf(selectedDay);
+
+    // Buscar el siguiente día activo
+    let nextDayIndex = (currentDayIndex + 1) % 7;
+    let nextDay = ordenDias[nextDayIndex];
+
+    // Si el siguiente día no está en diasActivos, buscar el próximo día activo
+    while (!diasActivos.includes(nextDay) && nextDayIndex !== currentDayIndex) {
+      nextDayIndex = (nextDayIndex + 1) % 7;
+      nextDay = ordenDias[nextDayIndex];
+    }
+
+    // Si el día siguiente está en la misma semana, solo cambiar el día
+    if (
+      nextDayIndex > currentDayIndex ||
+      (currentDayIndex === 6 && nextDayIndex === 0)
+    ) {
+      setSelectedDay(nextDay);
+    } else {
+      // Si necesitamos cambiar de semana
+      const currentWeekIndex = semanas.findIndex(
+        (semana) => semana.label === selectedWeek.label
+      );
+      if (currentWeekIndex < semanas.length - 1) {
+        setSelectedWeek(semanas[currentWeekIndex + 1]);
+        setSelectedDay(nextDay);
+      }
+    }
+  }, [selectedDay, selectedWeek, diasActivos, semanas]);
+
   useEffect(() => {
     // Cargar horarios y semanas al montar el componente
     loadHorariosYSemanas();
@@ -164,10 +208,8 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
     }
   }, [horarios, UserId, loadHorariosYSemanas, refreshData]);
 
-  if (isLoading) return <h1>Loading...</h1>;
-
   // Calcular fecha objetivo basada en la semana y día seleccionados
-  const calcularFechaObjetivo = () => {
+  const calcularFechaObjetivo = useCallback(() => {
     if (!selectedWeek || !selectedDay) return null;
 
     // Encontrar qué día de la semana es el día seleccionado
@@ -193,7 +235,53 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
     const fechaObjetivo = inicioSemana.add(diaIndex, "days");
 
     return fechaObjetivo;
-  };
+  }, [selectedWeek, selectedDay]);
+
+  // Efecto para avanzar automáticamente si todos los turnos están ocupados
+  useEffect(() => {
+    if (!isLoading && selectedDay && selectedWeek && horarios.length > 0) {
+      // Calcular horarios filtrados dentro del useEffect
+      const fechaObjetivo = calcularFechaObjetivo();
+      if (fechaObjetivo) {
+        const filtrados = horarios
+          .filter((agenda) => {
+            const fechaAgenda = ParaguayDateUtil.toParaguayTime(agenda.fecha);
+            return fechaAgenda.isSame(fechaObjetivo, "day");
+          })
+          .sort((a, b) => {
+            const horaA = parseInt(a.hora.replace(":", ""), 10);
+            const horaB = parseInt(b.hora.replace(":", ""), 10);
+            return horaA - horaB;
+          });
+
+        const todosOcupados =
+          filtrados.length > 0 &&
+          filtrados.every(
+            (agenda) =>
+              agenda.estado !== "disponible" ||
+              turnoYaPaso(agenda.fecha, agenda.hora)
+          );
+
+        if (todosOcupados) {
+          // Pequeño delay para evitar loops infinitos
+          const timer = setTimeout(() => {
+            avanzarAlSiguienteDia();
+          }, 100);
+
+          return () => clearTimeout(timer);
+        }
+      }
+    }
+  }, [
+    isLoading,
+    selectedDay,
+    selectedWeek,
+    horarios,
+    avanzarAlSiguienteDia,
+    calcularFechaObjetivo,
+  ]);
+
+  if (isLoading) return <h1>Loading...</h1>;
 
   // Como el backend ahora devuelve datos limpios (un turno por hora),
   // filtrar por la fecha específica calculada
@@ -266,6 +354,9 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
             .dropdown-mobile {
               flex: 1 !important;
               min-width: 0 !important;
+              display: flex !important;
+              justify-content: center;
+              align-items: center;
             }
           }
         `}
@@ -286,7 +377,7 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
 
           <div className="agenda-controls flex flex-row gap-2 md:gap-3 px-2 md:px-4 w-full md:w-auto justify-center md:justify-end">
             {/* Select de Semana */}
-            <div className="dropdown-mobile w-full md:w-auto min-w-0">
+            <div className="dropdown-mobile w-full md:w-auto min-w-0 bg-transparent border-2 border-purple-400 text-purple-400 rounded-lg transition duration-300 ease-in-out transform hover:bg-purple-400 hover:text-gray-900 hover:scale-105 relative z-50">
               <Dropdown
                 color=""
                 label={selectedWeek ? selectedWeek.label : "Semana"}
@@ -307,12 +398,12 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
             </div>
 
             {/* Select de Día */}
-            <div className="dropdown-mobile w-full md:w-auto min-w-0">
+            <div className="dropdown-mobile w-full md:w-auto min-w-0 bg-transparent border-2 border-purple-400 text-purple-400 rounded-lg transition duration-300 ease-in-out transform hover:bg-purple-400 hover:text-gray-900 hover:scale-105 relative z-50">
               <Dropdown
                 color=""
-                label={`${selectedDay || "Día"}`}
+                label={`Día: ${selectedDay || ""}`}
                 dismissOnClick={true}
-                className="w-full [&>button]:text-center [&>button]:justify-center [&>button]:text-xs [&>button]:px-2 [&>button]:py-1"
+                className="w-full d-flex justify-center align-items-center [&>button]:text-center [&>button]:justify-center [&>button]:text-xs [&>button]:px-2 [&>button]:py-1"
               >
                 {diasActivos.map((dia, index) => (
                   <Dropdown.Item
@@ -337,7 +428,7 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
               key={agenda._id}
             >
               <h3
-                className={`flex justify-center md:justify-start text-lg md:text-base font-medium ${
+                className={`flex justify-center md:justify-start text-xl md:text-lg font-medium ${
                   agenda.estado !== "disponible" ? "line-through" : ""
                 }`}
               >

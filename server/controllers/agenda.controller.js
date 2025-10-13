@@ -905,48 +905,84 @@ module.exports = {
           .json({ message: "Barbero no encontrado o inactivo" });
       }
 
-      // Verificar disponibilidad del barbero
-      const turnoExistente = await AgendaModel.findOne({
-        fecha: fechaObj,
+      // Buscar turno disponible del barbero en esa fecha/hora
+      let turnoAEditar = await AgendaModel.findOne({
+        fecha: {
+          $gte: ParaguayDateUtil.startOfDay(fechaObj).toDate(),
+          $lte: ParaguayDateUtil.endOfDay(fechaObj).toDate(),
+        },
         hora: hora,
         barbero: barberoId,
-        estado: { $in: ["reservado", "pagado", "en_proceso"] },
+        estado: "disponible",
       });
 
-      if (turnoExistente) {
-        return res.status(409).json({
-          message: "El barbero ya tiene un turno reservado en este horario",
+      // Si no existe turno disponible, verificar si hay conflicto
+      if (!turnoAEditar) {
+        const turnoOcupado = await AgendaModel.findOne({
+          fecha: {
+            $gte: ParaguayDateUtil.startOfDay(fechaObj).toDate(),
+            $lte: ParaguayDateUtil.endOfDay(fechaObj).toDate(),
+          },
+          hora: hora,
+          barbero: barberoId,
+          estado: { $in: ["reservado", "pagado", "en_proceso"] },
+        });
+
+        if (turnoOcupado) {
+          return res.status(409).json({
+            message: "El barbero ya tiene un turno reservado en este horario",
+          });
+        }
+
+        // Crear nuevo turno si no existe ninguno
+        turnoAEditar = new AgendaModel({
+          fecha: ParaguayDateUtil.startOfDay(fechaObj).toDate(),
+          hora: hora,
+          diaSemana: ParaguayDateUtil.getDayOfWeek(fechaObj),
+          barbero: barberoId,
+          nombreBarbero: barbero.nombre,
+          estado: "disponible",
+          creadoAutomaticamente: false,
         });
       }
 
-      // Crear un nuevo turno específico para este barbero (no modificar turnos existentes)
-      const nuevoTurno = new AgendaModel({
-        fecha: fechaObj,
+      // Antes de editar, eliminar otros turnos duplicados en la misma fecha/hora
+      await AgendaModel.deleteMany({
+        fecha: {
+          $gte: ParaguayDateUtil.startOfDay(fechaObj).toDate(),
+          $lte: ParaguayDateUtil.endOfDay(fechaObj).toDate(),
+        },
         hora: hora,
-        diaSemana: ParaguayDateUtil.getDayOfWeek(fechaObj),
-        estado: "reservado",
-        barbero: barberoId,
-        nombreBarbero: barbero.nombre,
-        nombreCliente: nombreCliente,
-        numeroCliente: numeroCliente,
-        servicios: servicios,
-        fechaReserva: new Date(),
-        creadoAutomaticamente: false,
+        _id: { $ne: turnoAEditar._id }, // Excluir el turno que vamos a editar
+        estado: "disponible",
+        $or: [
+          { nombreCliente: "" },
+          { nombreCliente: { $exists: false } },
+          { numeroCliente: "" },
+          { numeroCliente: { $exists: false } }
+        ]
       });
+
+      // Editar el turno encontrado con los datos de la reserva
+      turnoAEditar.estado = "reservado";
+      turnoAEditar.nombreCliente = nombreCliente;
+      turnoAEditar.numeroCliente = numeroCliente;
+      turnoAEditar.servicios = servicios;
+      turnoAEditar.fechaReserva = new Date();
 
       // Calcular costo total si hay servicios
       if (servicios.length > 0) {
-        nuevoTurno.calcularCostoTotal();
+        turnoAEditar.calcularCostoTotal();
       }
 
-      await nuevoTurno.save();
+      await turnoAEditar.save();
 
       // Populate el barbero para la respuesta
-      await nuevoTurno.populate("barbero", "nombre foto");
+      await turnoAEditar.populate("barbero", "nombre foto");
 
       // Enviar notificación de nueva reserva
       try {
-        await NotificationService.notificarNuevaReserva(nuevoTurno);
+        await NotificationService.notificarNuevaReserva(turnoAEditar);
       } catch (notifError) {
         console.error(
           "Error al enviar notificación de nueva reserva:",
@@ -957,7 +993,7 @@ module.exports = {
 
       res.status(200).json({
         message: "Turno reservado exitosamente",
-        turno: nuevoTurno,
+        turno: turnoAEditar,
       });
     } catch (error) {
       console.error("Error al reservar turno con barbero:", error);
