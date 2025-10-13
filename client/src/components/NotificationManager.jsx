@@ -36,19 +36,20 @@ const NotificationManager = () => {
   const updateDebugInfo = () => {
     const supportInfo = notificationService.getSupportInfo();
     const currentPermission = notificationService.getPermissionStatus();
-    
+
     const debugData = {
       ...supportInfo,
       currentPermission,
-      notificationAPI: 'Notification' in window,
-      notificationPermission: 'Notification' in window ? Notification.permission : 'no disponible',
+      notificationAPI: "Notification" in window,
+      notificationPermission:
+        "Notification" in window ? Notification.permission : "no disponible",
       isStandalone: window.navigator.standalone,
       isInSafari: /^((?!chrome|android).)*safari/i.test(navigator.userAgent),
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     };
-    
+
     setDebugInfo(debugData);
-    console.log('🔍 Debug Info iOS Notifications:', debugData);
+    console.log("🔍 Debug Info iOS Notifications:", debugData);
   };
 
   const setupMessageListener = () => {
@@ -145,7 +146,10 @@ const NotificationManager = () => {
               Se requiere iOS 16.4 o superior para notificaciones push.
               Actualiza tu dispositivo para usar esta función.
             </Alert>
-          ) : supportInfo.isIOS && supportInfo.isIOSSupported && (!supportInfo.hasNotification || Notification.permission === 'default') ? (
+          ) : supportInfo.isIOS &&
+            supportInfo.isIOSSupported &&
+            (!supportInfo.hasNotification ||
+              Notification.permission === "default") ? (
             <Alert color="info">
               <span className="font-medium">Configuración iOS:</span>
               Para habilitar notificaciones en Safari:
@@ -175,18 +179,53 @@ const NotificationManager = () => {
             </summary>
             <div className="mt-2 p-3 bg-gray-50 rounded-lg text-black">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
-                <div><strong>Es iOS:</strong> {supportInfo.isIOS ? '✅ Sí' : '❌ No'}</div>
-                <div><strong>Versión iOS:</strong> {supportInfo.iosVersion || 'N/A'}</div>
-                <div><strong>Es Safari:</strong> {supportInfo.isSafari ? '✅ Sí' : '❌ No'}</div>
-                <div><strong>iOS Soportado:</strong> {supportInfo.isIOSSupported ? '✅ Sí' : '❌ No'}</div>
-                <div><strong>Service Worker:</strong> {supportInfo.hasServiceWorker ? '✅ Sí' : '❌ No'}</div>
-                <div><strong>Push Manager:</strong> {supportInfo.hasPushManager ? '✅ Sí' : '❌ No'}</div>
-                <div><strong>API Notification:</strong> {supportInfo.hasNotification ? '✅ Sí' : '❌ No'}</div>
-                <div><strong>Permiso Notification:</strong> {supportInfo.notificationPermission}</div>
-                <div><strong>Soporte Real:</strong> {supportInfo.realSupport ? '✅ Sí' : '❌ No'}</div>
-                <div><strong>Standalone App:</strong> {supportInfo.isStandalone ? '✅ Sí' : '❌ No'}</div>
-                <div><strong>Permiso Estado:</strong> {permission}</div>
-                <div><strong>Está Suscrito:</strong> {isSubscribed ? '✅ Sí' : '❌ No'}</div>
+                <div>
+                  <strong>Es iOS:</strong>{" "}
+                  {supportInfo.isIOS ? "✅ Sí" : "❌ No"}
+                </div>
+                <div>
+                  <strong>Versión iOS:</strong>{" "}
+                  {supportInfo.iosVersion || "N/A"}
+                </div>
+                <div>
+                  <strong>Es Safari:</strong>{" "}
+                  {supportInfo.isSafari ? "✅ Sí" : "❌ No"}
+                </div>
+                <div>
+                  <strong>iOS Soportado:</strong>{" "}
+                  {supportInfo.isIOSSupported ? "✅ Sí" : "❌ No"}
+                </div>
+                <div>
+                  <strong>Service Worker:</strong>{" "}
+                  {supportInfo.hasServiceWorker ? "✅ Sí" : "❌ No"}
+                </div>
+                <div>
+                  <strong>Push Manager:</strong>{" "}
+                  {supportInfo.hasPushManager ? "✅ Sí" : "❌ No"}
+                </div>
+                <div>
+                  <strong>API Notification:</strong>{" "}
+                  {supportInfo.hasNotification ? "✅ Sí" : "❌ No"}
+                </div>
+                <div>
+                  <strong>Permiso Notification:</strong>{" "}
+                  {supportInfo.notificationPermission}
+                </div>
+                <div>
+                  <strong>Soporte Real:</strong>{" "}
+                  {supportInfo.realSupport ? "✅ Sí" : "❌ No"}
+                </div>
+                <div>
+                  <strong>Standalone App:</strong>{" "}
+                  {supportInfo.isStandalone ? "✅ Sí" : "❌ No"}
+                </div>
+                <div>
+                  <strong>Permiso Estado:</strong> {permission}
+                </div>
+                <div>
+                  <strong>Está Suscrito:</strong>{" "}
+                  {isSubscribed ? "✅ Sí" : "❌ No"}
+                </div>
               </div>
               <div className="mt-2 pt-2 border-t border-gray-200">
                 <strong>User Agent:</strong>
@@ -277,7 +316,10 @@ const NotificationManager = () => {
                 <li>
                   Haz clic en el ícono del candado en la barra de direcciones
                 </li>
-                <li>Cambia las notificaciones de &ldquo;Bloquear&rdquo; a &ldquo;Permitir&rdquo;</li>
+                <li>
+                  Cambia las notificaciones de &ldquo;Bloquear&rdquo; a
+                  &ldquo;Permitir&rdquo;
+                </li>
                 <li>Recarga la página</li>
               </ol>
             </div>
@@ -295,18 +337,53 @@ const NotificationManager = () => {
               return (
                 <>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
-                    <div><strong>Es iOS:</strong> {supportInfo.isIOS ? '✅ Sí' : '❌ No'}</div>
-                    <div><strong>Versión iOS:</strong> {supportInfo.iosVersion || 'N/A'}</div>
-                    <div><strong>Es Safari:</strong> {supportInfo.isSafari ? '✅ Sí' : '❌ No'}</div>
-                    <div><strong>iOS Soportado:</strong> {supportInfo.isIOSSupported ? '✅ Sí' : '❌ No'}</div>
-                    <div><strong>Service Worker:</strong> {supportInfo.hasServiceWorker ? '✅ Sí' : '❌ No'}</div>
-                    <div><strong>Push Manager:</strong> {supportInfo.hasPushManager ? '✅ Sí' : '❌ No'}</div>
-                    <div><strong>API Notification:</strong> {supportInfo.hasNotification ? '✅ Sí' : '❌ No'}</div>
-                    <div><strong>Permiso Notification:</strong> {supportInfo.notificationPermission}</div>
-                    <div><strong>Soporte Real:</strong> {supportInfo.realSupport ? '✅ Sí' : '❌ No'}</div>
-                    <div><strong>Standalone App:</strong> {supportInfo.isStandalone ? '✅ Sí' : '❌ No'}</div>
-                    <div><strong>Permiso Estado:</strong> {permission}</div>
-                    <div><strong>Está Suscrito:</strong> {isSubscribed ? '✅ Sí' : '❌ No'}</div>
+                    <div>
+                      <strong>Es iOS:</strong>{" "}
+                      {supportInfo.isIOS ? "✅ Sí" : "❌ No"}
+                    </div>
+                    <div>
+                      <strong>Versión iOS:</strong>{" "}
+                      {supportInfo.iosVersion || "N/A"}
+                    </div>
+                    <div>
+                      <strong>Es Safari:</strong>{" "}
+                      {supportInfo.isSafari ? "✅ Sí" : "❌ No"}
+                    </div>
+                    <div>
+                      <strong>iOS Soportado:</strong>{" "}
+                      {supportInfo.isIOSSupported ? "✅ Sí" : "❌ No"}
+                    </div>
+                    <div>
+                      <strong>Service Worker:</strong>{" "}
+                      {supportInfo.hasServiceWorker ? "✅ Sí" : "❌ No"}
+                    </div>
+                    <div>
+                      <strong>Push Manager:</strong>{" "}
+                      {supportInfo.hasPushManager ? "✅ Sí" : "❌ No"}
+                    </div>
+                    <div>
+                      <strong>API Notification:</strong>{" "}
+                      {supportInfo.hasNotification ? "✅ Sí" : "❌ No"}
+                    </div>
+                    <div>
+                      <strong>Permiso Notification:</strong>{" "}
+                      {supportInfo.notificationPermission}
+                    </div>
+                    <div>
+                      <strong>Soporte Real:</strong>{" "}
+                      {supportInfo.realSupport ? "✅ Sí" : "❌ No"}
+                    </div>
+                    <div>
+                      <strong>Standalone App:</strong>{" "}
+                      {supportInfo.isStandalone ? "✅ Sí" : "❌ No"}
+                    </div>
+                    <div>
+                      <strong>Permiso Estado:</strong> {permission}
+                    </div>
+                    <div>
+                      <strong>Está Suscrito:</strong>{" "}
+                      {isSubscribed ? "✅ Sí" : "❌ No"}
+                    </div>
                   </div>
                   <div className="mt-2 pt-2 border-t border-gray-200">
                     <strong>User Agent:</strong>
