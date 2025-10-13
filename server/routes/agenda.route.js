@@ -47,6 +47,10 @@ AgendaRouter.post(
   "/regenerar-por-horarios",
   AgendaController.regenerarAgendaPorHorarios
 );
+AgendaRouter.post(
+  "/limpiar-duplicados-nuevos",
+  AgendaController.limpiarDuplicados
+);
 AgendaRouter.get("/dashboard/estadisticas", AgendaController.getEstadisticas);
 AgendaRouter.post("/generar-turnos", AgendaController.generarTurnosMes);
 

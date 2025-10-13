@@ -791,6 +791,30 @@ module.exports = {
     }
   },
 
+  // Endpoint para limpiar turnos duplicados solamente
+  limpiarDuplicados: async (req, res) => {
+    try {
+      const { fechaInicio, fechaFin } = req.body;
+
+      const duplicadosEliminados =
+        await AgendaGeneratorService.eliminarDuplicados(
+          fechaInicio ? new Date(fechaInicio) : null,
+          fechaFin ? new Date(fechaFin) : null
+        );
+
+      res.status(200).json({
+        mensaje: "Duplicados eliminados exitosamente",
+        duplicadosEliminados: duplicadosEliminados,
+      });
+    } catch (error) {
+      console.error("Error al limpiar duplicados:", error);
+      res.status(500).json({
+        message: "Error al limpiar duplicados",
+        error: error.message,
+      });
+    }
+  },
+
   // Nuevo endpoint: Obtener disponibilidad por barbero para una fecha específica
   getDisponibilidadPorBarbero: async (req, res) => {
     try {

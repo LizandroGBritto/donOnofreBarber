@@ -324,6 +324,102 @@ class AgendaGeneratorService {
   }
 
   /**
+   * Elimina turnos duplicados (misma fecha, hora y barbero)
+   * Mantiene solo el turno más reciente o el que tenga cliente asignado
+   */
+  async eliminarDuplicados(fechaInicio, fechaFin) {
+    try {
+      const inicio = fechaInicio
+        ? ParaguayDateUtil.toParaguayTime(fechaInicio)
+        : ParaguayDateUtil.now();
+
+      const fin = fechaFin
+        ? ParaguayDateUtil.toParaguayTime(fechaFin)
+        : ParaguayDateUtil.now().add(3, "months");
+
+      console.log("🔍 Buscando turnos duplicados...");
+
+      // Buscar duplicados usando agregación
+      const duplicados = await Agenda.aggregate([
+        {
+          $match: {
+            fecha: {
+              $gte: inicio.toDate(),
+              $lte: fin.toDate(),
+            },
+          },
+        },
+        {
+          $group: {
+            _id: {
+              fecha: "$fecha",
+              hora: "$hora",
+              barbero: "$barbero",
+            },
+            turnos: { $push: "$$ROOT" },
+            count: { $sum: 1 },
+          },
+        },
+        {
+          $match: {
+            count: { $gt: 1 },
+          },
+        },
+      ]);
+
+      let duplicadosEliminados = 0;
+
+      for (const grupo of duplicados) {
+        const turnos = grupo.turnos;
+
+        // Ordenar turnos: primero los que tienen cliente, luego por fecha de creación
+        turnos.sort((a, b) => {
+          // Si uno tiene cliente y otro no, priorizar el que tiene cliente
+          if (a.nombreCliente && !b.nombreCliente) return -1;
+          if (!a.nombreCliente && b.nombreCliente) return 1;
+
+          // Si ambos tienen o no tienen cliente, priorizar el más reciente
+          return (
+            new Date(b.createdAt || b._id.getTimestamp()) -
+            new Date(a.createdAt || a._id.getTimestamp())
+          );
+        });
+
+        // Mantener el primer turno (el más prioritario) y eliminar el resto
+        const turnoAMantener = turnos[0];
+        const turnosAEliminar = turnos.slice(1);
+
+        console.log(
+          `📅 ${ParaguayDateUtil.toParaguayTime(grupo._id.fecha).format(
+            "DD/MM/YYYY"
+          )} ${grupo._id.hora} - Barbero: ${turnoAMantener.nombreBarbero}`
+        );
+        console.log(
+          `   ✅ Manteniendo: ${
+            turnoAMantener.nombreCliente || "Disponible"
+          } (${turnoAMantener.estado})`
+        );
+
+        for (const turno of turnosAEliminar) {
+          console.log(
+            `   ❌ Eliminando: ${turno.nombreCliente || "Disponible"} (${
+              turno.estado
+            })`
+          );
+          await Agenda.findByIdAndDelete(turno._id);
+          duplicadosEliminados++;
+        }
+      }
+
+      console.log(`🧹 Eliminados ${duplicadosEliminados} turnos duplicados`);
+      return duplicadosEliminados;
+    } catch (error) {
+      console.error("❌ Error eliminando duplicados:", error);
+      throw error;
+    }
+  }
+
+  /**
    * Regenerar agenda completa eliminando turnos disponibles y recreándolos
    */
   async regenerarAgendaCompleta(fechaInicio, fechaFin) {
@@ -336,6 +432,23 @@ class AgendaGeneratorService {
         ? ParaguayDateUtil.toParaguayTime(fechaFin)
         : ParaguayDateUtil.now().add(3, "months");
 
+      // 1. PRIMERO: Eliminar duplicados existentes en un rango más amplio
+      // Si no se especificaron fechas, buscar duplicados desde 1 mes atrás hasta el final del rango
+      const inicioLimpieza = fechaInicio
+        ? inicio.toDate()
+        : ParaguayDateUtil.now().subtract(1, "month").toDate();
+
+      console.log(
+        `🧹 Limpiando duplicados desde ${ParaguayDateUtil.toParaguayTime(
+          inicioLimpieza
+        ).format("DD/MM/YYYY")} hasta ${fin.format("DD/MM/YYYY")}`
+      );
+
+      const duplicadosEliminados = await this.eliminarDuplicados(
+        inicioLimpieza,
+        fin.toDate()
+      );
+
       // Obtener barberos que NO están incluidos en agenda
       const barberosExcluidos = await BarberoModel.find({
         $or: [
@@ -344,7 +457,7 @@ class AgendaGeneratorService {
         ],
       });
 
-      let turnosEliminadosTotal = 0;
+      let turnosEliminadosTotal = duplicadosEliminados;
 
       // Eliminar SOLO turnos disponibles en el rango
       const eliminadosDisponibles = await Agenda.deleteMany({
@@ -388,6 +501,7 @@ class AgendaGeneratorService {
 
       return {
         mensaje: "Agenda regenerada exitosamente",
+        duplicadosEliminados: duplicadosEliminados,
         turnosEliminados: turnosEliminadosTotal,
         ...resultado,
       };
