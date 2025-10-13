@@ -338,7 +338,9 @@ const EditarTurno = () => {
                 )}
                 {turno.servicios && turno.servicios.length > 0 && (
                   <div className="md:col-span-2">
-                    <span className="font-medium text-gray-900">Servicios:</span>
+                    <span className="font-medium text-gray-900">
+                      Servicios:
+                    </span>
                     <div className="flex flex-wrap gap-2 mt-1">
                       {turno.servicios.map((servicio, index) => (
                         <span

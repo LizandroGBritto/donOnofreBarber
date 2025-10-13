@@ -959,8 +959,8 @@ module.exports = {
           { nombreCliente: "" },
           { nombreCliente: { $exists: false } },
           { numeroCliente: "" },
-          { numeroCliente: { $exists: false } }
-        ]
+          { numeroCliente: { $exists: false } },
+        ],
       });
 
       // Editar el turno encontrado con los datos de la reserva
