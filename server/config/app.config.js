@@ -47,7 +47,33 @@ const config = {
 
   // CORS
   cors: {
-    origin: process.env.CLIENT_URL || "http://localhost:5173",
+    origin: function (origin, callback) {
+      // Lista de orígenes permitidos
+      const allowedOrigins = [
+        process.env.CLIENT_URL || "http://localhost:5173",
+        process.env.CLIENT_URL_WWW ||
+          `https://www.${(process.env.CLIENT_URL || "").replace(
+            /^https?:\/\//,
+            ""
+          )}`,
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "https://alonzostyle.com",
+        "https://www.alonzostyle.com",
+      ].filter(Boolean); // Remover valores undefined/null
+
+      // Permitir requests sin origin (aplicaciones móviles, Postman, etc.)
+      if (!origin) return callback(null, true);
+
+      // Verificar si el origin está en la lista permitida
+      if (allowedOrigins.indexOf(origin) !== -1) {
+        callback(null, true);
+      } else {
+        console.log(`❌ CORS bloqueado para origin: ${origin}`);
+        console.log(`✅ Orígenes permitidos:`, allowedOrigins);
+        callback(new Error("No permitido por política CORS"));
+      }
+    },
     credentials: true,
     methods: "GET, POST, PUT, DELETE",
   },
