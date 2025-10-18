@@ -84,7 +84,7 @@ const Landing = () => {
             </h2>
             <div className="flex justify-center">
               {/* Elfsight Instagram Feed | Untitled Instagram Feed */}
-             <div className="elfsight-app-59668bf7-e680-4f25-9265-80fbd3f7ff85" data-elfsight-app-lazy></div>
+            <div className="elfsight-app-d62d8456-ee4a-4f88-ab3b-fbae59fa9549" data-elfsight-app-lazy></div>
             </div>
           </div>
         </div>
