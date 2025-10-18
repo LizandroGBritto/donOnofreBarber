@@ -100,13 +100,6 @@ const FormReservarConBarbero = ({
     servicios: Yup.array().min(1, "Debes seleccionar al menos un servicio"),
   });
 
-  const initialValues = {
-    nombreCliente: "",
-    numeroCliente: "",
-    barberoId: "",
-    servicios: [],
-  };
-
   const handleServiceChange = (service, isChecked, setFieldValue) => {
     let updatedServices;
     const serviceId = service._id || service.nombre;
@@ -238,6 +231,24 @@ const FormReservarConBarbero = ({
     barberosOcupados.map((bo) => bo.barbero?._id?.toString()).filter(Boolean)
   );
 
+  // 🆕 Verificar si hay solo un barbero disponible
+  const barberosDisponiblesFiltrados = barberos.filter(
+    (b) => !barberosOcupadosIds.has(b._id.toString())
+  );
+
+  const unicoBarberoDisponible =
+    barberosDisponiblesFiltrados.length === 1
+      ? barberosDisponiblesFiltrados[0]
+      : null;
+
+  // 🆕 Valores iniciales con barbero único auto-seleccionado
+  const initialValues = {
+    nombreCliente: "",
+    numeroCliente: "",
+    barberoId: unicoBarberoDisponible?._id || "",
+    servicios: [],
+  };
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-2 md:p-4">
       <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[95vh] md:max-h-[90vh] overflow-y-auto">
@@ -327,97 +338,125 @@ const FormReservarConBarbero = ({
                     </div>
                   </div>
 
-                  {/* Selección de Barbero - CORREGIDO */}
-                  <div>
-                    <h3 className="text-base md:text-lg font-medium text-gray-900 mb-3 md:mb-4">
-                      Seleccionar Barbero *
-                    </h3>
-                    {loading ? (
-                      <div className="text-center py-4">
-                        Cargando disponibilidad...
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
-                        {barberos.map((barbero) => {
-                          // 🔧 SOLUCIÓN: Verificación correcta del estado del barbero
-                          const barberoIdStr = barbero._id.toString();
-                          const estaOcupado =
-                            barberosOcupadosIds.has(barberoIdStr);
+                  {/* Selección de Barbero - Solo mostrar si NO hay un único barbero disponible */}
+                  {!unicoBarberoDisponible && (
+                    <div>
+                      <h3 className="text-base md:text-lg font-medium text-gray-900 mb-3 md:mb-4">
+                        Seleccionar Barbero *
+                      </h3>
+                      {loading ? (
+                        <div className="text-center py-4">
+                          Cargando disponibilidad...
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+                          {barberos.map((barbero) => {
+                            // 🔧 SOLUCIÓN: Verificación correcta del estado del barbero
+                            const barberoIdStr = barbero._id.toString();
+                            const estaOcupado =
+                              barberosOcupadosIds.has(barberoIdStr);
 
-                          return (
-                            <div
-                              key={barbero._id}
-                              className={`border rounded-lg p-3 md:p-4 cursor-pointer transition-all ${
-                                values.barberoId === barbero._id
-                                  ? "border-purple-500 bg-purple-50"
-                                  : estaOcupado
-                                  ? "border-red-300 bg-red-50 opacity-50 cursor-not-allowed"
-                                  : "border-gray-300 hover:border-purple-300"
-                              }`}
-                              onClick={() => {
-                                if (!estaOcupado) {
-                                  const newSelected =
-                                    values.barberoId === barbero._id
-                                      ? ""
-                                      : barbero._id;
-                                  setSelectedBarbero(newSelected);
-                                  setFieldValue("barberoId", newSelected);
-                                }
-                              }}
-                            >
-                              <div className="flex items-center space-x-3">
-                                <div className="flex-shrink-0">
-                                  <img
-                                    src={`${
-                                      import.meta.env.VITE_API_URL
-                                    }/uploads/${barbero.foto}`}
-                                    alt={barbero.nombre}
-                                    className="w-10 h-10 md:w-12 md:h-12 rounded-full object-cover"
-                                  />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <h4 className="font-medium text-gray-900 text-sm md:text-base truncate">
-                                    {barbero.nombre}
-                                  </h4>
-                                  <p
-                                    className={`text-xs md:text-sm ${
-                                      estaOcupado
-                                        ? "text-red-500"
-                                        : "text-green-500"
-                                    }`}
-                                  >
-                                    {estaOcupado
-                                      ? "❌ No disponible"
-                                      : "✅ Disponible"}
-                                  </p>
-                                  {barbero.descripcion && (
-                                    <p className="text-xs text-gray-400 mt-1 hidden md:block">
-                                      {barbero.descripcion.substring(0, 50)}...
+                            return (
+                              <div
+                                key={barbero._id}
+                                className={`border rounded-lg p-3 md:p-4 cursor-pointer transition-all ${
+                                  values.barberoId === barbero._id
+                                    ? "border-purple-500 bg-purple-50"
+                                    : estaOcupado
+                                    ? "border-red-300 bg-red-50 opacity-50 cursor-not-allowed"
+                                    : "border-gray-300 hover:border-purple-300"
+                                }`}
+                                onClick={() => {
+                                  if (!estaOcupado) {
+                                    const newSelected =
+                                      values.barberoId === barbero._id
+                                        ? ""
+                                        : barbero._id;
+                                    setSelectedBarbero(newSelected);
+                                    setFieldValue("barberoId", newSelected);
+                                  }
+                                }}
+                              >
+                                <div className="flex items-center space-x-3">
+                                  <div className="flex-shrink-0">
+                                    <img
+                                      src={`${
+                                        import.meta.env.VITE_API_URL
+                                      }/uploads/${barbero.foto}`}
+                                      alt={barbero.nombre}
+                                      className="w-10 h-10 md:w-12 md:h-12 rounded-full object-cover"
+                                    />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <h4 className="font-medium text-gray-900 text-sm md:text-base truncate">
+                                      {barbero.nombre}
+                                    </h4>
+                                    <p
+                                      className={`text-xs md:text-sm ${
+                                        estaOcupado
+                                          ? "text-red-500"
+                                          : "text-green-500"
+                                      }`}
+                                    >
+                                      {estaOcupado
+                                        ? "❌ No disponible"
+                                        : "✅ Disponible"}
                                     </p>
-                                  )}
-                                </div>
-                                <div className="flex-shrink-0">
-                                  {values.barberoId === barbero._id && (
-                                    <div className="w-3 h-3 md:w-4 md:h-4 bg-purple-500 rounded-full"></div>
-                                  )}
-                                  {estaOcupado && (
-                                    <div className="text-red-500 text-lg md:text-xl">
-                                      🔒
-                                    </div>
-                                  )}
+                                    {barbero.descripcion && (
+                                      <p className="text-xs text-gray-400 mt-1 hidden md:block">
+                                        {barbero.descripcion.substring(0, 50)}
+                                        ...
+                                      </p>
+                                    )}
+                                  </div>
+                                  <div className="flex-shrink-0">
+                                    {values.barberoId === barbero._id && (
+                                      <div className="w-3 h-3 md:w-4 md:h-4 bg-purple-500 rounded-full"></div>
+                                    )}
+                                    {estaOcupado && (
+                                      <div className="text-red-500 text-lg md:text-xl">
+                                        🔒
+                                      </div>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          );
-                        })}
+                            );
+                          })}
+                        </div>
+                      )}
+                      <ErrorMessage
+                        name="barberoId"
+                        component="div"
+                        className="text-red-500 text-sm mt-1"
+                      />
+                    </div>
+                  )}
+
+                  {/* Mensaje informativo cuando hay un único barbero disponible */}
+                  {unicoBarberoDisponible && (
+                    <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                      <div className="flex items-center space-x-3">
+                        <div className="flex-shrink-0">
+                          <img
+                            src={`${import.meta.env.VITE_API_URL}/uploads/${
+                              unicoBarberoDisponible.foto
+                            }`}
+                            alt={unicoBarberoDisponible.nombre}
+                            className="w-12 h-12 rounded-full object-cover"
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-medium text-gray-900 text-base">
+                            Tu cita será con: {unicoBarberoDisponible.nombre}
+                          </h4>
+                          <p className="text-sm text-gray-600 mt-1">
+                            ✅ Único barbero disponible en este horario
+                          </p>
+                        </div>
                       </div>
-                    )}
-                    <ErrorMessage
-                      name="barberoId"
-                      component="div"
-                      className="text-red-500 text-sm mt-1"
-                    />
-                  </div>
+                    </div>
+                  )}
 
                   {/* Selección de Servicios */}
                   <div>
