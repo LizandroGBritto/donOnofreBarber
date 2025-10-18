@@ -17,6 +17,22 @@ import Dashboard from "./panel/Dashboard";
 import GestionUsuarios from "./panel/GestionUsuarios";
 import NotificationManager from "./NotificationManager";
 import UserContext from "../context/UserContext";
+import {
+  HiChartBar,
+  HiCalendar,
+  HiPhotograph,
+  HiPhone,
+  HiLocationMarker,
+  HiClock,
+  HiTag,
+  HiUserGroup,
+  HiBell,
+  HiUsers,
+  HiLogout,
+  HiHome,
+  HiMenu,
+  HiX,
+} from "react-icons/hi";
 
 const AdminDashboard = () => {
   const { setUser } = useContext(UserContext);
@@ -214,6 +230,9 @@ const AdminDashboard = () => {
   const [showNotificationModal, setShowNotificationModal] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState("");
   const [notificationType, setNotificationType] = useState("success"); // success, error, info
+
+  // 🆕 Estado para el menú lateral en mobile
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // Función para obtener las estadísticas de turnos
   // Función para obtener fecha de hoy
@@ -1004,14 +1023,14 @@ const AdminDashboard = () => {
 
   // Componente responsivo para mostrar turnos en móvil
   const TurnoCard = ({ turno }) => (
-    <Card className="mb-4" style={{ backgroundColor: "#5B4373" }}>
+    <Card className="mb-4 bg-white shadow-md">
       <div className="p-4">
         <div className="flex justify-between items-start mb-2">
           <div>
-            <h3 className="font-semibold text-lg text-white">
+            <h3 className="font-semibold text-lg text-gray-900">
               {turno.nombreCliente || "Disponible"}
             </h3>
-            <p className="text-sm text-gray-300">
+            <p className="text-sm text-gray-600">
               {formatearFecha(turno.fecha)} - {turno.hora}
             </p>
             {/* 🆕 NUEVO: Mostrar barbero en móvil */}
@@ -1024,7 +1043,7 @@ const AdminDashboard = () => {
                     className="w-5 h-5 rounded-full object-cover"
                   />
                 )}
-                <span className="text-xs text-purple-300">
+                <span className="text-xs text-purple-700 font-medium">
                   Barbero: {turno.barbero.nombre || turno.nombreBarbero}
                 </span>
               </div>
@@ -1033,21 +1052,21 @@ const AdminDashboard = () => {
           <div className="text-right">{formatearEstado(turno.estado)}</div>
         </div>
         <div className="flex justify-between items-start">
-          <div className="text-sm text-gray-300 flex-1">
+          <div className="text-sm text-gray-700 flex-1">
             <p>Tel: {turno.numeroCliente || "N/A"}</p>
-            <p className="font-semibold text-green-400">
+            <p className="font-semibold text-green-600">
               Costo: Gs.{turno.costoTotal || 0}
             </p>
             {turno.servicios && turno.servicios.length > 0 && (
-              <div className="text-xs text-gray-400 mt-1">
-                <p className="font-medium mb-2">Servicios:</p>
+              <div className="text-xs text-gray-600 mt-1">
+                <p className="font-medium mb-2 text-gray-900">Servicios:</p>
                 <div className="flex flex-wrap gap-1">
                   {turno.servicios.map((servicio, index) => (
                     <div
                       key={index}
-                      className="bg-blue-100 text-blue-800 px-2 py-1 rounded-md text-xs"
+                      className="bg-purple-100 text-purple-800 px-2 py-1 rounded-md text-xs font-medium"
                     >
-                      {servicio.nombre} - $
+                      {servicio.nombre} - Gs.
                       {servicio.precio?.toLocaleString() || 0}
                     </div>
                   ))}
@@ -1083,576 +1102,799 @@ const AdminDashboard = () => {
   );
 
   return (
-    <div className="p-4 md:p-6">
-      <Card className="mb-6" style={{ backgroundColor: "rgb(77, 55, 119)" }}>
-        <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-          <h2 className="text-xl md:text-2xl font-bold text-white text-center md:text-left">
-            Panel de Administración
-          </h2>
-          <div className="flex flex-wrap gap-1 md:gap-2 justify-center md:justify-end">
-            <Button
-              size="sm"
-              color={activeView === "dashboard" ? "purple" : "gray"}
-              onClick={() => setActiveView("dashboard")}
-              className="text-xs md:text-sm"
+    <div className="min-h-screen">
+      {/* 🆕 Navbar Superior Mejorado */}
+      <nav className="bg-gradient-to-r from-purple-700 to-purple-900 shadow-lg sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            {/* Botón de menú mobile (izquierda) */}
+            <button
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              className="md:hidden text-white p-2 rounded-lg hover:bg-purple-600 transition-colors"
+              aria-label="Menú"
             >
-              Dashboard
-            </Button>
-            <Button
-              size="sm"
-              color={activeView === "turnos" ? "purple" : "gray"}
-              onClick={() => setActiveView("turnos")}
-              className="text-xs md:text-sm"
-            >
-              Turnos
-            </Button>
-            <Button
-              size="sm"
-              color={activeView === "banners" ? "purple" : "gray"}
-              onClick={() => setActiveView("banners")}
-              className="text-xs md:text-sm"
-            >
-              Banners
-            </Button>
-            <Button
-              size="sm"
-              color={activeView === "contacto" ? "purple" : "gray"}
-              onClick={() => setActiveView("contacto")}
-              className="text-xs md:text-sm"
-            >
-              Contacto
-            </Button>
-            <Button
-              size="sm"
-              color={activeView === "ubicacion" ? "purple" : "gray"}
-              onClick={() => setActiveView("ubicacion")}
-              className="text-xs md:text-sm"
-            >
-              Ubicación
-            </Button>
-            <Button
-              size="sm"
-              color={activeView === "horarios" ? "purple" : "gray"}
-              onClick={() => setActiveView("horarios")}
-              className="text-xs md:text-sm"
-            >
-              Horarios
-            </Button>
-            <Button
-              size="sm"
-              color={activeView === "servicios" ? "purple" : "gray"}
-              onClick={() => setActiveView("servicios")}
-              className="text-xs md:text-sm"
-            >
-              Servicios
-            </Button>
-            <Button
-              size="sm"
-              color={activeView === "barberos" ? "purple" : "gray"}
-              onClick={() => setActiveView("barberos")}
-              className="text-xs md:text-sm"
-            >
-              Barberos
-            </Button>
-            <Button
-              size="sm"
-              color={activeView === "notificaciones" ? "purple" : "gray"}
-              onClick={() => setActiveView("notificaciones")}
-              className="text-xs md:text-sm"
-            >
-              🔔 Notificaciones
-            </Button>
-            <Button
-              size="sm"
-              color={activeView === "usuarios" ? "purple" : "gray"}
-              onClick={() => setActiveView("usuarios")}
-              className="text-xs md:text-sm"
-            >
-              👥 Usuarios
-            </Button>
-            <Button
-              size="sm"
-              color="failure"
-              onClick={handleLogout}
-              className="text-xs md:text-sm"
-            >
-              🚪 Cerrar Sesión
-            </Button>
+              {isSidebarOpen ? (
+                <HiX className="w-6 h-6" />
+              ) : (
+                <HiMenu className="w-6 h-6" />
+              )}
+            </button>
+
+            {/* Logo/Título - centrado en mobile, izquierda en desktop */}
+            <div className="flex-1 md:flex-none text-center md:text-left">
+              <h1 className="text-lg md:text-xl font-bold text-white">
+                Panel de Administración
+              </h1>
+            </div>
+
+            {/* Botones de acción (derecha) */}
+            <div className="flex items-center gap-2">
+              {/* Usuario (solo en desktop) */}
+              <span className="hidden md:block text-white text-sm font-medium mr-2">
+                {localStorage.getItem("user")
+                  ? JSON.parse(localStorage.getItem("user")).email
+                  : "Admin"}
+              </span>
+
+              {/* Botón Volver al Inicio */}
+              <Button
+                size="sm"
+                color="light"
+                onClick={() => navigate("/")}
+                className="flex items-center gap-1"
+              >
+                <HiHome className="w-4 h-4" />
+                <span className="hidden sm:inline">Inicio</span>
+              </Button>
+            </div>
           </div>
         </div>
-      </Card>
+      </nav>
 
-      {activeView === "dashboard" && <Dashboard />}
+      {/* 🆕 Menú Lateral Mobile (Sidebar) */}
+      <div
+        className={`fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden transition-opacity duration-300 ${
+          isSidebarOpen ? "opacity-100" : "opacity-0 pointer-events-none"
+        }`}
+        onClick={() => setIsSidebarOpen(false)}
+      >
+        <div
+          className={`fixed left-0 top-0 h-full w-64 bg-white shadow-xl transform transition-transform duration-300 ${
+            isSidebarOpen ? "translate-x-0" : "-translate-x-full"
+          }`}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Header del Sidebar */}
+          <div className="bg-gradient-to-r from-purple-700 to-purple-900 p-4 flex justify-between items-center">
+            <h2 className="text-white font-bold text-lg">Menú</h2>
+            <button
+              onClick={() => setIsSidebarOpen(false)}
+              className="text-white hover:bg-purple-600 p-1 rounded"
+            >
+              <HiX className="w-6 h-6" />
+            </button>
+          </div>
 
-      {activeView === "notificaciones" && (
-        <div className="space-y-6">
-          <NotificationManager />
+          {/* Usuario en Sidebar */}
+          <div className="p-4 border-b bg-gray-50">
+            <p className="text-sm text-gray-600">Usuario:</p>
+            <p className="text-sm font-medium text-gray-900 truncate">
+              {localStorage.getItem("user")
+                ? JSON.parse(localStorage.getItem("user")).email
+                : "Admin"}
+            </p>
+          </div>
+
+          {/* Opciones del menú */}
+          <div className="overflow-y-auto h-[calc(100vh-180px)]">
+            <nav className="p-2 space-y-1">
+              <button
+                onClick={() => {
+                  setActiveView("dashboard");
+                  setIsSidebarOpen(false);
+                }}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                  activeView === "dashboard"
+                    ? "bg-purple-100 text-purple-700 font-medium"
+                    : "text-gray-700 hover:bg-gray-100"
+                }`}
+              >
+                <HiChartBar className="w-5 h-5" />
+                Dashboard
+              </button>
+
+              <button
+                onClick={() => {
+                  setActiveView("turnos");
+                  setIsSidebarOpen(false);
+                }}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                  activeView === "turnos"
+                    ? "bg-purple-100 text-purple-700 font-medium"
+                    : "text-gray-700 hover:bg-gray-100"
+                }`}
+              >
+                <HiCalendar className="w-5 h-5" />
+                Turnos
+              </button>
+
+              <button
+                onClick={() => {
+                  setActiveView("banners");
+                  setIsSidebarOpen(false);
+                }}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                  activeView === "banners"
+                    ? "bg-purple-100 text-purple-700 font-medium"
+                    : "text-gray-700 hover:bg-gray-100"
+                }`}
+              >
+                <HiPhotograph className="w-5 h-5" />
+                Banners
+              </button>
+
+              <button
+                onClick={() => {
+                  setActiveView("contacto");
+                  setIsSidebarOpen(false);
+                }}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                  activeView === "contacto"
+                    ? "bg-purple-100 text-purple-700 font-medium"
+                    : "text-gray-700 hover:bg-gray-100"
+                }`}
+              >
+                <HiPhone className="w-5 h-5" />
+                Contacto
+              </button>
+
+              <button
+                onClick={() => {
+                  setActiveView("ubicacion");
+                  setIsSidebarOpen(false);
+                }}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                  activeView === "ubicacion"
+                    ? "bg-purple-100 text-purple-700 font-medium"
+                    : "text-gray-700 hover:bg-gray-100"
+                }`}
+              >
+                <HiLocationMarker className="w-5 h-5" />
+                Ubicación
+              </button>
+
+              <button
+                onClick={() => {
+                  setActiveView("horarios");
+                  setIsSidebarOpen(false);
+                }}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                  activeView === "horarios"
+                    ? "bg-purple-100 text-purple-700 font-medium"
+                    : "text-gray-700 hover:bg-gray-100"
+                }`}
+              >
+                <HiClock className="w-5 h-5" />
+                Horarios
+              </button>
+
+              <button
+                onClick={() => {
+                  setActiveView("servicios");
+                  setIsSidebarOpen(false);
+                }}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                  activeView === "servicios"
+                    ? "bg-purple-100 text-purple-700 font-medium"
+                    : "text-gray-700 hover:bg-gray-100"
+                }`}
+              >
+                <HiTag className="w-5 h-5" />
+                Servicios
+              </button>
+
+              <button
+                onClick={() => {
+                  setActiveView("barberos");
+                  setIsSidebarOpen(false);
+                }}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                  activeView === "barberos"
+                    ? "bg-purple-100 text-purple-700 font-medium"
+                    : "text-gray-700 hover:bg-gray-100"
+                }`}
+              >
+                <HiUserGroup className="w-5 h-5" />
+                Barberos
+              </button>
+
+              <button
+                onClick={() => {
+                  setActiveView("notificaciones");
+                  setIsSidebarOpen(false);
+                }}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                  activeView === "notificaciones"
+                    ? "bg-purple-100 text-purple-700 font-medium"
+                    : "text-gray-700 hover:bg-gray-100"
+                }`}
+              >
+                <HiBell className="w-5 h-5" />
+                Notificaciones
+              </button>
+
+              <button
+                onClick={() => {
+                  setActiveView("usuarios");
+                  setIsSidebarOpen(false);
+                }}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                  activeView === "usuarios"
+                    ? "bg-purple-100 text-purple-700 font-medium"
+                    : "text-gray-700 hover:bg-gray-100"
+                }`}
+              >
+                <HiUsers className="w-5 h-5" />
+                Usuarios
+              </button>
+
+              <div className="border-t my-2"></div>
+
+              <button
+                onClick={handleLogout}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-red-600 hover:bg-red-50 transition-colors"
+              >
+                <HiLogout className="w-5 h-5" />
+                Cerrar Sesión
+              </button>
+            </nav>
+          </div>
         </div>
-      )}
+      </div>
 
-      {activeView === "usuarios" && (
-        <div className="space-y-6">
-          <GestionUsuarios />
+      {/* 🆕 Menú Desktop (Tabs horizontales mejorados) */}
+      <div className="hidden md:block bg-white shadow-sm border-b sticky top-16 z-30">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex gap-1 py-2 overflow-x-auto">
+            <button
+              onClick={() => setActiveView("dashboard")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all whitespace-nowrap ${
+                activeView === "dashboard"
+                  ? "bg-purple-100 text-purple-700 shadow-sm"
+                  : "text-gray-600 hover:bg-gray-100"
+              }`}
+            >
+              <HiChartBar className="w-5 h-5" />
+              Dashboard
+            </button>
+
+            <button
+              onClick={() => setActiveView("turnos")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all whitespace-nowrap ${
+                activeView === "turnos"
+                  ? "bg-purple-100 text-purple-700 shadow-sm"
+                  : "text-gray-600 hover:bg-gray-100"
+              }`}
+            >
+              <HiCalendar className="w-5 h-5" />
+              Turnos
+            </button>
+
+            <button
+              onClick={() => setActiveView("banners")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all whitespace-nowrap ${
+                activeView === "banners"
+                  ? "bg-purple-100 text-purple-700 shadow-sm"
+                  : "text-gray-600 hover:bg-gray-100"
+              }`}
+            >
+              <HiPhotograph className="w-5 h-5" />
+              Banners
+            </button>
+
+            <button
+              onClick={() => setActiveView("contacto")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all whitespace-nowrap ${
+                activeView === "contacto"
+                  ? "bg-purple-100 text-purple-700 shadow-sm"
+                  : "text-gray-600 hover:bg-gray-100"
+              }`}
+            >
+              <HiPhone className="w-5 h-5" />
+              Contacto
+            </button>
+
+            <button
+              onClick={() => setActiveView("ubicacion")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all whitespace-nowrap ${
+                activeView === "ubicacion"
+                  ? "bg-purple-100 text-purple-700 shadow-sm"
+                  : "text-gray-600 hover:bg-gray-100"
+              }`}
+            >
+              <HiLocationMarker className="w-5 h-5" />
+              Ubicación
+            </button>
+
+            <button
+              onClick={() => setActiveView("horarios")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all whitespace-nowrap ${
+                activeView === "horarios"
+                  ? "bg-purple-100 text-purple-700 shadow-sm"
+                  : "text-gray-600 hover:bg-gray-100"
+              }`}
+            >
+              <HiClock className="w-5 h-5" />
+              Horarios
+            </button>
+
+            <button
+              onClick={() => setActiveView("servicios")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all whitespace-nowrap ${
+                activeView === "servicios"
+                  ? "bg-purple-100 text-purple-700 shadow-sm"
+                  : "text-gray-600 hover:bg-gray-100"
+              }`}
+            >
+              <HiTag className="w-5 h-5" />
+              Servicios
+            </button>
+
+            <button
+              onClick={() => setActiveView("barberos")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all whitespace-nowrap ${
+                activeView === "barberos"
+                  ? "bg-purple-100 text-purple-700 shadow-sm"
+                  : "text-gray-600 hover:bg-gray-100"
+              }`}
+            >
+              <HiUserGroup className="w-5 h-5" />
+              Barberos
+            </button>
+
+            <button
+              onClick={() => setActiveView("notificaciones")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all whitespace-nowrap ${
+                activeView === "notificaciones"
+                  ? "bg-purple-100 text-purple-700 shadow-sm"
+                  : "text-gray-600 hover:bg-gray-100"
+              }`}
+            >
+              <HiBell className="w-5 h-5" />
+              Notificaciones
+            </button>
+
+            <button
+              onClick={() => setActiveView("usuarios")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all whitespace-nowrap ${
+                activeView === "usuarios"
+                  ? "bg-purple-100 text-purple-700 shadow-sm"
+                  : "text-gray-600 hover:bg-gray-100"
+              }`}
+            >
+              <HiUsers className="w-5 h-5" />
+              Usuarios
+            </button>
+
+            <div className="border-l mx-2"></div>
+
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-red-600 hover:bg-red-50 transition-all whitespace-nowrap"
+            >
+              <HiLogout className="w-5 h-5" />
+              Cerrar Sesión
+            </button>
+          </div>
         </div>
-      )}
+      </div>
 
-      {activeView === "turnos" && (
-        <div>
-          {/* Filtros */}
-          <Card
-            className="mb-6"
-            style={{ backgroundColor: "rgb(77, 55, 119)" }}
-          >
-            <div className="space-y-4">
-              {/* Fila 1: Fechas */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="fechaDesde" className="text-white">
-                    Desde
-                  </Label>
-                  <TextInput
-                    id="fechaDesde"
-                    type="date"
-                    value={fechaDesde}
-                    onChange={(e) => setFechaDesde(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="fechaHasta" className="text-white">
-                    Hasta
-                  </Label>
-                  <TextInput
-                    id="fechaHasta"
-                    type="date"
-                    value={fechaHasta}
-                    onChange={(e) => setFechaHasta(e.target.value)}
-                  />
-                </div>
-              </div>
+      {/* Contenido Principal */}
+      <div className="p-4 md:p-6">
+        {activeView === "dashboard" && <Dashboard />}
 
-              {/* Fila 2: Estado, Barbero y búsqueda */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <Label htmlFor="filtroEstado" className="text-white">
-                    Estado
-                  </Label>
-                  <Select
-                    id="filtroEstado"
-                    value={filtroEstado}
-                    onChange={(e) => setFiltroEstado(e.target.value)}
+        {activeView === "notificaciones" && (
+          <div className="space-y-6">
+            <NotificationManager />
+          </div>
+        )}
+
+        {activeView === "usuarios" && (
+          <div className="space-y-6">
+            <GestionUsuarios />
+          </div>
+        )}
+
+        {activeView === "turnos" && (
+          <div>
+            {/* Filtros */}
+            <Card
+              className="mb-6"
+              style={{ backgroundColor: "rgb(77, 55, 119)" }}
+            >
+              <div className="space-y-4">
+                {/* Fila 1: Fechas */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="fechaDesde" className="text-white">
+                      Desde
+                    </Label>
+                    <TextInput
+                      id="fechaDesde"
+                      type="date"
+                      value={fechaDesde}
+                      onChange={(e) => setFechaDesde(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="fechaHasta" className="text-white">
+                      Hasta
+                    </Label>
+                    <TextInput
+                      id="fechaHasta"
+                      type="date"
+                      value={fechaHasta}
+                      onChange={(e) => setFechaHasta(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                {/* Fila 2: Estado, Barbero y búsqueda */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <Label htmlFor="filtroEstado" className="text-white">
+                      Estado
+                    </Label>
+                    <Select
+                      id="filtroEstado"
+                      value={filtroEstado}
+                      onChange={(e) => setFiltroEstado(e.target.value)}
+                    >
+                      <option value="">Todos los estados</option>
+                      <option value="disponible">Disponible</option>
+                      <option value="reservado">Reservado</option>
+                      <option value="pagado">Pagado</option>
+                    </Select>
+                  </div>
+
+                  {/* 🆕 NUEVO: Select de Barbero */}
+                  <div>
+                    <Label htmlFor="filtroBarbero" className="text-white">
+                      Barbero
+                    </Label>
+                    <Select
+                      id="filtroBarbero"
+                      value={filtroBarbero}
+                      onChange={(e) => setFiltroBarbero(e.target.value)}
+                    >
+                      <option value="">Todos los barberos</option>
+                      {barberos.map((barbero) => (
+                        <option key={barbero._id} value={barbero._id}>
+                          {barbero.nombre}
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="busqueda" className="text-white">
+                      Buscar
+                    </Label>
+                    <TextInput
+                      id="busqueda"
+                      type="text"
+                      placeholder="Cliente, teléfono, barbero..."
+                      value={busqueda}
+                      onChange={(e) => setBusqueda(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                {/* Fila 3: Botones de filtrado rápido */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                  <Button
+                    onClick={filtrarHoy}
+                    style={{ backgroundColor: "var(--primary-color)" }}
+                    size="sm"
                   >
-                    <option value="">Todos los estados</option>
-                    <option value="disponible">Disponible</option>
-                    <option value="reservado">Reservado</option>
-                    <option value="pagado">Pagado</option>
-                  </Select>
-                </div>
-
-                {/* 🆕 NUEVO: Select de Barbero */}
-                <div>
-                  <Label htmlFor="filtroBarbero" className="text-white">
-                    Barbero
-                  </Label>
-                  <Select
-                    id="filtroBarbero"
-                    value={filtroBarbero}
-                    onChange={(e) => setFiltroBarbero(e.target.value)}
+                    Hoy
+                  </Button>
+                  <Button
+                    onClick={filtrarManana}
+                    style={{ backgroundColor: "var(--primary-color)" }}
+                    size="sm"
                   >
-                    <option value="">Todos los barberos</option>
-                    {barberos.map((barbero) => (
-                      <option key={barbero._id} value={barbero._id}>
-                        {barbero.nombre}
-                      </option>
-                    ))}
-                  </Select>
-                </div>
-
-                <div>
-                  <Label htmlFor="busqueda" className="text-white">
-                    Buscar
-                  </Label>
-                  <TextInput
-                    id="busqueda"
-                    type="text"
-                    placeholder="Cliente, teléfono, barbero..."
-                    value={busqueda}
-                    onChange={(e) => setBusqueda(e.target.value)}
-                  />
+                    Mañana
+                  </Button>
+                  <Button
+                    onClick={filtrarSemana}
+                    style={{ backgroundColor: "var(--primary-color)" }}
+                    size="sm"
+                  >
+                    Esta Semana
+                  </Button>
+                  <Button onClick={limpiarFiltros} color="gray" size="sm">
+                    Limpiar Filtros
+                  </Button>
                 </div>
               </div>
+            </Card>
+            {/* Tabla de Turnos - Desktop */}
+            <div className="hidden md:block">
+              <Card style={{ backgroundColor: "#5B4373" }}>
+                {loading ? (
+                  <div className="text-center py-8 text-white">
+                    Cargando turnos...
+                  </div>
+                ) : filteredTurnos.length === 0 ? (
+                  <div className="text-center py-8">
+                    <p className="text-white">
+                      No hay turnos para mostrar con los filtros actuales.
+                    </p>
+                    <p className="text-sm text-gray-300 mt-2">
+                      Prueba cambiando las fechas o limpiando los filtros.
+                    </p>
+                  </div>
+                ) : (
+                  <Table>
+                    <Table.Head>
+                      <Table.HeadCell>Fecha</Table.HeadCell>
+                      <Table.HeadCell>Hora</Table.HeadCell>
+                      <Table.HeadCell>Cliente</Table.HeadCell>
+                      <Table.HeadCell>Barbero</Table.HeadCell>
+                      <Table.HeadCell>Teléfono</Table.HeadCell>
+                      <Table.HeadCell>Estado</Table.HeadCell>
+                      <Table.HeadCell>Costo</Table.HeadCell>
+                      <Table.HeadCell>Acciones</Table.HeadCell>
+                    </Table.Head>
+                    <Table.Body className="divide-y">
+                      {filteredTurnos.map((turno) => (
+                        <Table.Row
+                          key={turno._id}
+                          className="bg-white dark:border-gray-700 dark:bg-gray-800"
+                        >
+                          <Table.Cell>{formatearFecha(turno.fecha)}</Table.Cell>
+                          <Table.Cell>{turno.hora}</Table.Cell>
+                          <Table.Cell>
+                            {turno.nombreCliente || "Disponible"}
+                          </Table.Cell>
+                          <Table.Cell>
+                            {turno.barbero ? (
+                              <div className="flex items-center gap-2">
+                                {turno.barbero.foto && (
+                                  <img
+                                    src={`${
+                                      import.meta.env.VITE_API_URL
+                                    }/uploads/${turno.barbero.foto}`}
+                                    alt={turno.barbero.nombre}
+                                    className="w-6 h-6 rounded-full object-cover"
+                                  />
+                                )}
+                                <span className="text-sm">
+                                  {turno.barbero.nombre || turno.nombreBarbero}
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="text-gray-400 text-sm">
+                                Sin asignar
+                              </span>
+                            )}
+                          </Table.Cell>
 
-              {/* Fila 3: Botones de filtrado rápido */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                <Button
-                  onClick={filtrarHoy}
-                  style={{ backgroundColor: "var(--primary-color)" }}
-                  size="sm"
-                >
-                  Hoy
-                </Button>
-                <Button
-                  onClick={filtrarManana}
-                  style={{ backgroundColor: "var(--primary-color)" }}
-                  size="sm"
-                >
-                  Mañana
-                </Button>
-                <Button
-                  onClick={filtrarSemana}
-                  style={{ backgroundColor: "var(--primary-color)" }}
-                  size="sm"
-                >
-                  Esta Semana
-                </Button>
-                <Button onClick={limpiarFiltros} color="gray" size="sm">
-                  Limpiar Filtros
-                </Button>
-              </div>
+                          <Table.Cell>{turno.numeroCliente || "-"}</Table.Cell>
+                          <Table.Cell>
+                            {formatearEstado(turno.estado)}
+                          </Table.Cell>
+                          <Table.Cell>
+                            <div className="text-sm">
+                              <div className="font-semibold text-green-600">
+                                Gs. {turno.costoTotal || 0}
+                              </div>
+                              {turno.servicios &&
+                                turno.servicios.length > 0 && (
+                                  <div className="text-xs text-gray-600 mt-1 flex flex-wrap gap-1">
+                                    {turno.servicios.map((servicio, index) => (
+                                      <div
+                                        key={index}
+                                        className="bg-gray-100 text-gray-700 px-2 py-1 rounded-md text-xs border"
+                                      >
+                                        {servicio.nombre} - $
+                                        {servicio.precio?.toLocaleString() || 0}
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                            </div>
+                          </Table.Cell>
+                          <Table.Cell>
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedTurno(turno);
+                                  setShowModal(true);
+                                }}
+                              >
+                                Ver Detalles
+                              </Button>
+                              {turno.numeroCliente && turno.nombreCliente && (
+                                <Button
+                                  size="sm"
+                                  color="success"
+                                  onClick={() => enviarMensajeWhatsApp(turno)}
+                                >
+                                  Contactar
+                                </Button>
+                              )}
+                            </div>
+                          </Table.Cell>
+                        </Table.Row>
+                      ))}
+                    </Table.Body>
+                  </Table>
+                )}
+              </Card>
             </div>
-          </Card>
-          {/* Tabla de Turnos - Desktop */}
-          <div className="hidden md:block">
-            <Card style={{ backgroundColor: "#5B4373" }}>
+
+            {/* Vista móvil - Cards */}
+            <div className="block md:hidden">
               {loading ? (
                 <div className="text-center py-8 text-white">
                   Cargando turnos...
                 </div>
-              ) : filteredTurnos.length === 0 ? (
-                <div className="text-center py-8">
-                  <p className="text-white">
-                    No hay turnos para mostrar con los filtros actuales.
-                  </p>
-                  <p className="text-sm text-gray-300 mt-2">
-                    Prueba cambiando las fechas o limpiando los filtros.
-                  </p>
-                </div>
               ) : (
-                <Table>
-                  <Table.Head>
-                    <Table.HeadCell>Fecha</Table.HeadCell>
-                    <Table.HeadCell>Hora</Table.HeadCell>
-                    <Table.HeadCell>Cliente</Table.HeadCell>
-                    <Table.HeadCell>Barbero</Table.HeadCell>
-                    <Table.HeadCell>Teléfono</Table.HeadCell>
-                    <Table.HeadCell>Estado</Table.HeadCell>
-                    <Table.HeadCell>Costo</Table.HeadCell>
-                    <Table.HeadCell>Acciones</Table.HeadCell>
-                  </Table.Head>
-                  <Table.Body className="divide-y">
-                    {filteredTurnos.map((turno) => (
-                      <Table.Row
-                        key={turno._id}
-                        className="bg-white dark:border-gray-700 dark:bg-gray-800"
-                      >
-                        <Table.Cell>{formatearFecha(turno.fecha)}</Table.Cell>
-                        <Table.Cell>{turno.hora}</Table.Cell>
-                        <Table.Cell>
-                          {turno.nombreCliente || "Disponible"}
-                        </Table.Cell>
-                        <Table.Cell>
-                          {turno.barbero ? (
-                            <div className="flex items-center gap-2">
-                              {turno.barbero.foto && (
-                                <img
-                                  src={`${
-                                    import.meta.env.VITE_API_URL
-                                  }/uploads/${turno.barbero.foto}`}
-                                  alt={turno.barbero.nombre}
-                                  className="w-6 h-6 rounded-full object-cover"
-                                />
-                              )}
-                              <span className="text-sm">
-                                {turno.barbero.nombre || turno.nombreBarbero}
-                              </span>
-                            </div>
-                          ) : (
-                            <span className="text-gray-400 text-sm">
-                              Sin asignar
-                            </span>
-                          )}
-                        </Table.Cell>
-
-                        <Table.Cell>{turno.numeroCliente || "-"}</Table.Cell>
-                        <Table.Cell>{formatearEstado(turno.estado)}</Table.Cell>
-                        <Table.Cell>
-                          <div className="text-sm">
-                            <div className="font-semibold text-green-600">
-                              Gs. {turno.costoTotal || 0}
-                            </div>
-                            {turno.servicios && turno.servicios.length > 0 && (
-                              <div className="text-xs text-gray-600 mt-1 flex flex-wrap gap-1">
-                                {turno.servicios.map((servicio, index) => (
-                                  <div
-                                    key={index}
-                                    className="bg-gray-100 text-gray-700 px-2 py-1 rounded-md text-xs border"
-                                  >
-                                    {servicio.nombre} - $
-                                    {servicio.precio?.toLocaleString() || 0}
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        </Table.Cell>
-                        <Table.Cell>
-                          <div className="flex gap-2">
-                            <Button
-                              size="sm"
-                              onClick={() => {
-                                setSelectedTurno(turno);
-                                setShowModal(true);
-                              }}
-                            >
-                              Ver Detalles
-                            </Button>
-                            {turno.numeroCliente && turno.nombreCliente && (
-                              <Button
-                                size="sm"
-                                color="success"
-                                onClick={() => enviarMensajeWhatsApp(turno)}
-                              >
-                                Contactar
-                              </Button>
-                            )}
-                          </div>
-                        </Table.Cell>
-                      </Table.Row>
-                    ))}
-                  </Table.Body>
-                </Table>
+                <div>
+                  {filteredTurnos.map((turno) => (
+                    <TurnoCard key={turno._id} turno={turno} />
+                  ))}
+                </div>
               )}
-            </Card>
-          </div>
-
-          {/* Vista móvil - Cards */}
-          <div className="block md:hidden">
-            {loading ? (
-              <div className="text-center py-8 text-white">
-                Cargando turnos...
-              </div>
-            ) : (
-              <div>
-                {filteredTurnos.map((turno) => (
-                  <TurnoCard key={turno._id} turno={turno} />
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Vista de Banners */}
-      {activeView === "banners" && (
-        <div>
-          {/* Filtros y acciones para banners */}
-          <Card className="mb-6" style={{ backgroundColor: "#5B4373" }}>
-            <div className="space-y-4">
-              {/* Botón para crear nuevo banner */}
-              <div className="flex justify-between items-center">
-                <h3 className="text-lg font-semibold text-white">
-                  Gestión de Banners
-                </h3>
-                <Button
-                  onClick={() => {
-                    resetBannerForm();
-                    setShowBannerModal(true);
-                  }}
-                  style={{ backgroundColor: "var(--primary-color)" }}
-                >
-                  + Nuevo Banner
-                </Button>
-              </div>
-
-              {/* Filtros */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <Label htmlFor="bannerEstado" className="text-white">
-                    Estado
-                  </Label>
-                  <Select
-                    id="bannerEstado"
-                    value={bannerFilters.estado}
-                    onChange={(e) =>
-                      setBannerFilters({
-                        ...bannerFilters,
-                        estado: e.target.value,
-                      })
-                    }
-                  >
-                    <option value="">Todos</option>
-                    <option value="activo">Activo</option>
-                    <option value="inactivo">Inactivo</option>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="bannerTipo" className="text-white">
-                    Tipo
-                  </Label>
-                  <Select
-                    id="bannerTipo"
-                    value={bannerFilters.tipo}
-                    onChange={(e) =>
-                      setBannerFilters({
-                        ...bannerFilters,
-                        tipo: e.target.value,
-                      })
-                    }
-                  >
-                    <option value="">Todos</option>
-                    <option value="principal">Principal</option>
-                    <option value="secundario">Secundario</option>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="bannerVersion" className="text-white">
-                    Versión
-                  </Label>
-                  <Select
-                    id="bannerVersion"
-                    value={bannerFilters.version}
-                    onChange={(e) =>
-                      setBannerFilters({
-                        ...bannerFilters,
-                        version: e.target.value,
-                      })
-                    }
-                  >
-                    <option value="">Todas</option>
-                    <option value="mobile">Móvil</option>
-                    <option value="escritorio">Escritorio</option>
-                    <option value="ambos">Ambos</option>
-                  </Select>
-                </div>
-              </div>
             </div>
-          </Card>
-
-          {/* Tabla de Banners - Desktop */}
-          <div className="hidden md:block">
-            <Card style={{ backgroundColor: "#5B4373" }}>
-              {loading ? (
-                <div className="text-center py-8 text-white">
-                  Cargando banners...
-                </div>
-              ) : banners.length === 0 ? (
-                <div className="text-center py-8">
-                  <p className="text-white">No hay banners para mostrar.</p>
-                  <p className="text-sm text-gray-300 mt-2">
-                    Crea tu primer banner usando el botón de arriba.
-                  </p>
-                </div>
-              ) : (
-                <Table>
-                  <Table.Head>
-                    <Table.HeadCell>Imagen</Table.HeadCell>
-                    <Table.HeadCell>Título</Table.HeadCell>
-                    <Table.HeadCell>Tipo</Table.HeadCell>
-                    <Table.HeadCell>Versión</Table.HeadCell>
-                    <Table.HeadCell>Estado</Table.HeadCell>
-                    <Table.HeadCell>Orden</Table.HeadCell>
-                    <Table.HeadCell>Acciones</Table.HeadCell>
-                  </Table.Head>
-                  <Table.Body className="divide-y">
-                    {banners.map((banner) => (
-                      <Table.Row
-                        key={banner._id}
-                        className="bg-white dark:border-gray-700 dark:bg-gray-800"
-                      >
-                        <Table.Cell>
-                          <img
-                            src={`${import.meta.env.VITE_API_URL}/uploads/${
-                              banner.imagen
-                            }`}
-                            alt={banner.titulo}
-                            className="w-16 h-10 object-cover rounded"
-                          />
-                        </Table.Cell>
-                        <Table.Cell className="font-medium">
-                          {banner.titulo}
-                        </Table.Cell>
-                        <Table.Cell>
-                          <span
-                            className={`px-2 py-1 rounded text-xs ${
-                              banner.tipo === "principal"
-                                ? "bg-blue-100 text-blue-800"
-                                : "bg-gray-100 text-gray-800"
-                            }`}
-                          >
-                            {banner.tipo}
-                          </span>
-                        </Table.Cell>
-                        <Table.Cell>{banner.version}</Table.Cell>
-                        <Table.Cell>
-                          <Button
-                            size="xs"
-                            color={
-                              banner.estado === "activo" ? "success" : "failure"
-                            }
-                            onClick={() =>
-                              toggleBannerStatus(banner._id, banner.estado)
-                            }
-                          >
-                            {banner.estado}
-                          </Button>
-                        </Table.Cell>
-                        <Table.Cell>{banner.orden}</Table.Cell>
-                        <Table.Cell>
-                          <div className="flex gap-2">
-                            <Button
-                              size="xs"
-                              onClick={() => editBanner(banner)}
-                            >
-                              Editar
-                            </Button>
-                            <Button
-                              size="xs"
-                              color="failure"
-                              onClick={() => deleteBanner(banner._id)}
-                            >
-                              Eliminar
-                            </Button>
-                          </div>
-                        </Table.Cell>
-                      </Table.Row>
-                    ))}
-                  </Table.Body>
-                </Table>
-              )}
-            </Card>
           </div>
+        )}
 
-          {/* Vista móvil - Cards para banners */}
-          <div className="block md:hidden">
-            {loading ? (
-              <div className="text-center py-8 text-white">
-                Cargando banners...
-              </div>
-            ) : (
-              <div>
-                {banners.map((banner) => (
-                  <Card
-                    key={banner._id}
-                    className="mb-4"
-                    style={{ backgroundColor: "#5B4373" }}
+        {/* Vista de Banners */}
+        {activeView === "banners" && (
+          <div>
+            {/* Filtros y acciones para banners */}
+            <Card className="mb-6" style={{ backgroundColor: "#5B4373" }}>
+              <div className="space-y-4">
+                {/* Botón para crear nuevo banner */}
+                <div className="flex justify-between items-center">
+                  <h3 className="text-lg font-semibold text-white">
+                    Gestión de Banners
+                  </h3>
+                  <Button
+                    onClick={() => {
+                      resetBannerForm();
+                      setShowBannerModal(true);
+                    }}
+                    style={{ backgroundColor: "var(--primary-color)" }}
                   >
-                    <div className="p-4">
-                      <div className="flex gap-4">
-                        <img
-                          src={`${import.meta.env.VITE_API_URL}/uploads/${
-                            banner.imagen
-                          }`}
-                          alt={banner.titulo}
-                          className="w-20 h-12 object-cover rounded"
-                        />
-                        <div className="flex-1">
-                          <h3 className="font-semibold text-lg text-white">
+                    + Nuevo Banner
+                  </Button>
+                </div>
+
+                {/* Filtros */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <Label htmlFor="bannerEstado" className="text-white">
+                      Estado
+                    </Label>
+                    <Select
+                      id="bannerEstado"
+                      value={bannerFilters.estado}
+                      onChange={(e) =>
+                        setBannerFilters({
+                          ...bannerFilters,
+                          estado: e.target.value,
+                        })
+                      }
+                    >
+                      <option value="">Todos</option>
+                      <option value="activo">Activo</option>
+                      <option value="inactivo">Inactivo</option>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="bannerTipo" className="text-white">
+                      Tipo
+                    </Label>
+                    <Select
+                      id="bannerTipo"
+                      value={bannerFilters.tipo}
+                      onChange={(e) =>
+                        setBannerFilters({
+                          ...bannerFilters,
+                          tipo: e.target.value,
+                        })
+                      }
+                    >
+                      <option value="">Todos</option>
+                      <option value="principal">Principal</option>
+                      <option value="secundario">Secundario</option>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="bannerVersion" className="text-white">
+                      Versión
+                    </Label>
+                    <Select
+                      id="bannerVersion"
+                      value={bannerFilters.version}
+                      onChange={(e) =>
+                        setBannerFilters({
+                          ...bannerFilters,
+                          version: e.target.value,
+                        })
+                      }
+                    >
+                      <option value="">Todas</option>
+                      <option value="mobile">Móvil</option>
+                      <option value="escritorio">Escritorio</option>
+                      <option value="ambos">Ambos</option>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+            </Card>
+
+            {/* Tabla de Banners - Desktop */}
+            <div className="hidden md:block">
+              <Card style={{ backgroundColor: "#5B4373" }}>
+                {loading ? (
+                  <div className="text-center py-8 text-white">
+                    Cargando banners...
+                  </div>
+                ) : banners.length === 0 ? (
+                  <div className="text-center py-8">
+                    <p className="text-white">No hay banners para mostrar.</p>
+                    <p className="text-sm text-gray-300 mt-2">
+                      Crea tu primer banner usando el botón de arriba.
+                    </p>
+                  </div>
+                ) : (
+                  <Table>
+                    <Table.Head>
+                      <Table.HeadCell>Imagen</Table.HeadCell>
+                      <Table.HeadCell>Título</Table.HeadCell>
+                      <Table.HeadCell>Tipo</Table.HeadCell>
+                      <Table.HeadCell>Versión</Table.HeadCell>
+                      <Table.HeadCell>Estado</Table.HeadCell>
+                      <Table.HeadCell>Orden</Table.HeadCell>
+                      <Table.HeadCell>Acciones</Table.HeadCell>
+                    </Table.Head>
+                    <Table.Body className="divide-y">
+                      {banners.map((banner) => (
+                        <Table.Row
+                          key={banner._id}
+                          className="bg-white dark:border-gray-700 dark:bg-gray-800"
+                        >
+                          <Table.Cell>
+                            <img
+                              src={`${import.meta.env.VITE_API_URL}/uploads/${
+                                banner.imagen
+                              }`}
+                              alt={banner.titulo}
+                              className="w-16 h-10 object-cover rounded"
+                            />
+                          </Table.Cell>
+                          <Table.Cell className="font-medium">
                             {banner.titulo}
-                          </h3>
-                          <p className="text-sm text-gray-300">
-                            {banner.tipo} • {banner.version} • Orden:{" "}
-                            {banner.orden}
-                          </p>
-                          <div className="flex gap-2 mt-2">
+                          </Table.Cell>
+                          <Table.Cell>
+                            <span
+                              className={`px-2 py-1 rounded text-xs ${
+                                banner.tipo === "principal"
+                                  ? "bg-blue-100 text-blue-800"
+                                  : "bg-gray-100 text-gray-800"
+                              }`}
+                            >
+                              {banner.tipo}
+                            </span>
+                          </Table.Cell>
+                          <Table.Cell>{banner.version}</Table.Cell>
+                          <Table.Cell>
                             <Button
                               size="xs"
                               color={
@@ -1666,875 +1908,20 @@ const AdminDashboard = () => {
                             >
                               {banner.estado}
                             </Button>
-                            <Button
-                              size="xs"
-                              onClick={() => editBanner(banner)}
-                            >
-                              Editar
-                            </Button>
-                            <Button
-                              size="xs"
-                              color="failure"
-                              onClick={() => deleteBanner(banner._id)}
-                            >
-                              Eliminar
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Modal para crear/editar banner */}
-      <Modal
-        show={showBannerModal}
-        onClose={() => setShowBannerModal(false)}
-        size="lg"
-      >
-        <Modal.Header>
-          {selectedBanner ? "Editar Banner" : "Crear Banner"}
-        </Modal.Header>
-        <Modal.Body>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="bannerTitulo">Título</Label>
-              <TextInput
-                id="bannerTitulo"
-                value={bannerForm.titulo}
-                onChange={(e) =>
-                  setBannerForm({ ...bannerForm, titulo: e.target.value })
-                }
-                placeholder="Título del banner"
-                required
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="bannerDescripcion">Descripción</Label>
-              <TextInput
-                id="bannerDescripcion"
-                value={bannerForm.descripcion}
-                onChange={(e) =>
-                  setBannerForm({ ...bannerForm, descripcion: e.target.value })
-                }
-                placeholder="Descripción del banner"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="bannerImagen" className="text-white">
-                Imagen del Banner
-              </Label>
-              <input
-                id="bannerImagen"
-                type="file"
-                accept="image/*"
-                onChange={handleImageUpload}
-                className="block w-full text-sm text-gray-300 border border-gray-600 rounded-lg cursor-pointer bg-gray-700 focus:outline-none"
-              />
-              <p className="mt-1 text-sm text-gray-400">
-                Formatos soportados: JPG, PNG, WEBP. Se convertirá
-                automáticamente a WebP optimizado.
-              </p>
-              {imagePreview && (
-                <div className="mt-2">
-                  <img
-                    src={imagePreview}
-                    alt="Vista previa"
-                    className="w-full h-32 object-cover rounded"
-                  />
-                </div>
-              )}
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="bannerFormEstado">Estado</Label>
-                <Select
-                  id="bannerFormEstado"
-                  value={bannerForm.estado}
-                  onChange={(e) =>
-                    setBannerForm({ ...bannerForm, estado: e.target.value })
-                  }
-                >
-                  <option value="activo">Activo</option>
-                  <option value="inactivo">Inactivo</option>
-                </Select>
-              </div>
-
-              <div>
-                <Label htmlFor="bannerFormTipo">Tipo</Label>
-                <Select
-                  id="bannerFormTipo"
-                  value={bannerForm.tipo}
-                  onChange={(e) =>
-                    setBannerForm({ ...bannerForm, tipo: e.target.value })
-                  }
-                >
-                  <option value="principal">Principal</option>
-                  <option value="secundario">Secundario</option>
-                </Select>
-              </div>
-
-              <div>
-                <Label htmlFor="bannerFormVersion">Versión</Label>
-                <Select
-                  id="bannerFormVersion"
-                  value={bannerForm.version}
-                  onChange={(e) =>
-                    setBannerForm({ ...bannerForm, version: e.target.value })
-                  }
-                >
-                  <option value="ambos">Ambos</option>
-                  <option value="mobile">Móvil</option>
-                  <option value="escritorio">Escritorio</option>
-                </Select>
-              </div>
-
-              <div>
-                <Label htmlFor="bannerFormOrden">Orden</Label>
-                <TextInput
-                  id="bannerFormOrden"
-                  type="number"
-                  value={bannerForm.orden}
-                  onChange={(e) =>
-                    setBannerForm({
-                      ...bannerForm,
-                      orden: parseInt(e.target.value) || 0,
-                    })
-                  }
-                  min="0"
-                />
-              </div>
-            </div>
-
-            <div>
-              <Label htmlFor="bannerEnlace">Enlace (opcional)</Label>
-              <TextInput
-                id="bannerEnlace"
-                value={bannerForm.enlace}
-                onChange={(e) =>
-                  setBannerForm({ ...bannerForm, enlace: e.target.value })
-                }
-                placeholder="https://ejemplo.com"
-              />
-            </div>
-          </div>
-        </Modal.Body>
-        <Modal.Footer>
-          <Button
-            onClick={saveBanner}
-            style={{ backgroundColor: "var(--primary-color)" }}
-          >
-            {selectedBanner ? "Actualizar" : "Crear"} Banner
-          </Button>
-          <Button color="gray" onClick={() => setShowBannerModal(false)}>
-            Cancelar
-          </Button>
-        </Modal.Footer>
-      </Modal>
-
-      {/* Vista de Contacto */}
-      {activeView === "contacto" && (
-        <div>
-          <Card className="mb-6" style={{ backgroundColor: "#5B4373" }}>
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <h3 className="text-lg font-semibold text-white">
-                  Gestión de Contacto
-                </h3>
-                <Button
-                  color="purple"
-                  onClick={() => {
-                    resetContactoForm();
-                    setShowContactoModal(true);
-                  }}
-                >
-                  {contacto ? "Editar Contacto" : "+ Crear Contacto"}
-                </Button>
-              </div>
-
-              {/* Información actual */}
-              {contacto ? (
-                <div className="bg-white/10 p-4 rounded-lg">
-                  <h4 className="text-white font-medium mb-2">
-                    Información Actual:
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-white">
-                    <div>
-                      <span className="font-medium">WhatsApp:</span>
-                      <p>{contacto.whatsapp || "No configurado"}</p>
-                    </div>
-                    <div>
-                      <span className="font-medium">Instagram:</span>
-                      <p>{contacto.instagram || "No configurado"}</p>
-                    </div>
-                    <div>
-                      <span className="font-medium">Correo:</span>
-                      <p>{contacto.correo || "No configurado"}</p>
-                    </div>
-                  </div>
-                  <div className="mt-4">
-                    <Button color="purple" size="sm" onClick={editContacto}>
-                      Editar
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <div className="bg-yellow-100/10 border border-yellow-400/30 p-4 rounded-lg">
-                  <p className="text-yellow-200">
-                    No hay información de contacto configurada. Haz clic en
-                    Crear Contacto para agregar.
-                  </p>
-                </div>
-              )}
-            </div>
-          </Card>
-        </div>
-      )}
-
-      {/* Vista de Ubicación */}
-      {activeView === "ubicacion" && (
-        <div>
-          <Card className="mb-6" style={{ backgroundColor: "#5B4373" }}>
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <h3 className="text-lg font-semibold text-white">
-                  Gestión de Ubicación
-                </h3>
-                <Button
-                  color="purple"
-                  onClick={() => {
-                    resetUbicacionForm();
-                    setShowUbicacionModal(true);
-                  }}
-                >
-                  {ubicacion ? "Editar Ubicación" : "+ Crear Ubicación"}
-                </Button>
-              </div>
-
-              {/* Información actual */}
-              {ubicacion ? (
-                <div className="bg-white/10 p-4 rounded-lg">
-                  <h4 className="text-white font-medium mb-2">
-                    Información Actual:
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-white">
-                    <div>
-                      <span className="font-medium">Dirección:</span>
-                      <p>{ubicacion.direccion || "No configurado"}</p>
-                    </div>
-                    <div>
-                      <span className="font-medium">Enlace Maps:</span>
-                      <p className="break-all">
-                        {ubicacion.enlaceMaps || "No configurado"}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="mt-4">
-                    <Button color="purple" size="sm" onClick={editUbicacion}>
-                      Editar
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <div className="bg-yellow-100/10 border border-yellow-400/30 p-4 rounded-lg">
-                  <p className="text-yellow-200">
-                    No hay información de ubicación configurada. Haz clic en
-                    Crear Ubicación para agregar.
-                  </p>
-                </div>
-              )}
-            </div>
-          </Card>
-        </div>
-      )}
-
-      {/* Modal para crear/editar contacto */}
-      <Modal
-        show={showContactoModal}
-        onClose={() => setShowContactoModal(false)}
-        size="lg"
-      >
-        <Modal.Header>
-          {contacto ? "Editar Contacto" : "Crear Contacto"}
-        </Modal.Header>
-        <Modal.Body>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="whatsapp">WhatsApp</Label>
-              <TextInput
-                id="whatsapp"
-                type="text"
-                placeholder="Ej: +595123456789"
-                value={contactoForm.whatsapp}
-                onChange={(e) =>
-                  setContactoForm({ ...contactoForm, whatsapp: e.target.value })
-                }
-              />
-            </div>
-            <div>
-              <Label htmlFor="instagram">Instagram</Label>
-              <TextInput
-                id="instagram"
-                type="text"
-                placeholder="Ej: @usuario_instagram"
-                value={contactoForm.instagram}
-                onChange={(e) =>
-                  setContactoForm({
-                    ...contactoForm,
-                    instagram: e.target.value,
-                  })
-                }
-              />
-            </div>
-            <div>
-              <Label htmlFor="instagramUrl">URL de Instagram (opcional)</Label>
-              <TextInput
-                id="instagramUrl"
-                type="url"
-                placeholder="Ej: https://www.instagram.com/usuario_instagram/"
-                value={contactoForm.instagramUrl}
-                onChange={(e) =>
-                  setContactoForm({
-                    ...contactoForm,
-                    instagramUrl: e.target.value,
-                  })
-                }
-              />
-            </div>
-            <div>
-              <Label htmlFor="correo">Correo Electrónico</Label>
-              <TextInput
-                id="correo"
-                type="email"
-                placeholder="Ej: contacto@ejemplo.com"
-                value={contactoForm.correo}
-                onChange={(e) =>
-                  setContactoForm({ ...contactoForm, correo: e.target.value })
-                }
-              />
-            </div>
-          </div>
-        </Modal.Body>
-        <Modal.Footer>
-          <Button color="purple" onClick={saveContacto}>
-            Guardar
-          </Button>
-          <Button color="gray" onClick={() => setShowContactoModal(false)}>
-            Cancelar
-          </Button>
-        </Modal.Footer>
-      </Modal>
-
-      {/* Modal para crear/editar ubicación */}
-      <Modal
-        show={showUbicacionModal}
-        onClose={() => setShowUbicacionModal(false)}
-        size="lg"
-      >
-        <Modal.Header>
-          {ubicacion ? "Editar Ubicación" : "Crear Ubicación"}
-        </Modal.Header>
-        <Modal.Body>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="direccion">Dirección</Label>
-              <TextInput
-                id="direccion"
-                type="text"
-                placeholder="Ej: Av. Principal 123, Asunción, Paraguay"
-                value={ubicacionForm.direccion}
-                onChange={(e) =>
-                  setUbicacionForm({
-                    ...ubicacionForm,
-                    direccion: e.target.value,
-                  })
-                }
-              />
-            </div>
-            <div>
-              <Label htmlFor="enlaceMaps">Enlace de Google Maps</Label>
-              <TextInput
-                id="enlaceMaps"
-                type="url"
-                placeholder="Ej: https://maps.google.com/..."
-                value={ubicacionForm.enlaceMaps}
-                onChange={(e) =>
-                  setUbicacionForm({
-                    ...ubicacionForm,
-                    enlaceMaps: e.target.value,
-                  })
-                }
-              />
-            </div>
-          </div>
-        </Modal.Body>
-        <Modal.Footer>
-          <Button color="purple" onClick={saveUbicacion}>
-            Guardar
-          </Button>
-          <Button color="gray" onClick={() => setShowUbicacionModal(false)}>
-            Cancelar
-          </Button>
-        </Modal.Footer>
-      </Modal>
-
-      {/* Vista de Horarios */}
-      {activeView === "horarios" && (
-        <div className="space-y-6">
-          <Card>
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-bold text-black">
-                Gestión de Horarios
-              </h3>
-              <div className="flex gap-2">
-                <Button
-                  color="blue"
-                  onClick={regenerarAgendaPorHorarios}
-                  size="sm"
-                >
-                  Regenerar Agenda
-                </Button>
-                <Button
-                  color="purple"
-                  onClick={() => {
-                    resetHorarioForm();
-                    setShowHorarioModal(true);
-                  }}
-                >
-                  Crear Horario
-                </Button>
-              </div>
-            </div>
-
-            <div className="overflow-x-auto">
-              <Table>
-                <Table.Head>
-                  <Table.HeadCell>Hora</Table.HeadCell>
-                  <Table.HeadCell className="hidden sm:table-cell">
-                    Días de la Semana
-                  </Table.HeadCell>
-                  <Table.HeadCell>Estado</Table.HeadCell>
-                  <Table.HeadCell>Acciones</Table.HeadCell>
-                </Table.Head>
-                <Table.Body className="divide-y">
-                  {horarios.length === 0 ? (
-                    <Table.Row>
-                      <Table.Cell colSpan="4" className="text-center">
-                        No hay horarios configurados. Haz clic en &quot;Crear
-                        Horario&quot; para agregar.
-                      </Table.Cell>
-                    </Table.Row>
-                  ) : (
-                    horarios.map((horario) => (
-                      <Table.Row key={horario._id}>
-                        <Table.Cell className="font-medium text-sm md:text-base">
-                          {horario.hora}
-                        </Table.Cell>
-                        <Table.Cell className="hidden sm:table-cell">
-                          <div className="flex flex-wrap gap-1">
-                            {horario.dias.map((dia, index) => (
-                              <span
-                                key={index}
-                                className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full"
-                              >
-                                {dia}
-                              </span>
-                            ))}
-                          </div>
-                        </Table.Cell>
-                        <Table.Cell>
-                          <span
-                            className={`px-1 md:px-2 py-1 rounded-full text-xs ${
-                              horario.estado === "activo"
-                                ? "bg-green-100 text-green-800"
-                                : "bg-red-100 text-red-800"
-                            }`}
-                          >
-                            {horario.estado}
-                          </span>
-                        </Table.Cell>
-                        <Table.Cell>
-                          <div className="flex flex-col sm:flex-row gap-1 sm:gap-2">
-                            <Button
-                              color="blue"
-                              size="xs"
-                              onClick={() => editHorario(horario)}
-                              className="text-xs w-full sm:w-auto"
-                            >
-                              Editar
-                            </Button>
-                            <Button
-                              color={
-                                horario.estado === "activo" ? "yellow" : "green"
-                              }
-                              size="xs"
-                              onClick={() =>
-                                toggleHorarioStatus(horario._id, horario.estado)
-                              }
-                              className="text-xs w-full sm:w-auto"
-                            >
-                              {horario.estado === "activo"
-                                ? "Desactivar"
-                                : "Activar"}
-                            </Button>
-                            <Button
-                              color="red"
-                              size="xs"
-                              onClick={() => deleteHorario(horario._id)}
-                              className="text-xs w-full sm:w-auto"
-                            >
-                              Eliminar
-                            </Button>
-                          </div>
-                        </Table.Cell>
-                      </Table.Row>
-                    ))
-                  )}
-                </Table.Body>
-              </Table>
-            </div>
-          </Card>
-        </div>
-      )}
-
-      {/* Modal para crear/editar horario */}
-      <Modal show={showHorarioModal} onClose={() => setShowHorarioModal(false)}>
-        <Modal.Header>
-          {selectedHorario ? "Editar Horario" : "Crear Horario"}
-        </Modal.Header>
-        <Modal.Body>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="hora" className="text-black">
-                Hora
-              </Label>
-              <TextInput
-                id="hora"
-                type="time"
-                value={horarioForm.hora}
-                onChange={(e) =>
-                  setHorarioForm({ ...horarioForm, hora: e.target.value })
-                }
-              />
-            </div>
-
-            <div>
-              <Label className="text-black">Días de la Semana</Label>
-              <div className="grid grid-cols-2 gap-2 mt-2">
-                {[
-                  "lunes",
-                  "martes",
-                  "miercoles",
-                  "jueves",
-                  "viernes",
-                  "sabado",
-                  "domingo",
-                ].map((dia) => (
-                  <label key={dia} className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      checked={horarioForm.dias.includes(dia)}
-                      onChange={() => handleDiaToggle(dia)}
-                      className="w-4 h-4 text-purple-600"
-                    />
-                    <span className="capitalize text-black">{dia}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <Label className="text-black mb-2 block">Estado</Label>
-              <div className="flex items-center space-x-3">
-                <span
-                  className={`text-sm ${
-                    horarioForm.estado === "activo"
-                      ? "text-gray-500"
-                      : "text-black font-medium"
-                  }`}
-                >
-                  Inactivo
-                </span>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    className="sr-only"
-                    checked={horarioForm.estado === "activo"}
-                    onChange={(e) =>
-                      setHorarioForm({
-                        ...horarioForm,
-                        estado: e.target.checked ? "activo" : "inactivo",
-                      })
-                    }
-                  />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
-                </label>
-                <span
-                  className={`text-sm ${
-                    horarioForm.estado === "activo"
-                      ? "text-black font-medium"
-                      : "text-gray-500"
-                  }`}
-                >
-                  Activo
-                </span>
-              </div>
-            </div>
-          </div>
-        </Modal.Body>
-        <Modal.Footer>
-          <Button color="purple" onClick={saveHorario}>
-            {selectedHorario ? "Actualizar" : "Crear"}
-          </Button>
-          <Button color="gray" onClick={() => setShowHorarioModal(false)}>
-            Cancelar
-          </Button>
-        </Modal.Footer>
-      </Modal>
-
-      {/* Sección de Servicios */}
-      {activeView === "servicios" && (
-        <div className="space-y-6">
-          <Card>
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-bold text-black">
-                Gestión de Servicios
-              </h3>
-              <Button
-                color="purple"
-                onClick={() => {
-                  resetServicioForm();
-                  setShowServicioModal(true);
-                }}
-              >
-                Nuevo Servicio
-              </Button>
-            </div>
-
-            {servicios.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-gray-500 mb-4">
-                  No hay servicios registrados.
-                </p>
-                <p className="text-sm text-gray-400">
-                  Haz clic en Nuevo Servicio para agregar.
-                </p>
-              </div>
-            ) : (
-              <>
-                {/* Vista de Cards para Móvil */}
-                <div className="block md:hidden space-y-4">
-                  {servicios.map((servicio) => (
-                    <div
-                      key={servicio._id}
-                      className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm"
-                    >
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex items-center flex-1 min-w-0">
-                          <div className="min-w-0 flex-1">
-                            <h4 className="font-semibold text-gray-900 dark:text-white truncate">
-                              {servicio.nombre}
-                            </h4>
-                          </div>
-                        </div>
-                        <span
-                          className={`px-2 py-1 rounded-full text-xs font-medium ml-2 flex-shrink-0 ${
-                            servicio.activo
-                              ? "bg-green-100 text-green-800"
-                              : "bg-red-100 text-red-800"
-                          }`}
-                        >
-                          {servicio.activo ? "Activo" : "Inactivo"}
-                        </span>
-                      </div>
-
-                      {/* Galería de imágenes */}
-                      {servicio.imagenes && servicio.imagenes.length > 0 && (
-                        <div className="mb-3">
-                          <div
-                            className="flex gap-2 overflow-x-auto pb-2 cursor-pointer"
-                            onClick={() =>
-                              openImageModal(servicio.imagenes, servicio._id)
-                            }
-                          >
-                            {servicio.imagenes.map((imagen, index) => (
-                              <img
-                                key={index}
-                                src={`${
-                                  import.meta.env.VITE_API_URL
-                                }/uploads/${imagen}`}
-                                alt={`${servicio.nombre} - ${index + 1}`}
-                                className="w-16 h-16 object-cover rounded-lg flex-shrink-0 hover:opacity-80"
-                              />
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      <div className="space-y-2 mb-4">
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm text-gray-500">Precio:</span>
-                          <span className="font-medium text-gray-900 dark:text-white">
-                            Gs.{servicio.precio}
-                          </span>
-                        </div>
-                        {servicio.descripcion && (
-                          <div>
-                            <span className="text-sm text-gray-500">
-                              Descripción:
-                            </span>
-                            <p className="text-sm text-gray-700 dark:text-gray-300 mt-1">
-                              {servicio.descripcion}
-                            </p>
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="flex flex-col gap-2">
-                        <div className="flex gap-2">
-                          <Button
-                            size="xs"
-                            color="blue"
-                            onClick={() => editServicio(servicio)}
-                            className="flex-1"
-                          >
-                            Editar
-                          </Button>
-                          <Button
-                            size="xs"
-                            color={servicio.activo ? "failure" : "success"}
-                            onClick={() =>
-                              toggleServicioStatus(
-                                servicio._id,
-                                servicio.activo
-                              )
-                            }
-                            className="flex-1"
-                          >
-                            {servicio.activo ? "Desactivar" : "Activar"}
-                          </Button>
-                        </div>
-                        <Button
-                          size="xs"
-                          color="failure"
-                          onClick={() => deleteServicio(servicio._id)}
-                          className="w-full"
-                        >
-                          Eliminar
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Vista de Tabla para Desktop */}
-                <div className="hidden md:block overflow-x-auto">
-                  <Table>
-                    <Table.Head>
-                      <Table.HeadCell>Nombre</Table.HeadCell>
-                      <Table.HeadCell>Imágenes</Table.HeadCell>
-                      <Table.HeadCell>Descripción</Table.HeadCell>
-                      <Table.HeadCell>Precio</Table.HeadCell>
-                      <Table.HeadCell>Estado</Table.HeadCell>
-                      <Table.HeadCell>Acciones</Table.HeadCell>
-                    </Table.Head>
-                    <Table.Body>
-                      {servicios.map((servicio) => (
-                        <Table.Row
-                          key={servicio._id}
-                          className="bg-white dark:bg-gray-800"
-                        >
-                          <Table.Cell className="font-medium text-gray-900 dark:text-white">
-                            <span className="truncate">{servicio.nombre}</span>
                           </Table.Cell>
-                          <Table.Cell>
-                            {servicio.imagenes &&
-                            servicio.imagenes.length > 0 ? (
-                              <div
-                                className="flex gap-1 overflow-x-auto cursor-pointer"
-                                onClick={() =>
-                                  openImageModal(
-                                    servicio.imagenes,
-                                    servicio._id
-                                  )
-                                }
-                              >
-                                {servicio.imagenes
-                                  .slice(0, 3)
-                                  .map((imagen, index) => (
-                                    <img
-                                      key={index}
-                                      src={`${
-                                        import.meta.env.VITE_API_URL
-                                      }/uploads/${imagen}`}
-                                      alt={`${servicio.nombre} - ${index + 1}`}
-                                      className="w-8 h-8 object-cover rounded flex-shrink-0 hover:opacity-80"
-                                    />
-                                  ))}
-                                {servicio.imagenes.length > 3 && (
-                                  <div className="w-8 h-8 bg-gray-200 rounded flex items-center justify-center text-xs">
-                                    +{servicio.imagenes.length - 3}
-                                  </div>
-                                )}
-                              </div>
-                            ) : (
-                              <span className="text-gray-400 text-sm">
-                                Sin imágenes
-                              </span>
-                            )}
-                          </Table.Cell>
-                          <Table.Cell className="max-w-xs">
-                            <span className="truncate block">
-                              {servicio.descripcion || "Sin descripción"}
-                            </span>
-                          </Table.Cell>
-                          <Table.Cell className="font-medium">
-                            Gs.{servicio.precio}
-                          </Table.Cell>
-                          <Table.Cell>
-                            <span
-                              className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                servicio.activo
-                                  ? "bg-green-100 text-green-800"
-                                  : "bg-red-100 text-red-800"
-                              }`}
-                            >
-                              {servicio.activo ? "Activo" : "Inactivo"}
-                            </span>
-                          </Table.Cell>
+                          <Table.Cell>{banner.orden}</Table.Cell>
                           <Table.Cell>
                             <div className="flex gap-2">
                               <Button
                                 size="xs"
-                                color="blue"
-                                onClick={() => editServicio(servicio)}
+                                onClick={() => editBanner(banner)}
                               >
                                 Editar
                               </Button>
                               <Button
                                 size="xs"
-                                color={servicio.activo ? "failure" : "success"}
-                                onClick={() =>
-                                  toggleServicioStatus(
-                                    servicio._id,
-                                    servicio.activo
-                                  )
-                                }
-                              >
-                                {servicio.activo ? "Desactivar" : "Activar"}
-                              </Button>
-                              <Button
-                                size="xs"
                                 color="failure"
-                                onClick={() => deleteServicio(servicio._id)}
+                                onClick={() => deleteBanner(banner._id)}
                               >
                                 Eliminar
                               </Button>
@@ -2544,723 +1931,1680 @@ const AdminDashboard = () => {
                       ))}
                     </Table.Body>
                   </Table>
-                </div>
-              </>
-            )}
-          </Card>
-        </div>
-      )}
-
-      {/* SECCIÓN BARBEROS */}
-      {activeView === "barberos" && (
-        <div className="space-y-6">
-          <Card>
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-              <div>
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                  Gestión de Barberos
-                </h2>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Administra la información de los barberos del equipo
-                </p>
-              </div>
-              <Button
-                color="purple"
-                onClick={() => {
-                  resetBarberoForm();
-                  setShowBarberoModal(true);
-                }}
-              >
-                <svg
-                  className="mr-2 h-4 w-4"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-                Nuevo Barbero
-              </Button>
+                )}
+              </Card>
             </div>
 
-            {barberos.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-gray-500 dark:text-gray-400 mb-4">
-                  No hay barberos registrados aún.
-                </p>
-                <p className="text-sm text-gray-400 dark:text-gray-500">
-                  Haz clic en Nuevo Barbero para agregar.
-                </p>
-              </div>
-            ) : (
-              <>
-                {/* Vista de tarjetas para móvil */}
-                <div className="grid gap-4 md:hidden">
-                  {barberos.map((barbero) => (
-                    <div
-                      key={barbero._id}
-                      className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700"
+            {/* Vista móvil - Cards para banners */}
+            <div className="block md:hidden">
+              {loading ? (
+                <div className="text-center py-8 text-white">
+                  Cargando banners...
+                </div>
+              ) : (
+                <div>
+                  {banners.map((banner) => (
+                    <Card
+                      key={banner._id}
+                      className="mb-4"
+                      style={{ backgroundColor: "#5B4373" }}
                     >
-                      <div className="flex items-start gap-4">
-                        <img
-                          src={`${import.meta.env.VITE_API_URL}/uploads/${
-                            barbero.foto
-                          }`}
-                          alt={barbero.nombre}
-                          className="w-16 h-16 object-cover rounded-lg flex-shrink-0"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between mb-2">
-                            <h3 className="font-medium text-gray-900 dark:text-white truncate">
-                              {barbero.nombre}
+                      <div className="p-4">
+                        <div className="flex gap-4">
+                          <img
+                            src={`${import.meta.env.VITE_API_URL}/uploads/${
+                              banner.imagen
+                            }`}
+                            alt={banner.titulo}
+                            className="w-20 h-12 object-cover rounded"
+                          />
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-lg text-white">
+                              {banner.titulo}
                             </h3>
+                            <p className="text-sm text-gray-300">
+                              {banner.tipo} • {banner.version} • Orden:{" "}
+                              {banner.orden}
+                            </p>
+                            <div className="flex gap-2 mt-2">
+                              <Button
+                                size="xs"
+                                color={
+                                  banner.estado === "activo"
+                                    ? "success"
+                                    : "failure"
+                                }
+                                onClick={() =>
+                                  toggleBannerStatus(banner._id, banner.estado)
+                                }
+                              >
+                                {banner.estado}
+                              </Button>
+                              <Button
+                                size="xs"
+                                onClick={() => editBanner(banner)}
+                              >
+                                Editar
+                              </Button>
+                              <Button
+                                size="xs"
+                                color="failure"
+                                onClick={() => deleteBanner(banner._id)}
+                              >
+                                Eliminar
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Modal para crear/editar banner */}
+        <Modal
+          show={showBannerModal}
+          onClose={() => setShowBannerModal(false)}
+          size="lg"
+        >
+          <Modal.Header>
+            {selectedBanner ? "Editar Banner" : "Crear Banner"}
+          </Modal.Header>
+          <Modal.Body>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="bannerTitulo">Título</Label>
+                <TextInput
+                  id="bannerTitulo"
+                  value={bannerForm.titulo}
+                  onChange={(e) =>
+                    setBannerForm({ ...bannerForm, titulo: e.target.value })
+                  }
+                  placeholder="Título del banner"
+                  required
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="bannerDescripcion">Descripción</Label>
+                <TextInput
+                  id="bannerDescripcion"
+                  value={bannerForm.descripcion}
+                  onChange={(e) =>
+                    setBannerForm({
+                      ...bannerForm,
+                      descripcion: e.target.value,
+                    })
+                  }
+                  placeholder="Descripción del banner"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="bannerImagen" className="text-white">
+                  Imagen del Banner
+                </Label>
+                <input
+                  id="bannerImagen"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  className="block w-full text-sm text-gray-300 border border-gray-600 rounded-lg cursor-pointer bg-gray-700 focus:outline-none"
+                />
+                <p className="mt-1 text-sm text-gray-400">
+                  Formatos soportados: JPG, PNG, WEBP. Se convertirá
+                  automáticamente a WebP optimizado.
+                </p>
+                {imagePreview && (
+                  <div className="mt-2">
+                    <img
+                      src={imagePreview}
+                      alt="Vista previa"
+                      className="w-full h-32 object-cover rounded"
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="bannerFormEstado">Estado</Label>
+                  <Select
+                    id="bannerFormEstado"
+                    value={bannerForm.estado}
+                    onChange={(e) =>
+                      setBannerForm({ ...bannerForm, estado: e.target.value })
+                    }
+                  >
+                    <option value="activo">Activo</option>
+                    <option value="inactivo">Inactivo</option>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="bannerFormTipo">Tipo</Label>
+                  <Select
+                    id="bannerFormTipo"
+                    value={bannerForm.tipo}
+                    onChange={(e) =>
+                      setBannerForm({ ...bannerForm, tipo: e.target.value })
+                    }
+                  >
+                    <option value="principal">Principal</option>
+                    <option value="secundario">Secundario</option>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="bannerFormVersion">Versión</Label>
+                  <Select
+                    id="bannerFormVersion"
+                    value={bannerForm.version}
+                    onChange={(e) =>
+                      setBannerForm({ ...bannerForm, version: e.target.value })
+                    }
+                  >
+                    <option value="ambos">Ambos</option>
+                    <option value="mobile">Móvil</option>
+                    <option value="escritorio">Escritorio</option>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="bannerFormOrden">Orden</Label>
+                  <TextInput
+                    id="bannerFormOrden"
+                    type="number"
+                    value={bannerForm.orden}
+                    onChange={(e) =>
+                      setBannerForm({
+                        ...bannerForm,
+                        orden: parseInt(e.target.value) || 0,
+                      })
+                    }
+                    min="0"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="bannerEnlace">Enlace (opcional)</Label>
+                <TextInput
+                  id="bannerEnlace"
+                  value={bannerForm.enlace}
+                  onChange={(e) =>
+                    setBannerForm({ ...bannerForm, enlace: e.target.value })
+                  }
+                  placeholder="https://ejemplo.com"
+                />
+              </div>
+            </div>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button
+              onClick={saveBanner}
+              style={{ backgroundColor: "var(--primary-color)" }}
+            >
+              {selectedBanner ? "Actualizar" : "Crear"} Banner
+            </Button>
+            <Button color="gray" onClick={() => setShowBannerModal(false)}>
+              Cancelar
+            </Button>
+          </Modal.Footer>
+        </Modal>
+
+        {/* Vista de Contacto */}
+        {activeView === "contacto" && (
+          <div>
+            <Card className="mb-6" style={{ backgroundColor: "#5B4373" }}>
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-lg font-semibold text-white">
+                    Gestión de Contacto
+                  </h3>
+                  <Button
+                    color="purple"
+                    onClick={() => {
+                      resetContactoForm();
+                      setShowContactoModal(true);
+                    }}
+                  >
+                    {contacto ? "Editar Contacto" : "+ Crear Contacto"}
+                  </Button>
+                </div>
+
+                {/* Información actual */}
+                {contacto ? (
+                  <div className="bg-white/10 p-4 rounded-lg">
+                    <h4 className="text-white font-medium mb-2">
+                      Información Actual:
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-white">
+                      <div>
+                        <span className="font-medium">WhatsApp:</span>
+                        <p>{contacto.whatsapp || "No configurado"}</p>
+                      </div>
+                      <div>
+                        <span className="font-medium">Instagram:</span>
+                        <p>{contacto.instagram || "No configurado"}</p>
+                      </div>
+                      <div>
+                        <span className="font-medium">Correo:</span>
+                        <p>{contacto.correo || "No configurado"}</p>
+                      </div>
+                    </div>
+                    <div className="mt-4">
+                      <Button color="purple" size="sm" onClick={editContacto}>
+                        Editar
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-yellow-100/10 border border-yellow-400/30 p-4 rounded-lg">
+                    <p className="text-yellow-200">
+                      No hay información de contacto configurada. Haz clic en
+                      Crear Contacto para agregar.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </Card>
+          </div>
+        )}
+
+        {/* Vista de Ubicación */}
+        {activeView === "ubicacion" && (
+          <div>
+            <Card className="mb-6" style={{ backgroundColor: "#5B4373" }}>
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-lg font-semibold text-white">
+                    Gestión de Ubicación
+                  </h3>
+                  <Button
+                    color="purple"
+                    onClick={() => {
+                      resetUbicacionForm();
+                      setShowUbicacionModal(true);
+                    }}
+                  >
+                    {ubicacion ? "Editar Ubicación" : "+ Crear Ubicación"}
+                  </Button>
+                </div>
+
+                {/* Información actual */}
+                {ubicacion ? (
+                  <div className="bg-white/10 p-4 rounded-lg">
+                    <h4 className="text-white font-medium mb-2">
+                      Información Actual:
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-white">
+                      <div>
+                        <span className="font-medium">Dirección:</span>
+                        <p>{ubicacion.direccion || "No configurado"}</p>
+                      </div>
+                      <div>
+                        <span className="font-medium">Enlace Maps:</span>
+                        <p className="break-all">
+                          {ubicacion.enlaceMaps || "No configurado"}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="mt-4">
+                      <Button color="purple" size="sm" onClick={editUbicacion}>
+                        Editar
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-yellow-100/10 border border-yellow-400/30 p-4 rounded-lg">
+                    <p className="text-yellow-200">
+                      No hay información de ubicación configurada. Haz clic en
+                      Crear Ubicación para agregar.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </Card>
+          </div>
+        )}
+
+        {/* Modal para crear/editar contacto */}
+        <Modal
+          show={showContactoModal}
+          onClose={() => setShowContactoModal(false)}
+          size="lg"
+        >
+          <Modal.Header>
+            {contacto ? "Editar Contacto" : "Crear Contacto"}
+          </Modal.Header>
+          <Modal.Body>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="whatsapp">WhatsApp</Label>
+                <TextInput
+                  id="whatsapp"
+                  type="text"
+                  placeholder="Ej: +595123456789"
+                  value={contactoForm.whatsapp}
+                  onChange={(e) =>
+                    setContactoForm({
+                      ...contactoForm,
+                      whatsapp: e.target.value,
+                    })
+                  }
+                />
+              </div>
+              <div>
+                <Label htmlFor="instagram">Instagram</Label>
+                <TextInput
+                  id="instagram"
+                  type="text"
+                  placeholder="Ej: @usuario_instagram"
+                  value={contactoForm.instagram}
+                  onChange={(e) =>
+                    setContactoForm({
+                      ...contactoForm,
+                      instagram: e.target.value,
+                    })
+                  }
+                />
+              </div>
+              <div>
+                <Label htmlFor="instagramUrl">
+                  URL de Instagram (opcional)
+                </Label>
+                <TextInput
+                  id="instagramUrl"
+                  type="url"
+                  placeholder="Ej: https://www.instagram.com/usuario_instagram/"
+                  value={contactoForm.instagramUrl}
+                  onChange={(e) =>
+                    setContactoForm({
+                      ...contactoForm,
+                      instagramUrl: e.target.value,
+                    })
+                  }
+                />
+              </div>
+              <div>
+                <Label htmlFor="correo">Correo Electrónico</Label>
+                <TextInput
+                  id="correo"
+                  type="email"
+                  placeholder="Ej: contacto@ejemplo.com"
+                  value={contactoForm.correo}
+                  onChange={(e) =>
+                    setContactoForm({ ...contactoForm, correo: e.target.value })
+                  }
+                />
+              </div>
+            </div>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button color="purple" onClick={saveContacto}>
+              Guardar
+            </Button>
+            <Button color="gray" onClick={() => setShowContactoModal(false)}>
+              Cancelar
+            </Button>
+          </Modal.Footer>
+        </Modal>
+
+        {/* Modal para crear/editar ubicación */}
+        <Modal
+          show={showUbicacionModal}
+          onClose={() => setShowUbicacionModal(false)}
+          size="lg"
+        >
+          <Modal.Header>
+            {ubicacion ? "Editar Ubicación" : "Crear Ubicación"}
+          </Modal.Header>
+          <Modal.Body>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="direccion">Dirección</Label>
+                <TextInput
+                  id="direccion"
+                  type="text"
+                  placeholder="Ej: Av. Principal 123, Asunción, Paraguay"
+                  value={ubicacionForm.direccion}
+                  onChange={(e) =>
+                    setUbicacionForm({
+                      ...ubicacionForm,
+                      direccion: e.target.value,
+                    })
+                  }
+                />
+              </div>
+              <div>
+                <Label htmlFor="enlaceMaps">Enlace de Google Maps</Label>
+                <TextInput
+                  id="enlaceMaps"
+                  type="url"
+                  placeholder="Ej: https://maps.google.com/..."
+                  value={ubicacionForm.enlaceMaps}
+                  onChange={(e) =>
+                    setUbicacionForm({
+                      ...ubicacionForm,
+                      enlaceMaps: e.target.value,
+                    })
+                  }
+                />
+              </div>
+            </div>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button color="purple" onClick={saveUbicacion}>
+              Guardar
+            </Button>
+            <Button color="gray" onClick={() => setShowUbicacionModal(false)}>
+              Cancelar
+            </Button>
+          </Modal.Footer>
+        </Modal>
+
+        {/* Vista de Horarios */}
+        {activeView === "horarios" && (
+          <div className="space-y-6">
+            <Card>
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-bold text-black">
+                  Gestión de Horarios
+                </h3>
+                <div className="flex gap-2">
+                  <Button
+                    color="blue"
+                    onClick={regenerarAgendaPorHorarios}
+                    size="sm"
+                  >
+                    Regenerar Agenda
+                  </Button>
+                  <Button
+                    color="purple"
+                    onClick={() => {
+                      resetHorarioForm();
+                      setShowHorarioModal(true);
+                    }}
+                  >
+                    Crear Horario
+                  </Button>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <Table>
+                  <Table.Head>
+                    <Table.HeadCell>Hora</Table.HeadCell>
+                    <Table.HeadCell className="hidden sm:table-cell">
+                      Días de la Semana
+                    </Table.HeadCell>
+                    <Table.HeadCell>Estado</Table.HeadCell>
+                    <Table.HeadCell>Acciones</Table.HeadCell>
+                  </Table.Head>
+                  <Table.Body className="divide-y">
+                    {horarios.length === 0 ? (
+                      <Table.Row>
+                        <Table.Cell colSpan="4" className="text-center">
+                          No hay horarios configurados. Haz clic en &quot;Crear
+                          Horario&quot; para agregar.
+                        </Table.Cell>
+                      </Table.Row>
+                    ) : (
+                      horarios.map((horario) => (
+                        <Table.Row key={horario._id}>
+                          <Table.Cell className="font-medium text-sm md:text-base">
+                            {horario.hora}
+                          </Table.Cell>
+                          <Table.Cell className="hidden sm:table-cell">
+                            <div className="flex flex-wrap gap-1">
+                              {horario.dias.map((dia, index) => (
+                                <span
+                                  key={index}
+                                  className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full"
+                                >
+                                  {dia}
+                                </span>
+                              ))}
+                            </div>
+                          </Table.Cell>
+                          <Table.Cell>
                             <span
-                              className={`px-2 py-1 rounded-full text-xs ${
-                                barbero.activo
+                              className={`px-1 md:px-2 py-1 rounded-full text-xs ${
+                                horario.estado === "activo"
                                   ? "bg-green-100 text-green-800"
                                   : "bg-red-100 text-red-800"
                               }`}
                             >
-                              {barbero.activo ? "Activo" : "Inactivo"}
+                              {horario.estado}
+                            </span>
+                          </Table.Cell>
+                          <Table.Cell>
+                            <div className="flex flex-col sm:flex-row gap-1 sm:gap-2">
+                              <Button
+                                color="blue"
+                                size="xs"
+                                onClick={() => editHorario(horario)}
+                                className="text-xs w-full sm:w-auto"
+                              >
+                                Editar
+                              </Button>
+                              <Button
+                                color={
+                                  horario.estado === "activo"
+                                    ? "yellow"
+                                    : "green"
+                                }
+                                size="xs"
+                                onClick={() =>
+                                  toggleHorarioStatus(
+                                    horario._id,
+                                    horario.estado
+                                  )
+                                }
+                                className="text-xs w-full sm:w-auto"
+                              >
+                                {horario.estado === "activo"
+                                  ? "Desactivar"
+                                  : "Activar"}
+                              </Button>
+                              <Button
+                                color="red"
+                                size="xs"
+                                onClick={() => deleteHorario(horario._id)}
+                                className="text-xs w-full sm:w-auto"
+                              >
+                                Eliminar
+                              </Button>
+                            </div>
+                          </Table.Cell>
+                        </Table.Row>
+                      ))
+                    )}
+                  </Table.Body>
+                </Table>
+              </div>
+            </Card>
+          </div>
+        )}
+
+        {/* Modal para crear/editar horario */}
+        <Modal
+          show={showHorarioModal}
+          onClose={() => setShowHorarioModal(false)}
+        >
+          <Modal.Header>
+            {selectedHorario ? "Editar Horario" : "Crear Horario"}
+          </Modal.Header>
+          <Modal.Body>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="hora" className="text-black">
+                  Hora
+                </Label>
+                <TextInput
+                  id="hora"
+                  type="time"
+                  value={horarioForm.hora}
+                  onChange={(e) =>
+                    setHorarioForm({ ...horarioForm, hora: e.target.value })
+                  }
+                />
+              </div>
+
+              <div>
+                <Label className="text-black">Días de la Semana</Label>
+                <div className="grid grid-cols-2 gap-2 mt-2">
+                  {[
+                    "lunes",
+                    "martes",
+                    "miercoles",
+                    "jueves",
+                    "viernes",
+                    "sabado",
+                    "domingo",
+                  ].map((dia) => (
+                    <label key={dia} className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        checked={horarioForm.dias.includes(dia)}
+                        onChange={() => handleDiaToggle(dia)}
+                        className="w-4 h-4 text-purple-600"
+                      />
+                      <span className="capitalize text-black">{dia}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <Label className="text-black mb-2 block">Estado</Label>
+                <div className="flex items-center space-x-3">
+                  <span
+                    className={`text-sm ${
+                      horarioForm.estado === "activo"
+                        ? "text-gray-500"
+                        : "text-black font-medium"
+                    }`}
+                  >
+                    Inactivo
+                  </span>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="sr-only"
+                      checked={horarioForm.estado === "activo"}
+                      onChange={(e) =>
+                        setHorarioForm({
+                          ...horarioForm,
+                          estado: e.target.checked ? "activo" : "inactivo",
+                        })
+                      }
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                  </label>
+                  <span
+                    className={`text-sm ${
+                      horarioForm.estado === "activo"
+                        ? "text-black font-medium"
+                        : "text-gray-500"
+                    }`}
+                  >
+                    Activo
+                  </span>
+                </div>
+              </div>
+            </div>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button color="purple" onClick={saveHorario}>
+              {selectedHorario ? "Actualizar" : "Crear"}
+            </Button>
+            <Button color="gray" onClick={() => setShowHorarioModal(false)}>
+              Cancelar
+            </Button>
+          </Modal.Footer>
+        </Modal>
+
+        {/* Sección de Servicios */}
+        {activeView === "servicios" && (
+          <div className="space-y-6">
+            <Card>
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-bold text-black">
+                  Gestión de Servicios
+                </h3>
+                <Button
+                  color="purple"
+                  onClick={() => {
+                    resetServicioForm();
+                    setShowServicioModal(true);
+                  }}
+                >
+                  Nuevo Servicio
+                </Button>
+              </div>
+
+              {servicios.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-gray-500 mb-4">
+                    No hay servicios registrados.
+                  </p>
+                  <p className="text-sm text-gray-400">
+                    Haz clic en Nuevo Servicio para agregar.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  {/* Vista de Cards para Móvil */}
+                  <div className="block md:hidden space-y-4">
+                    {servicios.map((servicio) => (
+                      <div
+                        key={servicio._id}
+                        className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm"
+                      >
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex items-center flex-1 min-w-0">
+                            <div className="min-w-0 flex-1">
+                              <h4 className="font-semibold text-gray-900 dark:text-white truncate">
+                                {servicio.nombre}
+                              </h4>
+                            </div>
+                          </div>
+                          <span
+                            className={`px-2 py-1 rounded-full text-xs font-medium ml-2 flex-shrink-0 ${
+                              servicio.activo
+                                ? "bg-green-100 text-green-800"
+                                : "bg-red-100 text-red-800"
+                            }`}
+                          >
+                            {servicio.activo ? "Activo" : "Inactivo"}
+                          </span>
+                        </div>
+
+                        {/* Galería de imágenes */}
+                        {servicio.imagenes && servicio.imagenes.length > 0 && (
+                          <div className="mb-3">
+                            <div
+                              className="flex gap-2 overflow-x-auto pb-2 cursor-pointer"
+                              onClick={() =>
+                                openImageModal(servicio.imagenes, servicio._id)
+                              }
+                            >
+                              {servicio.imagenes.map((imagen, index) => (
+                                <img
+                                  key={index}
+                                  src={`${
+                                    import.meta.env.VITE_API_URL
+                                  }/uploads/${imagen}`}
+                                  alt={`${servicio.nombre} - ${index + 1}`}
+                                  className="w-16 h-16 object-cover rounded-lg flex-shrink-0 hover:opacity-80"
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="space-y-2 mb-4">
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-gray-500">
+                              Precio:
+                            </span>
+                            <span className="font-medium text-gray-900 dark:text-white">
+                              Gs.{servicio.precio}
                             </span>
                           </div>
-
-                          {barbero.logo && (
-                            <div className="mb-2">
-                              <img
-                                src={`${import.meta.env.VITE_API_URL}/uploads/${
-                                  barbero.logo
-                                }`}
-                                alt={`Logo de ${barbero.nombre}`}
-                                className="w-8 h-8 object-contain"
-                              />
+                          {servicio.descripcion && (
+                            <div>
+                              <span className="text-sm text-gray-500">
+                                Descripción:
+                              </span>
+                              <p className="text-sm text-gray-700 dark:text-gray-300 mt-1">
+                                {servicio.descripcion}
+                              </p>
                             </div>
                           )}
+                        </div>
 
-                          <p className="text-sm text-gray-600 dark:text-gray-300 mb-3 line-clamp-2">
-                            {barbero.descripcion}
-                          </p>
-
+                        <div className="flex flex-col gap-2">
                           <div className="flex gap-2">
                             <Button
                               size="xs"
                               color="blue"
-                              onClick={() => editBarbero(barbero)}
+                              onClick={() => editServicio(servicio)}
                               className="flex-1"
                             >
                               Editar
                             </Button>
                             <Button
                               size="xs"
-                              color="red"
-                              onClick={() => deleteBarbero(barbero._id)}
+                              color={servicio.activo ? "failure" : "success"}
+                              onClick={() =>
+                                toggleServicioStatus(
+                                  servicio._id,
+                                  servicio.activo
+                                )
+                              }
                               className="flex-1"
                             >
-                              Eliminar
+                              {servicio.activo ? "Desactivar" : "Activar"}
                             </Button>
                           </div>
+                          <Button
+                            size="xs"
+                            color="failure"
+                            onClick={() => deleteServicio(servicio._id)}
+                            className="w-full"
+                          >
+                            Eliminar
+                          </Button>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
 
-                {/* Vista de tabla para desktop */}
-                <div className="hidden md:block overflow-x-auto">
-                  <Table>
-                    <Table.Head>
-                      <Table.HeadCell>Barbero</Table.HeadCell>
-                      <Table.HeadCell>Logo</Table.HeadCell>
-                      <Table.HeadCell>Descripción</Table.HeadCell>
-                      <Table.HeadCell>Estado</Table.HeadCell>
-                      <Table.HeadCell>Incluir en Agenda</Table.HeadCell>
-                      <Table.HeadCell>Acciones</Table.HeadCell>
-                    </Table.Head>
-                    <Table.Body>
-                      {barberos.map((barbero) => (
-                        <Table.Row
-                          key={barbero._id}
-                          className="bg-white dark:bg-gray-800"
-                        >
-                          <Table.Cell className="font-medium">
-                            <div className="flex items-center gap-3">
-                              <img
-                                src={`${import.meta.env.VITE_API_URL}/uploads/${
-                                  barbero.foto
+                  {/* Vista de Tabla para Desktop */}
+                  <div className="hidden md:block overflow-x-auto">
+                    <Table>
+                      <Table.Head>
+                        <Table.HeadCell>Nombre</Table.HeadCell>
+                        <Table.HeadCell>Imágenes</Table.HeadCell>
+                        <Table.HeadCell>Descripción</Table.HeadCell>
+                        <Table.HeadCell>Precio</Table.HeadCell>
+                        <Table.HeadCell>Estado</Table.HeadCell>
+                        <Table.HeadCell>Acciones</Table.HeadCell>
+                      </Table.Head>
+                      <Table.Body>
+                        {servicios.map((servicio) => (
+                          <Table.Row
+                            key={servicio._id}
+                            className="bg-white dark:bg-gray-800"
+                          >
+                            <Table.Cell className="font-medium text-gray-900 dark:text-white">
+                              <span className="truncate">
+                                {servicio.nombre}
+                              </span>
+                            </Table.Cell>
+                            <Table.Cell>
+                              {servicio.imagenes &&
+                              servicio.imagenes.length > 0 ? (
+                                <div
+                                  className="flex gap-1 overflow-x-auto cursor-pointer"
+                                  onClick={() =>
+                                    openImageModal(
+                                      servicio.imagenes,
+                                      servicio._id
+                                    )
+                                  }
+                                >
+                                  {servicio.imagenes
+                                    .slice(0, 3)
+                                    .map((imagen, index) => (
+                                      <img
+                                        key={index}
+                                        src={`${
+                                          import.meta.env.VITE_API_URL
+                                        }/uploads/${imagen}`}
+                                        alt={`${servicio.nombre} - ${
+                                          index + 1
+                                        }`}
+                                        className="w-8 h-8 object-cover rounded flex-shrink-0 hover:opacity-80"
+                                      />
+                                    ))}
+                                  {servicio.imagenes.length > 3 && (
+                                    <div className="w-8 h-8 bg-gray-200 rounded flex items-center justify-center text-xs">
+                                      +{servicio.imagenes.length - 3}
+                                    </div>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-gray-400 text-sm">
+                                  Sin imágenes
+                                </span>
+                              )}
+                            </Table.Cell>
+                            <Table.Cell className="max-w-xs">
+                              <span className="truncate block">
+                                {servicio.descripcion || "Sin descripción"}
+                              </span>
+                            </Table.Cell>
+                            <Table.Cell className="font-medium">
+                              Gs.{servicio.precio}
+                            </Table.Cell>
+                            <Table.Cell>
+                              <span
+                                className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                  servicio.activo
+                                    ? "bg-green-100 text-green-800"
+                                    : "bg-red-100 text-red-800"
                                 }`}
-                                alt={barbero.nombre}
-                                className="w-12 h-12 object-cover rounded-lg"
-                              />
-                              <span className="text-gray-900 dark:text-white">
+                              >
+                                {servicio.activo ? "Activo" : "Inactivo"}
+                              </span>
+                            </Table.Cell>
+                            <Table.Cell>
+                              <div className="flex gap-2">
+                                <Button
+                                  size="xs"
+                                  color="blue"
+                                  onClick={() => editServicio(servicio)}
+                                >
+                                  Editar
+                                </Button>
+                                <Button
+                                  size="xs"
+                                  color={
+                                    servicio.activo ? "failure" : "success"
+                                  }
+                                  onClick={() =>
+                                    toggleServicioStatus(
+                                      servicio._id,
+                                      servicio.activo
+                                    )
+                                  }
+                                >
+                                  {servicio.activo ? "Desactivar" : "Activar"}
+                                </Button>
+                                <Button
+                                  size="xs"
+                                  color="failure"
+                                  onClick={() => deleteServicio(servicio._id)}
+                                >
+                                  Eliminar
+                                </Button>
+                              </div>
+                            </Table.Cell>
+                          </Table.Row>
+                        ))}
+                      </Table.Body>
+                    </Table>
+                  </div>
+                </>
+              )}
+            </Card>
+          </div>
+        )}
+
+        {/* SECCIÓN BARBEROS */}
+        {activeView === "barberos" && (
+          <div className="space-y-6">
+            <Card>
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                    Gestión de Barberos
+                  </h2>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Administra la información de los barberos del equipo
+                  </p>
+                </div>
+                <Button
+                  color="purple"
+                  onClick={() => {
+                    resetBarberoForm();
+                    setShowBarberoModal(true);
+                  }}
+                >
+                  <svg
+                    className="mr-2 h-4 w-4"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  Nuevo Barbero
+                </Button>
+              </div>
+
+              {barberos.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-gray-500 dark:text-gray-400 mb-4">
+                    No hay barberos registrados aún.
+                  </p>
+                  <p className="text-sm text-gray-400 dark:text-gray-500">
+                    Haz clic en Nuevo Barbero para agregar.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  {/* Vista de tarjetas para móvil */}
+                  <div className="grid gap-4 md:hidden">
+                    {barberos.map((barbero) => (
+                      <div
+                        key={barbero._id}
+                        className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700"
+                      >
+                        <div className="flex items-start gap-4">
+                          <img
+                            src={`${import.meta.env.VITE_API_URL}/uploads/${
+                              barbero.foto
+                            }`}
+                            alt={barbero.nombre}
+                            className="w-16 h-16 object-cover rounded-lg flex-shrink-0"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between mb-2">
+                              <h3 className="font-medium text-gray-900 dark:text-white truncate">
                                 {barbero.nombre}
+                              </h3>
+                              <span
+                                className={`px-2 py-1 rounded-full text-xs ${
+                                  barbero.activo
+                                    ? "bg-green-100 text-green-800"
+                                    : "bg-red-100 text-red-800"
+                                }`}
+                              >
+                                {barbero.activo ? "Activo" : "Inactivo"}
                               </span>
                             </div>
-                          </Table.Cell>
-                          <Table.Cell>
-                            {barbero.logo ? (
-                              <img
-                                src={`${import.meta.env.VITE_API_URL}/uploads/${
-                                  barbero.logo
-                                }`}
-                                alt={`Logo de ${barbero.nombre}`}
-                                className="w-8 h-8 object-contain"
-                              />
-                            ) : (
-                              <span className="text-gray-400 text-sm">
-                                Sin logo
-                              </span>
+
+                            {barbero.logo && (
+                              <div className="mb-2">
+                                <img
+                                  src={`${
+                                    import.meta.env.VITE_API_URL
+                                  }/uploads/${barbero.logo}`}
+                                  alt={`Logo de ${barbero.nombre}`}
+                                  className="w-8 h-8 object-contain"
+                                />
+                              </div>
                             )}
-                          </Table.Cell>
-                          <Table.Cell>
-                            <span className="text-sm text-gray-600 dark:text-gray-300 line-clamp-2">
+
+                            <p className="text-sm text-gray-600 dark:text-gray-300 mb-3 line-clamp-2">
                               {barbero.descripcion}
-                            </span>
-                          </Table.Cell>
-                          <Table.Cell>
-                            <span
-                              className={`px-2 py-1 rounded-full text-xs ${
-                                barbero.activo
-                                  ? "bg-green-100 text-green-800"
-                                  : "bg-red-100 text-red-800"
-                              }`}
-                            >
-                              {barbero.activo ? "Activo" : "Inactivo"}
-                            </span>
-                          </Table.Cell>
-                          <Table.Cell>
-                            <span
-                              className={`px-2 py-1 rounded-full text-xs ${
-                                barbero.incluirEnAgenda
-                                  ? "bg-blue-100 text-blue-800"
-                                  : "bg-gray-100 text-gray-800"
-                              }`}
-                            >
-                              {barbero.incluirEnAgenda
-                                ? "✓ Incluido"
-                                : "✗ Excluido"}
-                            </span>
-                          </Table.Cell>
-                          <Table.Cell>
+                            </p>
+
                             <div className="flex gap-2">
                               <Button
                                 size="xs"
                                 color="blue"
                                 onClick={() => editBarbero(barbero)}
+                                className="flex-1"
                               >
                                 Editar
                               </Button>
                               <Button
                                 size="xs"
-                                color="failure"
+                                color="red"
                                 onClick={() => deleteBarbero(barbero._id)}
+                                className="flex-1"
                               >
                                 Eliminar
                               </Button>
                             </div>
-                          </Table.Cell>
-                        </Table.Row>
-                      ))}
-                    </Table.Body>
-                  </Table>
-                </div>
-              </>
-            )}
-          </Card>
-        </div>
-      )}
-
-      {/* Modal para crear/editar barbero */}
-      <Modal show={showBarberoModal} onClose={() => setShowBarberoModal(false)}>
-        <Modal.Header>
-          {selectedBarbero ? "Editar Barbero" : "Nuevo Barbero"}
-        </Modal.Header>
-        <Modal.Body>
-          <form onSubmit={handleBarberoSubmit} className="space-y-4">
-            <div>
-              <Label htmlFor="nombreBarbero">Nombre del Barbero *</Label>
-              <TextInput
-                id="nombreBarbero"
-                type="text"
-                required
-                value={barberoForm.nombre}
-                onChange={(e) =>
-                  setBarberoForm({ ...barberoForm, nombre: e.target.value })
-                }
-                placeholder="Nombre completo del barbero"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="descripcionBarbero">Descripción *</Label>
-              <Textarea
-                id="descripcionBarbero"
-                required
-                rows={3}
-                value={barberoForm.descripcion}
-                onChange={(e) =>
-                  setBarberoForm({
-                    ...barberoForm,
-                    descripcion: e.target.value,
-                  })
-                }
-                placeholder="Descripción profesional del barbero, especialidades, experiencia..."
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="fotoBarbero">Foto del Barbero *</Label>
-              <input
-                id="fotoBarbero"
-                type="file"
-                accept="image/*"
-                required={!selectedBarbero}
-                onChange={(e) => setBarberoFoto(e.target.files[0])}
-                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100"
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Formatos: JPG, PNG, WEBP. Tamaño máximo: 5MB
-              </p>
-              {selectedBarbero && selectedBarbero.foto && (
-                <div className="mt-2">
-                  <img
-                    src={`${import.meta.env.VITE_API_URL}/uploads/${
-                      selectedBarbero.foto
-                    }`}
-                    alt="Foto actual"
-                    className="w-20 h-20 object-cover rounded-lg"
-                  />
-                  <p className="text-xs text-gray-500">Foto actual</p>
-                </div>
-              )}
-            </div>
-
-            <div>
-              <Label htmlFor="logoBarbero">Logo del Barbero (Opcional)</Label>
-              <input
-                id="logoBarbero"
-                type="file"
-                accept="image/*"
-                onChange={(e) => setBarberoLogo(e.target.files[0])}
-                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100"
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Logo personal o marca del barbero (opcional)
-              </p>
-              {selectedBarbero && selectedBarbero.logo && (
-                <div className="mt-2">
-                  <img
-                    src={`${import.meta.env.VITE_API_URL}/uploads/${
-                      selectedBarbero.logo
-                    }`}
-                    alt="Logo actual"
-                    className="w-16 h-16 object-contain"
-                  />
-                  <p className="text-xs text-gray-500">Logo actual</p>
-                </div>
-              )}
-            </div>
-
-            <div className="flex items-center gap-2">
-              <input
-                id="activoBarbero"
-                type="checkbox"
-                checked={barberoForm.activo}
-                onChange={(e) =>
-                  setBarberoForm({ ...barberoForm, activo: e.target.checked })
-                }
-                className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
-              />
-              <Label htmlFor="activoBarbero">Barbero activo</Label>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <input
-                id="incluirEnAgendaBarbero"
-                type="checkbox"
-                checked={barberoForm.incluirEnAgenda}
-                onChange={(e) =>
-                  setBarberoForm({
-                    ...barberoForm,
-                    incluirEnAgenda: e.target.checked,
-                  })
-                }
-                className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
-              />
-              <Label htmlFor="incluirEnAgendaBarbero">Incluir en agenda</Label>
-            </div>
-
-            <div className="flex gap-2 pt-4">
-              <Button type="submit" color="purple" className="flex-1">
-                {selectedBarbero ? "Actualizar" : "Crear"} Barbero
-              </Button>
-              <Button
-                type="button"
-                color="gray"
-                onClick={() => setShowBarberoModal(false)}
-                className="flex-1"
-              >
-                Cancelar
-              </Button>
-            </div>
-          </form>
-        </Modal.Body>
-      </Modal>
-
-      {/* Modal para crear/editar servicio */}
-      <Modal
-        show={showServicioModal}
-        onClose={() => setShowServicioModal(false)}
-      >
-        <Modal.Header>
-          {selectedServicio ? "Editar Servicio" : "Nuevo Servicio"}
-        </Modal.Header>
-        <Modal.Body>
-          <form onSubmit={handleServicioSubmit} className="space-y-4">
-            <div>
-              <Label htmlFor="nombre">Nombre del Servicio *</Label>
-              <TextInput
-                id="nombre"
-                type="text"
-                required
-                value={servicioForm.nombre}
-                onChange={(e) =>
-                  setServicioForm({ ...servicioForm, nombre: e.target.value })
-                }
-                placeholder="Ej: Corte de cabello"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="descripcion">Descripción</Label>
-              <TextInput
-                id="descripcion"
-                type="text"
-                value={servicioForm.descripcion}
-                onChange={(e) =>
-                  setServicioForm({
-                    ...servicioForm,
-                    descripcion: e.target.value,
-                  })
-                }
-                placeholder="Descripción del servicio"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="precio">Precio *</Label>
-              <TextInput
-                id="precio"
-                type="number"
-                required
-                min="0"
-                step="0.01"
-                value={servicioForm.precio}
-                onChange={(e) =>
-                  setServicioForm({ ...servicioForm, precio: e.target.value })
-                }
-                placeholder="0.00"
-              />
-            </div>
-
-            {/* Sección de imágenes existentes (solo en edición) */}
-            {selectedServicio && imagenesServicio.length > 0 && (
-              <div>
-                <Label>Imágenes Actuales</Label>
-                <div className="grid grid-cols-3 gap-4 mt-2">
-                  {imagenesServicio.map((imagen, index) => (
-                    <div key={index} className="relative">
-                      <img
-                        src={`${
-                          import.meta.env.VITE_API_URL
-                        }/uploads/${imagen}`}
-                        alt={`${servicioForm.nombre} - ${index + 1}`}
-                        className="w-full h-20 object-cover rounded border cursor-pointer"
-                        onClick={() =>
-                          openImageGallery(imagenesServicio, index)
-                        }
-                      />
-                      <button
-                        type="button"
-                        onClick={() => deleteExistingImage(index)}
-                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Sección para subir nuevas imágenes */}
-            <div>
-              <Label htmlFor="imagenes">Agregar Imágenes</Label>
-              <input
-                id="imagenes"
-                type="file"
-                multiple
-                accept="image/*"
-                onChange={handleImagenesChange}
-                className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100"
-              />
-              <p className="mt-1 text-sm text-gray-500">
-                Puedes seleccionar múltiples imágenes. PNG, JPG, JPEG, WEBP
-                (máx. 5MB cada una)
-              </p>
-            </div>
-
-            {/* Vista previa de nuevas imágenes */}
-            {nuevasImagenes.length > 0 && (
-              <div>
-                <Label>Vista Previa de Nuevas Imágenes</Label>
-                <div className="grid grid-cols-3 gap-4 mt-2">
-                  {nuevasImagenes.map((imagen, index) => (
-                    <div key={index} className="relative">
-                      <img
-                        src={URL.createObjectURL(imagen)}
-                        alt={`Nueva imagen ${index + 1}`}
-                        className="w-full h-20 object-cover rounded border"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removeNewImage(index)}
-                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </form>
-        </Modal.Body>
-        <Modal.Footer>
-          <Button color="purple" onClick={handleServicioSubmit}>
-            {selectedServicio ? "Actualizar" : "Crear"}
-          </Button>
-          <Button color="gray" onClick={() => setShowServicioModal(false)}>
-            Cancelar
-          </Button>
-        </Modal.Footer>
-      </Modal>
-
-      {/* Modal para ver/editar turno */}
-      <Modal show={showModal} onClose={() => setShowModal(false)}>
-        <Modal.Header>Detalles del Turno</Modal.Header>
-        <Modal.Body>
-          {selectedTurno && (
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="fecha">Fecha</Label>
-                <TextInput
-                  id="fecha"
-                  value={formatearFecha(selectedTurno.fecha)}
-                  readOnly
-                />
-              </div>
-              <div>
-                <Label htmlFor="hora">Hora</Label>
-                <TextInput id="hora" value={selectedTurno.hora} readOnly />
-              </div>
-              <div>
-                <Label htmlFor="cliente">Cliente</Label>
-                <TextInput
-                  id="cliente"
-                  value={selectedTurno.nombreCliente || "No asignado"}
-                  readOnly
-                />
-              </div>
-              <div>
-                <Label htmlFor="telefono">Teléfono</Label>
-                <TextInput
-                  id="telefono"
-                  value={selectedTurno.numeroCliente || "No asignado"}
-                  readOnly
-                />
-              </div>
-              <div>
-                <Label htmlFor="costo">Costo</Label>
-                <TextInput
-                  id="costo"
-                  value={`Gs.${selectedTurno.costoTotal || 0}`}
-                  readOnly
-                />
-              </div>
-              <div>
-                <Label htmlFor="estado">Estado</Label>
-                <Select
-                  id="estado"
-                  value={selectedTurno.estado}
-                  onChange={(e) =>
-                    actualizarEstadoTurno(selectedTurno._id, e.target.value)
-                  }
-                >
-                  <option value="sin Pagar">Sin Pagar</option>
-                  <option value="pagado">Pagado</option>
-                  <option value="disponible">Disponible</option>
-                  <option value="cancelado">Cancelado</option>
-                </Select>
-              </div>
-              {selectedTurno.servicios &&
-                selectedTurno.servicios.length > 0 && (
-                  <div>
-                    <Label>Servicios</Label>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {selectedTurno.servicios.map((servicio, index) => (
-                        <div
-                          key={index}
-                          className="bg-green-50 border border-green-200 rounded-lg p-3 flex-1 min-w-[200px]"
-                        >
-                          <div className="flex justify-between items-center">
-                            <span className="font-medium text-green-800">
-                              {servicio.nombre}
-                            </span>
-                            <span className="font-bold text-green-600">
-                              Gs.{servicio.precio?.toLocaleString() || 0}
-                            </span>
                           </div>
-                          {servicio.duracion && (
-                            <div className="text-xs text-green-600 mt-1">
-                              Duración: {servicio.duracion} min
-                            </div>
-                          )}
                         </div>
-                      ))}
-                    </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Vista de tabla para desktop */}
+                  <div className="hidden md:block overflow-x-auto">
+                    <Table>
+                      <Table.Head>
+                        <Table.HeadCell>Barbero</Table.HeadCell>
+                        <Table.HeadCell>Logo</Table.HeadCell>
+                        <Table.HeadCell>Descripción</Table.HeadCell>
+                        <Table.HeadCell>Estado</Table.HeadCell>
+                        <Table.HeadCell>Incluir en Agenda</Table.HeadCell>
+                        <Table.HeadCell>Acciones</Table.HeadCell>
+                      </Table.Head>
+                      <Table.Body>
+                        {barberos.map((barbero) => (
+                          <Table.Row
+                            key={barbero._id}
+                            className="bg-white dark:bg-gray-800"
+                          >
+                            <Table.Cell className="font-medium">
+                              <div className="flex items-center gap-3">
+                                <img
+                                  src={`${
+                                    import.meta.env.VITE_API_URL
+                                  }/uploads/${barbero.foto}`}
+                                  alt={barbero.nombre}
+                                  className="w-12 h-12 object-cover rounded-lg"
+                                />
+                                <span className="text-gray-900 dark:text-white">
+                                  {barbero.nombre}
+                                </span>
+                              </div>
+                            </Table.Cell>
+                            <Table.Cell>
+                              {barbero.logo ? (
+                                <img
+                                  src={`${
+                                    import.meta.env.VITE_API_URL
+                                  }/uploads/${barbero.logo}`}
+                                  alt={`Logo de ${barbero.nombre}`}
+                                  className="w-8 h-8 object-contain"
+                                />
+                              ) : (
+                                <span className="text-gray-400 text-sm">
+                                  Sin logo
+                                </span>
+                              )}
+                            </Table.Cell>
+                            <Table.Cell>
+                              <span className="text-sm text-gray-600 dark:text-gray-300 line-clamp-2">
+                                {barbero.descripcion}
+                              </span>
+                            </Table.Cell>
+                            <Table.Cell>
+                              <span
+                                className={`px-2 py-1 rounded-full text-xs ${
+                                  barbero.activo
+                                    ? "bg-green-100 text-green-800"
+                                    : "bg-red-100 text-red-800"
+                                }`}
+                              >
+                                {barbero.activo ? "Activo" : "Inactivo"}
+                              </span>
+                            </Table.Cell>
+                            <Table.Cell>
+                              <span
+                                className={`px-2 py-1 rounded-full text-xs ${
+                                  barbero.incluirEnAgenda
+                                    ? "bg-blue-100 text-blue-800"
+                                    : "bg-gray-100 text-gray-800"
+                                }`}
+                              >
+                                {barbero.incluirEnAgenda
+                                  ? "✓ Incluido"
+                                  : "✗ Excluido"}
+                              </span>
+                            </Table.Cell>
+                            <Table.Cell>
+                              <div className="flex gap-2">
+                                <Button
+                                  size="xs"
+                                  color="blue"
+                                  onClick={() => editBarbero(barbero)}
+                                >
+                                  Editar
+                                </Button>
+                                <Button
+                                  size="xs"
+                                  color="failure"
+                                  onClick={() => deleteBarbero(barbero._id)}
+                                >
+                                  Eliminar
+                                </Button>
+                              </div>
+                            </Table.Cell>
+                          </Table.Row>
+                        ))}
+                      </Table.Body>
+                    </Table>
+                  </div>
+                </>
+              )}
+            </Card>
+          </div>
+        )}
+
+        {/* Modal para crear/editar barbero */}
+        <Modal
+          show={showBarberoModal}
+          onClose={() => setShowBarberoModal(false)}
+        >
+          <Modal.Header>
+            {selectedBarbero ? "Editar Barbero" : "Nuevo Barbero"}
+          </Modal.Header>
+          <Modal.Body>
+            <form onSubmit={handleBarberoSubmit} className="space-y-4">
+              <div>
+                <Label htmlFor="nombreBarbero">Nombre del Barbero *</Label>
+                <TextInput
+                  id="nombreBarbero"
+                  type="text"
+                  required
+                  value={barberoForm.nombre}
+                  onChange={(e) =>
+                    setBarberoForm({ ...barberoForm, nombre: e.target.value })
+                  }
+                  placeholder="Nombre completo del barbero"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="descripcionBarbero">Descripción *</Label>
+                <Textarea
+                  id="descripcionBarbero"
+                  required
+                  rows={3}
+                  value={barberoForm.descripcion}
+                  onChange={(e) =>
+                    setBarberoForm({
+                      ...barberoForm,
+                      descripcion: e.target.value,
+                    })
+                  }
+                  placeholder="Descripción profesional del barbero, especialidades, experiencia..."
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="fotoBarbero">Foto del Barbero *</Label>
+                <input
+                  id="fotoBarbero"
+                  type="file"
+                  accept="image/*"
+                  required={!selectedBarbero}
+                  onChange={(e) => setBarberoFoto(e.target.files[0])}
+                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Formatos: JPG, PNG, WEBP. Tamaño máximo: 5MB
+                </p>
+                {selectedBarbero && selectedBarbero.foto && (
+                  <div className="mt-2">
+                    <img
+                      src={`${import.meta.env.VITE_API_URL}/uploads/${
+                        selectedBarbero.foto
+                      }`}
+                      alt="Foto actual"
+                      className="w-20 h-20 object-cover rounded-lg"
+                    />
+                    <p className="text-xs text-gray-500">Foto actual</p>
                   </div>
                 )}
-            </div>
-          )}
-        </Modal.Body>
-        <Modal.Footer>
-          <Button color="gray" onClick={() => setShowModal(false)}>
-            Cerrar
-          </Button>
-        </Modal.Footer>
-      </Modal>
+              </div>
 
-      {/* Modal para ver y eliminar imágenes */}
-      <Modal show={showImageModal} onClose={closeImageModal} size="4xl">
-        <Modal.Header>Galería de Imágenes</Modal.Header>
-        <Modal.Body>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {currentImagenes.map((imagen, index) => (
-              <div key={index} className="relative group">
-                <img
-                  src={`${import.meta.env.VITE_API_URL}/uploads/${imagen}`}
-                  alt={`Imagen ${index + 1}`}
-                  className="w-full h-48 object-cover rounded-lg"
+              <div>
+                <Label htmlFor="logoBarbero">Logo del Barbero (Opcional)</Label>
+                <input
+                  id="logoBarbero"
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setBarberoLogo(e.target.files[0])}
+                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100"
                 />
-                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-200 rounded-lg flex items-center justify-center">
-                  <Button
-                    color="red"
-                    size="sm"
-                    onClick={() => deleteImageFromModal(imagen)}
-                    className="opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                  >
-                    Eliminar
-                  </Button>
-                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Logo personal o marca del barbero (opcional)
+                </p>
+                {selectedBarbero && selectedBarbero.logo && (
+                  <div className="mt-2">
+                    <img
+                      src={`${import.meta.env.VITE_API_URL}/uploads/${
+                        selectedBarbero.logo
+                      }`}
+                      alt="Logo actual"
+                      className="w-16 h-16 object-contain"
+                    />
+                    <p className="text-xs text-gray-500">Logo actual</p>
+                  </div>
+                )}
               </div>
-            ))}
-          </div>
-          {currentImagenes.length === 0 && (
-            <div className="text-center py-8 text-gray-500">
-              No hay imágenes para mostrar
-            </div>
-          )}
-        </Modal.Body>
-        <Modal.Footer>
-          <Button color="gray" onClick={closeImageModal}>
-            Cerrar
-          </Button>
-        </Modal.Footer>
-      </Modal>
 
-      {/* Modal de Notificación */}
-      <Modal
-        show={showNotificationModal}
-        onClose={() => setShowNotificationModal(false)}
-        size="md"
-      >
-        <Modal.Header>
-          <div className="flex items-center gap-2">
-            {notificationType === "success" && (
-              <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center">
-                <svg
-                  className="w-4 h-4 text-green-600"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
+              <div className="flex items-center gap-2">
+                <input
+                  id="activoBarbero"
+                  type="checkbox"
+                  checked={barberoForm.activo}
+                  onChange={(e) =>
+                    setBarberoForm({ ...barberoForm, activo: e.target.checked })
+                  }
+                  className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+                />
+                <Label htmlFor="activoBarbero">Barbero activo</Label>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <input
+                  id="incluirEnAgendaBarbero"
+                  type="checkbox"
+                  checked={barberoForm.incluirEnAgenda}
+                  onChange={(e) =>
+                    setBarberoForm({
+                      ...barberoForm,
+                      incluirEnAgenda: e.target.checked,
+                    })
+                  }
+                  className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+                />
+                <Label htmlFor="incluirEnAgendaBarbero">
+                  Incluir en agenda
+                </Label>
+              </div>
+
+              <div className="flex gap-2 pt-4">
+                <Button type="submit" color="purple" className="flex-1">
+                  {selectedBarbero ? "Actualizar" : "Crear"} Barbero
+                </Button>
+                <Button
+                  type="button"
+                  color="gray"
+                  onClick={() => setShowBarberoModal(false)}
+                  className="flex-1"
                 >
-                  <path
-                    fillRule="evenodd"
-                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                    clipRule="evenodd"
+                  Cancelar
+                </Button>
+              </div>
+            </form>
+          </Modal.Body>
+        </Modal>
+
+        {/* Modal para crear/editar servicio */}
+        <Modal
+          show={showServicioModal}
+          onClose={() => setShowServicioModal(false)}
+        >
+          <Modal.Header>
+            {selectedServicio ? "Editar Servicio" : "Nuevo Servicio"}
+          </Modal.Header>
+          <Modal.Body>
+            <form onSubmit={handleServicioSubmit} className="space-y-4">
+              <div>
+                <Label htmlFor="nombre">Nombre del Servicio *</Label>
+                <TextInput
+                  id="nombre"
+                  type="text"
+                  required
+                  value={servicioForm.nombre}
+                  onChange={(e) =>
+                    setServicioForm({ ...servicioForm, nombre: e.target.value })
+                  }
+                  placeholder="Ej: Corte de cabello"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="descripcion">Descripción</Label>
+                <TextInput
+                  id="descripcion"
+                  type="text"
+                  value={servicioForm.descripcion}
+                  onChange={(e) =>
+                    setServicioForm({
+                      ...servicioForm,
+                      descripcion: e.target.value,
+                    })
+                  }
+                  placeholder="Descripción del servicio"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="precio">Precio *</Label>
+                <TextInput
+                  id="precio"
+                  type="number"
+                  required
+                  min="0"
+                  step="0.01"
+                  value={servicioForm.precio}
+                  onChange={(e) =>
+                    setServicioForm({ ...servicioForm, precio: e.target.value })
+                  }
+                  placeholder="0.00"
+                />
+              </div>
+
+              {/* Sección de imágenes existentes (solo en edición) */}
+              {selectedServicio && imagenesServicio.length > 0 && (
+                <div>
+                  <Label>Imágenes Actuales</Label>
+                  <div className="grid grid-cols-3 gap-4 mt-2">
+                    {imagenesServicio.map((imagen, index) => (
+                      <div key={index} className="relative">
+                        <img
+                          src={`${
+                            import.meta.env.VITE_API_URL
+                          }/uploads/${imagen}`}
+                          alt={`${servicioForm.nombre} - ${index + 1}`}
+                          className="w-full h-20 object-cover rounded border cursor-pointer"
+                          onClick={() =>
+                            openImageGallery(imagenesServicio, index)
+                          }
+                        />
+                        <button
+                          type="button"
+                          onClick={() => deleteExistingImage(index)}
+                          className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Sección para subir nuevas imágenes */}
+              <div>
+                <Label htmlFor="imagenes">Agregar Imágenes</Label>
+                <input
+                  id="imagenes"
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  onChange={handleImagenesChange}
+                  className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100"
+                />
+                <p className="mt-1 text-sm text-gray-500">
+                  Puedes seleccionar múltiples imágenes. PNG, JPG, JPEG, WEBP
+                  (máx. 5MB cada una)
+                </p>
+              </div>
+
+              {/* Vista previa de nuevas imágenes */}
+              {nuevasImagenes.length > 0 && (
+                <div>
+                  <Label>Vista Previa de Nuevas Imágenes</Label>
+                  <div className="grid grid-cols-3 gap-4 mt-2">
+                    {nuevasImagenes.map((imagen, index) => (
+                      <div key={index} className="relative">
+                        <img
+                          src={URL.createObjectURL(imagen)}
+                          alt={`Nueva imagen ${index + 1}`}
+                          className="w-full h-20 object-cover rounded border"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeNewImage(index)}
+                          className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </form>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button color="purple" onClick={handleServicioSubmit}>
+              {selectedServicio ? "Actualizar" : "Crear"}
+            </Button>
+            <Button color="gray" onClick={() => setShowServicioModal(false)}>
+              Cancelar
+            </Button>
+          </Modal.Footer>
+        </Modal>
+
+        {/* Modal para ver/editar turno */}
+        <Modal show={showModal} onClose={() => setShowModal(false)}>
+          <Modal.Header>Detalles del Turno</Modal.Header>
+          <Modal.Body>
+            {selectedTurno && (
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="fecha">Fecha</Label>
+                  <TextInput
+                    id="fecha"
+                    value={formatearFecha(selectedTurno.fecha)}
+                    readOnly
                   />
-                </svg>
+                </div>
+                <div>
+                  <Label htmlFor="hora">Hora</Label>
+                  <TextInput id="hora" value={selectedTurno.hora} readOnly />
+                </div>
+                <div>
+                  <Label htmlFor="cliente">Cliente</Label>
+                  <TextInput
+                    id="cliente"
+                    value={selectedTurno.nombreCliente || "No asignado"}
+                    readOnly
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="telefono">Teléfono</Label>
+                  <TextInput
+                    id="telefono"
+                    value={selectedTurno.numeroCliente || "No asignado"}
+                    readOnly
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="costo">Costo</Label>
+                  <TextInput
+                    id="costo"
+                    value={`Gs.${selectedTurno.costoTotal || 0}`}
+                    readOnly
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="estado">Estado</Label>
+                  <Select
+                    id="estado"
+                    value={selectedTurno.estado}
+                    onChange={(e) =>
+                      actualizarEstadoTurno(selectedTurno._id, e.target.value)
+                    }
+                  >
+                    <option value="sin Pagar">Sin Pagar</option>
+                    <option value="pagado">Pagado</option>
+                    <option value="disponible">Disponible</option>
+                    <option value="cancelado">Cancelado</option>
+                  </Select>
+                </div>
+                {selectedTurno.servicios &&
+                  selectedTurno.servicios.length > 0 && (
+                    <div>
+                      <Label>Servicios</Label>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {selectedTurno.servicios.map((servicio, index) => (
+                          <div
+                            key={index}
+                            className="bg-green-50 border border-green-200 rounded-lg p-3 flex-1 min-w-[200px]"
+                          >
+                            <div className="flex justify-between items-center">
+                              <span className="font-medium text-green-800">
+                                {servicio.nombre}
+                              </span>
+                              <span className="font-bold text-green-600">
+                                Gs.{servicio.precio?.toLocaleString() || 0}
+                              </span>
+                            </div>
+                            {servicio.duracion && (
+                              <div className="text-xs text-green-600 mt-1">
+                                Duración: {servicio.duracion} min
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
               </div>
             )}
-            {notificationType === "error" && (
-              <div className="w-6 h-6 bg-red-100 rounded-full flex items-center justify-center">
-                <svg
-                  className="w-4 h-4 text-red-600"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                    clipRule="evenodd"
+          </Modal.Body>
+          <Modal.Footer>
+            <Button color="gray" onClick={() => setShowModal(false)}>
+              Cerrar
+            </Button>
+          </Modal.Footer>
+        </Modal>
+
+        {/* Modal para ver y eliminar imágenes */}
+        <Modal show={showImageModal} onClose={closeImageModal} size="4xl">
+          <Modal.Header>Galería de Imágenes</Modal.Header>
+          <Modal.Body>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {currentImagenes.map((imagen, index) => (
+                <div key={index} className="relative group">
+                  <img
+                    src={`${import.meta.env.VITE_API_URL}/uploads/${imagen}`}
+                    alt={`Imagen ${index + 1}`}
+                    className="w-full h-48 object-cover rounded-lg"
                   />
-                </svg>
+                  <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-200 rounded-lg flex items-center justify-center">
+                    <Button
+                      color="red"
+                      size="sm"
+                      onClick={() => deleteImageFromModal(imagen)}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                    >
+                      Eliminar
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            {currentImagenes.length === 0 && (
+              <div className="text-center py-8 text-gray-500">
+                No hay imágenes para mostrar
               </div>
             )}
-            {notificationType === "info" && (
-              <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
-                <svg
-                  className="w-4 h-4 text-blue-600"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              </div>
-            )}
-            <span className="font-medium">
-              {notificationType === "success" && "¡Éxito!"}
-              {notificationType === "error" && "Error"}
-              {notificationType === "info" && "Información"}
-            </span>
-          </div>
-        </Modal.Header>
-        <Modal.Body>
-          <p className="text-gray-700 dark:text-gray-300">
-            {notificationMessage}
-          </p>
-        </Modal.Body>
-        <Modal.Footer>
-          <Button
-            color={
-              notificationType === "success"
-                ? "success"
-                : notificationType === "error"
-                ? "failure"
-                : "gray"
-            }
-            onClick={() => setShowNotificationModal(false)}
-          >
-            Aceptar
-          </Button>
-        </Modal.Footer>
-      </Modal>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button color="gray" onClick={closeImageModal}>
+              Cerrar
+            </Button>
+          </Modal.Footer>
+        </Modal>
+
+        {/* Modal de Notificación */}
+        <Modal
+          show={showNotificationModal}
+          onClose={() => setShowNotificationModal(false)}
+          size="md"
+        >
+          <Modal.Header>
+            <div className="flex items-center gap-2">
+              {notificationType === "success" && (
+                <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center">
+                  <svg
+                    className="w-4 h-4 text-green-600"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </div>
+              )}
+              {notificationType === "error" && (
+                <div className="w-6 h-6 bg-red-100 rounded-full flex items-center justify-center">
+                  <svg
+                    className="w-4 h-4 text-red-600"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </div>
+              )}
+              {notificationType === "info" && (
+                <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
+                  <svg
+                    className="w-4 h-4 text-blue-600"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </div>
+              )}
+              <span className="font-medium">
+                {notificationType === "success" && "¡Éxito!"}
+                {notificationType === "error" && "Error"}
+                {notificationType === "info" && "Información"}
+              </span>
+            </div>
+          </Modal.Header>
+          <Modal.Body>
+            <p className="text-gray-700 dark:text-gray-300">
+              {notificationMessage}
+            </p>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button
+              color={
+                notificationType === "success"
+                  ? "success"
+                  : notificationType === "error"
+                  ? "failure"
+                  : "gray"
+              }
+              onClick={() => setShowNotificationModal(false)}
+            >
+              Aceptar
+            </Button>
+          </Modal.Footer>
+        </Modal>
+      </div>
     </div>
   );
 };
