@@ -1,6 +1,6 @@
 import axios from "axios";
 import { useState, useEffect, useCallback } from "react";
-import { Button, Modal, Dropdown } from "flowbite-react";
+import { Button, Modal } from "flowbite-react";
 import FormAgendar from "./FormAgendar";
 import FormReservarConBarbero from "./FormReservarConBarbero";
 import ParaguayDateUtil from "../utils/paraguayDate";
@@ -16,6 +16,9 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
   const [selectedWeek, setSelectedWeek] = useState(null);
   const [diasActivos, setDiasActivos] = useState([]);
   const [semanas, setSemanas] = useState([]);
+  const [isInitialLoad, setIsInitialLoad] = useState(true); // 🆕 Controlar carga inicial
+  const [selectedDate, setSelectedDate] = useState(null); // 🆕 Nueva forma de manejar fecha seleccionada
+  const [diasDisponibles, setDiasDisponibles] = useState([]); // 🆕 Array de 15 días disponibles
 
   // Usar fechas de Paraguay
   const diaHoy = ParaguayDateUtil.getDayOfWeek();
@@ -208,38 +211,56 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
     }
   }, [horarios, UserId, loadHorariosYSemanas, refreshData]);
 
-  // Calcular fecha objetivo basada en la semana y día seleccionados
-  const calcularFechaObjetivo = useCallback(() => {
-    if (!selectedWeek || !selectedDay) return null;
-
-    // Encontrar qué día de la semana es el día seleccionado
-    // IMPORTANTE: Este array debe coincidir con cómo el backend calcula las semanas
-    // El backend establece inicioSemana al LUNES, por lo que el array debe empezar desde Lunes
-    const diasSemana = [
-      "Lunes",
-      "Martes",
-      "Miercoles",
-      "Jueves",
-      "Viernes",
-      "Sabado",
-      "Domingo",
-    ];
-    const diaIndex = diasSemana.indexOf(selectedDay);
-
-    if (diaIndex === -1) return null;
-
-    // Calcular la fecha específica en la semana seleccionada
-    const inicioSemana = ParaguayDateUtil.toParaguayTime(
-      selectedWeek.inicioSemana
-    );
-    const fechaObjetivo = inicioSemana.add(diaIndex, "days");
-
-    return fechaObjetivo;
-  }, [selectedWeek, selectedDay]);
-
-  // Efecto para avanzar automáticamente si todos los turnos están ocupados
+  // 🆕 Generar los próximos 15 días disponibles
   useEffect(() => {
-    if (!isLoading && selectedDay && selectedWeek && horarios.length > 0) {
+    const generarDiasDisponibles = () => {
+      const dias = [];
+      const hoy = ParaguayDateUtil.now();
+
+      for (let i = 0; i < 15; i++) {
+        const fecha = hoy.clone().add(i, "days");
+        const diaNombre = fecha.format("dddd"); // Nombre completo del día en español
+        const diaCorto =
+          diaNombre.substring(0, 3).charAt(0).toUpperCase() +
+          diaNombre.substring(1, 3); // Primeras 3 letras
+        const diaNumero = fecha.format("DD");
+        const fechaCompleta = fecha.toDate();
+
+        dias.push({
+          diaCorto,
+          diaNumero,
+          fechaCompleta,
+          fechaISO: fecha.format("YYYY-MM-DD"),
+        });
+      }
+
+      setDiasDisponibles(dias);
+
+      // Establecer el primer día como seleccionado por defecto
+      if (dias.length > 0) {
+        setSelectedDate(dias[0].fechaCompleta);
+      }
+    };
+
+    generarDiasDisponibles();
+  }, []);
+
+  // Calcular fecha objetivo basada en la fecha seleccionada
+  const calcularFechaObjetivo = useCallback(() => {
+    if (!selectedDate) return null;
+    return ParaguayDateUtil.toParaguayTime(selectedDate);
+  }, [selectedDate]);
+
+  // Efecto para avanzar automáticamente si todos los turnos están ocupados (SOLO EN CARGA INICIAL)
+  useEffect(() => {
+    // 🆕 Solo ejecutar si es la carga inicial
+    if (
+      !isLoading &&
+      selectedDate &&
+      diasDisponibles.length > 0 &&
+      horarios.length > 0 &&
+      isInitialLoad
+    ) {
       // Calcular horarios filtrados dentro del useEffect
       const fechaObjetivo = calcularFechaObjetivo();
       if (fechaObjetivo) {
@@ -263,22 +284,42 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
           );
 
         if (todosOcupados) {
-          // Pequeño delay para evitar loops infinitos
-          const timer = setTimeout(() => {
-            avanzarAlSiguienteDia();
-          }, 100);
+          // Avanzar al siguiente día disponible
+          const fechaActualIndex = diasDisponibles.findIndex((dia) =>
+            ParaguayDateUtil.toParaguayTime(dia.fechaCompleta).isSame(
+              fechaObjetivo,
+              "day"
+            )
+          );
 
-          return () => clearTimeout(timer);
+          if (
+            fechaActualIndex >= 0 &&
+            fechaActualIndex < diasDisponibles.length - 1
+          ) {
+            const timer = setTimeout(() => {
+              setSelectedDate(
+                diasDisponibles[fechaActualIndex + 1].fechaCompleta
+              );
+              setIsInitialLoad(false);
+            }, 100);
+
+            return () => clearTimeout(timer);
+          } else {
+            setIsInitialLoad(false);
+          }
+        } else {
+          // 🆕 Si hay turnos disponibles, también marcar como no inicial
+          setIsInitialLoad(false);
         }
       }
     }
   }, [
     isLoading,
-    selectedDay,
-    selectedWeek,
+    selectedDate,
+    diasDisponibles,
     horarios,
-    avanzarAlSiguienteDia,
     calcularFechaObjetivo,
+    isInitialLoad,
   ]);
 
   if (isLoading) return <h1>Loading...</h1>;
@@ -308,6 +349,20 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
       {/* Estilos personalizados para dropdown y mobile fixes */}
       <style>
         {`
+          /* Ocultar scrollbar pero mantener funcionalidad */
+          .scrollbar-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+          }
+          .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+          }
+
+          /* Estilos para el carrusel de días */
+          .scale-102 {
+            transform: scale(1.02);
+          }
+
           .agenda-dropdown [data-testid="flowbite-dropdown"] {
             width: 30% !important;
             min-width: 120px !important;
@@ -371,55 +426,50 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
           AGENDA
         </h3>
 
-        {/* Selectores de Semana y Día */}
-        <div className="agenda-header flex flex-col md:flex-row justify-between items-center border-b-2 border-gray-300 mx-2 md:mx-8 pb-4 pt-4 gap-2 md:gap-4">
-          <h3 className="justify-start mt-2 ml-3 hidden md:flex">HORA</h3>
+        {/* Carrusel de días */}
+        <div className="mx-2 md:mx-8 mt-4 md:mt-8 mb-2">
+          <div className="overflow-x-auto scrollbar-hide">
+            <div className="flex gap-2 md:gap-3 pb-4">
+              {diasDisponibles.map((dia, index) => {
+                const isSelected =
+                  selectedDate &&
+                  ParaguayDateUtil.toParaguayTime(selectedDate).isSame(
+                    ParaguayDateUtil.toParaguayTime(dia.fechaCompleta),
+                    "day"
+                  );
 
-          <div className="agenda-controls flex flex-row gap-2 md:gap-3 px-2 md:px-4 w-full md:w-auto justify-center md:justify-end">
-            {/* Select de Semana */}
-            <div className="dropdown-mobile w-full md:w-auto min-w-0 bg-transparent border-2 border-purple-400 text-purple-400 rounded-lg transition duration-300 ease-in-out transform hover:bg-purple-400 hover:text-gray-900 hover:scale-105 relative z-50">
-              <Dropdown
-                color=""
-                label={selectedWeek ? selectedWeek.label : "Semana"}
-                dismissOnClick={true}
-                className="w-full [&>button]:text-center [&>button]:justify-center [&>button]:text-xs [&>button]:px-2 [&>button]:py-1"
-              >
-                {semanas.map((semana, index) => (
-                  <Dropdown.Item
+                return (
+                  <button
                     key={index}
-                    onClick={() => {
-                      setSelectedWeek(semana);
-                    }}
+                    onClick={() => setSelectedDate(dia.fechaCompleta)}
+                    className={`flex-shrink-0 flex flex-col items-center justify-center rounded-lg p-3 min-w-[70px] md:min-w-[80px] transition-all duration-200 ${
+                      isSelected
+                        ? "bg-purple-500 text-white scale-105 shadow-lg"
+                        : "bg-gray-800 text-gray-300 hover:bg-gray-700 hover:scale-102"
+                    }`}
                   >
-                    {semana.label}
-                  </Dropdown.Item>
-                ))}
-              </Dropdown>
-            </div>
-
-            {/* Select de Día */}
-            <div className="dropdown-mobile w-full md:w-auto min-w-0 bg-transparent border-2 border-purple-400 text-purple-400 rounded-lg transition duration-300 ease-in-out transform hover:bg-purple-400 hover:text-gray-900 hover:scale-105 relative z-50">
-              <Dropdown
-                color=""
-                label={`Día: ${selectedDay || ""}`}
-                dismissOnClick={true}
-                className="w-full d-flex justify-center align-items-center [&>button]:text-center [&>button]:justify-center [&>button]:text-xs [&>button]:px-2 [&>button]:py-1"
-              >
-                {diasActivos.map((dia, index) => (
-                  <Dropdown.Item
-                    key={index}
-                    onClick={() => {
-                      setSelectedDay(dia);
-                    }}
-                    style={{ width: "50%" }}
-                  >
-                    {dia}
-                  </Dropdown.Item>
-                ))}
-              </Dropdown>
+                    <span
+                      className={`text-xs md:text-sm font-medium ${
+                        isSelected ? "text-white" : "text-gray-400"
+                      }`}
+                    >
+                      {dia.diaCorto}
+                    </span>
+                    <span
+                      className={`text-2xl md:text-3xl font-bold mt-1 ${
+                        isSelected ? "text-white" : "text-purple-400"
+                      }`}
+                    >
+                      {dia.diaNumero}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>
+
+        <div className="border-b-2 border-gray-300 mx-2 md:mx-8 pb-2"></div>
 
         {horariosFiltrados.map((agenda) => {
           return (
