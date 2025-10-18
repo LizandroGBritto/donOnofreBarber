@@ -211,27 +211,52 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
     }
   }, [horarios, UserId, loadHorariosYSemanas, refreshData]);
 
-  // 🆕 Generar los próximos 15 días disponibles
+  // 🆕 Generar los próximos días disponibles (solo los que tienen turnos)
   useEffect(() => {
     const generarDiasDisponibles = () => {
+      if (!horarios || horarios.length === 0) return;
+
       const dias = [];
       const hoy = ParaguayDateUtil.now();
 
-      for (let i = 0; i < 15; i++) {
-        const fecha = hoy.clone().add(i, "days");
-        const diaNombre = fecha.format("dddd"); // Nombre completo del día en español
-        const diaCorto =
-          diaNombre.substring(0, 3).charAt(0).toUpperCase() +
-          diaNombre.substring(1, 3); // Primeras 3 letras
-        const diaNumero = fecha.format("DD");
-        const fechaCompleta = fecha.toDate();
+      // Mapeo de días en inglés a español
+      const diasEspanol = {
+        monday: "Lun",
+        tuesday: "Mar",
+        wednesday: "Mié",
+        thursday: "Jue",
+        friday: "Vie",
+        saturday: "Sáb",
+        sunday: "Dom",
+      };
 
-        dias.push({
-          diaCorto,
-          diaNumero,
-          fechaCompleta,
-          fechaISO: fecha.format("YYYY-MM-DD"),
+      // Buscar hasta 60 días adelante para encontrar días con turnos
+      for (let i = 0; i < 60; i++) {
+        const fecha = hoy.clone().add(i, "days");
+
+        // Verificar si este día tiene al menos un turno en la agenda
+        const tieneTurnos = horarios.some((agenda) => {
+          const fechaAgenda = ParaguayDateUtil.toParaguayTime(agenda.fecha);
+          return fechaAgenda.isSame(fecha, "day");
         });
+
+        // Solo agregar el día si tiene turnos
+        if (tieneTurnos) {
+          const diaNombreIngles = fecha.format("dddd").toLowerCase(); // monday, tuesday, etc.
+          const diaCorto = diasEspanol[diaNombreIngles] || fecha.format("ddd");
+          const diaNumero = fecha.format("DD");
+          const fechaCompleta = fecha.toDate();
+
+          dias.push({
+            diaCorto,
+            diaNumero,
+            fechaCompleta,
+            fechaISO: fecha.format("YYYY-MM-DD"),
+          });
+
+          // Limitar a 15 días con turnos
+          if (dias.length >= 15) break;
+        }
       }
 
       setDiasDisponibles(dias);
@@ -243,7 +268,7 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
     };
 
     generarDiasDisponibles();
-  }, []);
+  }, [horarios]);
 
   // Calcular fecha objetivo basada en la fecha seleccionada
   const calcularFechaObjetivo = useCallback(() => {
@@ -425,6 +450,11 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
         <h3 className="flex justify-center mt-4 md:mt-8 mx-2 md:mx-8 border-b-2 border-gray-300 pb-2">
           AGENDA
         </h3>
+
+        {/* Texto de ayuda para mobile */}
+        <p className="md:hidden text-center text-gray-400 text-xs mt-2 mx-2">
+          Desliza para ver más días
+        </p>
 
         {/* Carrusel de días */}
         <div className="mx-2 md:mx-8 mt-4 md:mt-8 mb-2">
