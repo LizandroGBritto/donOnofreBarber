@@ -459,7 +459,7 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
         {/* Carrusel de días */}
         <div className="mx-2 md:mx-8 mt-4 md:mt-8 mb-2">
           <div className="overflow-x-auto scrollbar-hide">
-            <div className="flex gap-2 md:gap-3 pb-4">
+            <div className="flex gap-2 md:gap-3 pb-4 lg:justify-center">
               {diasDisponibles.map((dia, index) => {
                 const isSelected =
                   selectedDate &&

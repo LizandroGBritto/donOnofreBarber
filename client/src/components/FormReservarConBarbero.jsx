@@ -520,13 +520,6 @@ const FormReservarConBarbero = ({
                   {/* Botones */}
                   <div className="flex flex-col md:flex-row justify-end space-y-2 md:space-y-0 md:space-x-4 pt-4 md:pt-6 border-t">
                     <button
-                      type="button"
-                      onClick={onCloseModal}
-                      className="w-full md:w-auto px-4 md:px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
-                    >
-                      Cancelar
-                    </button>
-                    <button
                       type="submit"
                       disabled={
                         isSubmitting ||
@@ -537,6 +530,13 @@ const FormReservarConBarbero = ({
                       className="w-full md:w-auto px-4 md:px-6 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
                     >
                       {isSubmitting ? "Reservando..." : "Confirmar Reserva"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={onCloseModal}
+                      className="w-full md:w-auto px-4 md:px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
+                    >
+                      Cancelar
                     </button>
                   </div>
                 </FormikForm>

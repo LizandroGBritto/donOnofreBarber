@@ -12,6 +12,7 @@ const NavBar = ({ agendarRef, footerRef }) => {
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [imageCache] = useState(new Set()); // Cache simple de URLs cargadas
 
   // Detectar si es mobile o desktop
   useEffect(() => {
@@ -25,7 +26,7 @@ const NavBar = ({ agendarRef, footerRef }) => {
     return () => window.removeEventListener("resize", checkIsMobile);
   }, []);
 
-  // Cargar banners activos
+  // Cargar banners activos y precargar imágenes con link preload
   useEffect(() => {
     const fetchBanners = async () => {
       try {
@@ -36,13 +37,34 @@ const NavBar = ({ agendarRef, footerRef }) => {
           (banner) => banner.estado === "activo"
         );
         setBanners(activeBanners);
+
+        // Precargar todas las imágenes de los banners usando link preload (mayor prioridad)
+        activeBanners.forEach((banner) => {
+          if (banner.imagen && !imageCache.has(banner.imagen)) {
+            const imageUrl = `${import.meta.env.VITE_API_URL}/uploads/${banner.imagen}`;
+
+            // Usar link preload para mayor prioridad
+            const link = document.createElement('link');
+            link.rel = 'preload';
+            link.as = 'image';
+            link.href = imageUrl;
+            document.head.appendChild(link);
+
+            // Marcar en cache
+            imageCache.add(banner.imagen);
+
+            // También crear Image() como respaldo
+            const img = new Image();
+            img.src = imageUrl;
+          }
+        });
       } catch (error) {
         console.error("Error al cargar banners:", error);
       }
     };
 
     fetchBanners();
-  }, []);
+  }, [imageCache]);
 
   // Transición automática entre banners
   useEffect(() => {
@@ -114,6 +136,9 @@ const NavBar = ({ agendarRef, footerRef }) => {
   const appropriateBanners = getAppropiateBanners();
   const currentBanner =
     appropriateBanners[currentBannerIndex % appropriateBanners.length];
+
+  // Determinar la imagen de fondo
+  // Prioridad: Banner > backImg
   const backgroundImage = currentBanner?.imagen
     ? `${import.meta.env.VITE_API_URL}/uploads/${currentBanner.imagen}`
     : backImg;
