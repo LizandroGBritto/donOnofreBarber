@@ -49,12 +49,14 @@ const NavBar = ({ agendarRef, footerRef }) => {
         // Precargar todas las imágenes de los banners usando link preload (mayor prioridad)
         activeBanners.forEach((banner) => {
           if (banner.imagen && !imageCacheRef.current.has(banner.imagen)) {
-            const imageUrl = `${import.meta.env.VITE_API_URL}/uploads/${banner.imagen}`;
+            const imageUrl = `${import.meta.env.VITE_API_URL}/uploads/${
+              banner.imagen
+            }`;
 
             // Usar link preload para mayor prioridad
-            const link = document.createElement('link');
-            link.rel = 'preload';
-            link.as = 'image';
+            const link = document.createElement("link");
+            link.rel = "preload";
+            link.as = "image";
             link.href = imageUrl;
             document.head.appendChild(link);
 

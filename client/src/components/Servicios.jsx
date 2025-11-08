@@ -38,31 +38,37 @@ const Servicios = () => {
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
     const [isPaused, setIsPaused] = useState(false);
 
-    const nextImage = useCallback((e) => {
-      if (e) {
-        e.preventDefault();
-        e.stopPropagation();
-      }
-      setIsPaused(true);
-      setCurrentImageIndex((prevIndex) =>
-        prevIndex === imagenes.length - 1 ? 0 : prevIndex + 1
-      );
-      // Resume auto-advance after 3 seconds
-      setTimeout(() => setIsPaused(false), 3000);
-    }, [imagenes.length]);
+    const nextImage = useCallback(
+      (e) => {
+        if (e) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+        setIsPaused(true);
+        setCurrentImageIndex((prevIndex) =>
+          prevIndex === imagenes.length - 1 ? 0 : prevIndex + 1
+        );
+        // Resume auto-advance after 3 seconds
+        setTimeout(() => setIsPaused(false), 3000);
+      },
+      [imagenes.length]
+    );
 
-    const prevImage = useCallback((e) => {
-      if (e) {
-        e.preventDefault();
-        e.stopPropagation();
-      }
-      setIsPaused(true);
-      setCurrentImageIndex((prevIndex) =>
-        prevIndex === 0 ? imagenes.length - 1 : prevIndex - 1
-      );
-      // Resume auto-advance after 3 seconds
-      setTimeout(() => setIsPaused(false), 3000);
-    }, [imagenes.length]);
+    const prevImage = useCallback(
+      (e) => {
+        if (e) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+        setIsPaused(true);
+        setCurrentImageIndex((prevIndex) =>
+          prevIndex === 0 ? imagenes.length - 1 : prevIndex - 1
+        );
+        // Resume auto-advance after 3 seconds
+        setTimeout(() => setIsPaused(false), 3000);
+      },
+      [imagenes.length]
+    );
 
     const goToImage = useCallback((e, index) => {
       if (e) {
