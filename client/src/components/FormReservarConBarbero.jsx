@@ -8,15 +8,12 @@ const FormReservarConBarbero = ({
   turno,
   onCloseModal,
   refreshData,
-  getUserId,
 }) => {
   const [barberos, setBarberos] = useState([]);
-  const [selectedBarbero, setSelectedBarbero] = useState(null);
   const [disponibilidad, setDisponibilidad] = useState({});
   const [loading, setLoading] = useState(false);
   const [services, setServices] = useState([]);
   const [selectedServices, setSelectedServices] = useState([]);
-  const [error, setError] = useState("");
   const [turnoExistenteInfo, setTurnoExistenteInfo] = useState(null);
 
   // Cargar barberos activos incluidos en agenda
@@ -76,7 +73,6 @@ const FormReservarConBarbero = ({
         setDisponibilidad(response.data.disponibilidad);
       } catch (error) {
         console.error("Error loading disponibilidad:", error);
-        setError("Error al cargar la disponibilidad de barberos");
       } finally {
         setLoading(false);
       }
@@ -152,15 +148,11 @@ const FormReservarConBarbero = ({
         if (verificacionResponse.data.tieneTurno) {
           const turnoExistente = verificacionResponse.data.turno;
           setTurnoExistenteInfo(turnoExistente);
-          setError(
-            `Ya tienes un turno abierto para el ${turnoExistente.fecha} a las ${turnoExistente.hora} con ${turnoExistente.barbero}`
-          );
           setSubmitting(false);
           return;
         }
 
         // Limpiar error si no hay turno existente
-        setError("");
         setTurnoExistenteInfo(null);
       } catch (error) {
         console.error("Error verificando turno existente:", error);
@@ -212,8 +204,6 @@ const FormReservarConBarbero = ({
         text: errorMessage,
         confirmButtonText: "Entendido",
       });
-
-      setError(errorMessage);
     } finally {
       setSubmitting(false);
     }
@@ -221,10 +211,8 @@ const FormReservarConBarbero = ({
 
   if (!turno) return null;
 
-  // 🔧 SOLUCIÓN: Verificación mejorada de barberos disponibles/ocupados
-  const horaDisponibilidad = disponibilidad[turno.hora];
-  const barberosDisponibles = horaDisponibilidad?.barberosDisponibles || [];
-  const barberosOcupados = horaDisponibilidad?.barberosOcupados || [];
+  // Obtener barberos ocupados en la hora seleccionada
+  const barberosOcupados = disponibilidad[turno.hora]?.barberosOcupados || [];
 
   // Crear un Set con IDs de barberos ocupados para búsqueda rápida
   const barberosOcupadosIds = new Set(
@@ -266,25 +254,16 @@ const FormReservarConBarbero = ({
             </button>
           </div>
 
-          {error && (
-            <div
-              className={`mb-4 p-4 rounded ${
-                turnoExistenteInfo
-                  ? "bg-yellow-100 border border-yellow-400 text-yellow-700"
-                  : "bg-red-100 border border-red-400 text-red-700"
-              }`}
-            >
-              {turnoExistenteInfo ? (
-                <div>
-                  <strong>⚠️ Ya tienes un turno reservado</strong>
-                  <p className="mt-1">{error}</p>
-                  <p className="mt-2 text-sm">
-                    Debes cancelar tu turno actual antes de agendar uno nuevo.
-                  </p>
-                </div>
-              ) : (
-                error
-              )}
+          {turnoExistenteInfo && (
+            <div className="mb-4 p-4 rounded bg-yellow-100 border border-yellow-400 text-yellow-700">
+              <strong>⚠️ Ya tienes un turno reservado</strong>
+              <p className="mt-1">
+                Ya tienes un turno abierto para el {turnoExistenteInfo.fecha} a las{" "}
+                {turnoExistenteInfo.hora} con {turnoExistenteInfo.barbero}
+              </p>
+              <p className="mt-2 text-sm">
+                Debes cancelar tu turno actual antes de agendar uno nuevo.
+              </p>
             </div>
           )}
 
@@ -372,7 +351,6 @@ const FormReservarConBarbero = ({
                                       values.barberoId === barbero._id
                                         ? ""
                                         : barbero._id;
-                                    setSelectedBarbero(newSelected);
                                     setFieldValue("barberoId", newSelected);
                                   }
                                 }}
