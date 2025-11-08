@@ -9,6 +9,32 @@ body {
   overflow-x: hidden;
 }
 
+/* 🚀 Optimizaciones de rendimiento para Android */
+* {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Reducir uso de GPU en modales y overlays */
+.modal-overlay {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+/* Optimizar scroll en mobile */
+.will-change-scroll {
+  will-change: scroll-position;
+  -webkit-overflow-scrolling: touch;
+  transform: translateZ(0);
+}
+
+/* Optimizar imágenes */
+img {
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+}
+
 /* Utilidad para truncar texto en múltiples líneas */
 .line-clamp-3 {
   display: -webkit-box;

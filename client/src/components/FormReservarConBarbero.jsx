@@ -1,14 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Formik, Field, Form as FormikForm, ErrorMessage } from "formik";
 import * as Yup from "yup";
 import axios from "axios";
 import Swal from "sweetalert2";
 
-const FormReservarConBarbero = ({
-  turno,
-  onCloseModal,
-  refreshData,
-}) => {
+const FormReservarConBarbero = ({ turno, onCloseModal, refreshData }) => {
   const [barberos, setBarberos] = useState([]);
   const [disponibilidad, setDisponibilidad] = useState({});
   const [loading, setLoading] = useState(false);
@@ -209,25 +205,43 @@ const FormReservarConBarbero = ({
     }
   };
 
+  // 🚀 Optimización: Memoizar cálculos pesados
+  const {
+    barberosOcupadosIds,
+    barberosDisponiblesFiltrados,
+    unicoBarberoDisponible,
+  } = useMemo(() => {
+    if (!turno?.hora || !disponibilidad || !barberos.length) {
+      return {
+        barberosOcupadosIds: new Set(),
+        barberosDisponiblesFiltrados: [],
+        unicoBarberoDisponible: null,
+      };
+    }
+
+    // Obtener barberos ocupados en la hora seleccionada
+    const barberosOcupados = disponibilidad[turno.hora]?.barberosOcupados || [];
+
+    // Crear un Set con IDs de barberos ocupados para búsqueda rápida
+    const ocupadosIds = new Set(
+      barberosOcupados.map((bo) => bo.barbero?._id?.toString()).filter(Boolean)
+    );
+
+    // Verificar si hay solo un barbero disponible
+    const disponibles = barberos.filter(
+      (b) => !ocupadosIds.has(b._id.toString())
+    );
+
+    const unico = disponibles.length === 1 ? disponibles[0] : null;
+
+    return {
+      barberosOcupadosIds: ocupadosIds,
+      barberosDisponiblesFiltrados: disponibles,
+      unicoBarberoDisponible: unico,
+    };
+  }, [disponibilidad, turno?.hora, barberos]);
+
   if (!turno) return null;
-
-  // Obtener barberos ocupados en la hora seleccionada
-  const barberosOcupados = disponibilidad[turno.hora]?.barberosOcupados || [];
-
-  // Crear un Set con IDs de barberos ocupados para búsqueda rápida
-  const barberosOcupadosIds = new Set(
-    barberosOcupados.map((bo) => bo.barbero?._id?.toString()).filter(Boolean)
-  );
-
-  // 🆕 Verificar si hay solo un barbero disponible
-  const barberosDisponiblesFiltrados = barberos.filter(
-    (b) => !barberosOcupadosIds.has(b._id.toString())
-  );
-
-  const unicoBarberoDisponible =
-    barberosDisponiblesFiltrados.length === 1
-      ? barberosDisponiblesFiltrados[0]
-      : null;
 
   // 🆕 Valores iniciales con barbero único auto-seleccionado
   const initialValues = {
@@ -238,8 +252,8 @@ const FormReservarConBarbero = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-2 md:p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[95vh] md:max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 md:p-4">
+      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[95vh] md:max-h-[90vh] overflow-y-auto will-change-scroll">
         <div className="p-3 md:p-6">
           <div className="flex justify-between items-start mb-4 md:mb-6">
             <h2 className="text-lg md:text-2xl font-bold text-gray-900 pr-4">
@@ -258,8 +272,8 @@ const FormReservarConBarbero = ({
             <div className="mb-4 p-4 rounded bg-yellow-100 border border-yellow-400 text-yellow-700">
               <strong>⚠️ Ya tienes un turno reservado</strong>
               <p className="mt-1">
-                Ya tienes un turno abierto para el {turnoExistenteInfo.fecha} a las{" "}
-                {turnoExistenteInfo.hora} con {turnoExistenteInfo.barbero}
+                Ya tienes un turno abierto para el {turnoExistenteInfo.fecha} a
+                las {turnoExistenteInfo.hora} con {turnoExistenteInfo.barbero}
               </p>
               <p className="mt-2 text-sm">
                 Debes cancelar tu turno actual antes de agendar uno nuevo.
@@ -363,6 +377,8 @@ const FormReservarConBarbero = ({
                                       }/uploads/${barbero.foto}`}
                                       alt={barbero.nombre}
                                       className="w-10 h-10 md:w-12 md:h-12 rounded-full object-cover"
+                                      loading="lazy"
+                                      decoding="async"
                                     />
                                   </div>
                                   <div className="flex-1 min-w-0">
@@ -422,6 +438,8 @@ const FormReservarConBarbero = ({
                             }`}
                             alt={unicoBarberoDisponible.nombre}
                             className="w-12 h-12 rounded-full object-cover"
+                            loading="lazy"
+                            decoding="async"
                           />
                         </div>
                         <div className="flex-1">
