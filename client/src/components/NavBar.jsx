@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import axios from "axios";
 import DownButton from "../assets/DownButton.svg";
 import logoCenter from "../assets/assets_template/AlonzoStylev2.webp";
@@ -12,18 +12,26 @@ const NavBar = ({ agendarRef, footerRef }) => {
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
-  const [imageCache] = useState(new Set()); // Cache simple de URLs cargadas
+  const imageCacheRef = useRef(new Set()); // ✅ Usar useRef en lugar de useState para evitar re-renders
 
-  // Detectar si es mobile o desktop
+  // Detectar si es mobile o desktop con debounce
   useEffect(() => {
+    let timeoutId;
     const checkIsMobile = () => {
-      setIsMobile(window.innerWidth < 768);
+      // ✅ Debounce para evitar múltiples re-renders
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        setIsMobile(window.innerWidth < 768);
+      }, 150);
     };
 
     checkIsMobile();
     window.addEventListener("resize", checkIsMobile);
 
-    return () => window.removeEventListener("resize", checkIsMobile);
+    return () => {
+      clearTimeout(timeoutId);
+      window.removeEventListener("resize", checkIsMobile);
+    };
   }, []);
 
   // Cargar banners activos y precargar imágenes con link preload
@@ -40,7 +48,7 @@ const NavBar = ({ agendarRef, footerRef }) => {
 
         // Precargar todas las imágenes de los banners usando link preload (mayor prioridad)
         activeBanners.forEach((banner) => {
-          if (banner.imagen && !imageCache.has(banner.imagen)) {
+          if (banner.imagen && !imageCacheRef.current.has(banner.imagen)) {
             const imageUrl = `${import.meta.env.VITE_API_URL}/uploads/${banner.imagen}`;
 
             // Usar link preload para mayor prioridad
@@ -51,7 +59,7 @@ const NavBar = ({ agendarRef, footerRef }) => {
             document.head.appendChild(link);
 
             // Marcar en cache
-            imageCache.add(banner.imagen);
+            imageCacheRef.current.add(banner.imagen);
 
             // También crear Image() como respaldo
             const img = new Image();
@@ -64,7 +72,7 @@ const NavBar = ({ agendarRef, footerRef }) => {
     };
 
     fetchBanners();
-  }, [imageCache]);
+  }, []); // ✅ Sin dependencias - solo ejecutar una vez
 
   // Transición automática entre banners
   useEffect(() => {
@@ -143,21 +151,22 @@ const NavBar = ({ agendarRef, footerRef }) => {
     ? `${import.meta.env.VITE_API_URL}/uploads/${currentBanner.imagen}`
     : backImg;
 
-  const scrollToAgendar = () => {
+  // Funciones de navegación memoizadas
+  const scrollToAgendar = useCallback(() => {
     if (agendarRef.current) {
       agendarRef.current.scrollIntoView({ behavior: "smooth" });
     }
-  };
+  }, [agendarRef]);
 
-  const scrollToFooter = () => {
+  const scrollToFooter = useCallback(() => {
     if (footerRef.current) {
       footerRef.current.scrollIntoView({ behavior: "smooth" });
     }
-  };
+  }, [footerRef]);
 
-  const goToAdmin = () => {
+  const goToAdmin = useCallback(() => {
     navigate("/admin");
-  };
+  }, [navigate]);
 
   return (
     <div

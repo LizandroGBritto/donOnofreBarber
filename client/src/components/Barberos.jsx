@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 
 const Barberos = () => {
@@ -25,19 +25,20 @@ const Barberos = () => {
     }
   };
 
-  const scrollToAgenda = () => {
+  // ✅ Memoizar funciones de navegación
+  const scrollToAgenda = useCallback(() => {
     const agendaSection = document.getElementById("agenda");
     if (agendaSection) {
       agendaSection.scrollIntoView({ behavior: "smooth" });
     }
-  };
+  }, []);
 
-  const scrollToServicios = () => {
+  const scrollToServicios = useCallback(() => {
     const serviciosSection = document.getElementById("servicios");
     if (serviciosSection) {
       serviciosSection.scrollIntoView({ behavior: "smooth" });
     }
-  };
+  }, []);
 
   if (loading) {
     return (
@@ -116,6 +117,8 @@ const Barberos = () => {
                   }`}
                   alt={barbero.nombre}
                   className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-300"
+                  loading="lazy"
+                  decoding="async"
                 />
 
                 {/* Logo del barbero (si existe) */}
@@ -127,6 +130,8 @@ const Barberos = () => {
                       }`}
                       alt={`Logo de ${barbero.nombre}`}
                       className="w-12 h-12 object-contain rounded-full"
+                      loading="lazy"
+                      decoding="async"
                     />
                   </div>
                 )}

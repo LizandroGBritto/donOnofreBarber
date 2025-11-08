@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, memo } from "react";
 import axios from "axios";
 
 const Servicios = () => {
@@ -26,18 +26,19 @@ const Servicios = () => {
     }
   };
 
-  const scrollToAgenda = () => {
+  const scrollToAgenda = useCallback(() => {
     const agendaSection = document.getElementById("agenda");
     if (agendaSection) {
       agendaSection.scrollIntoView({ behavior: "smooth" });
     }
-  };
+  }, []);
 
-  const CarruselImagenes = ({ imagenes, nombre }) => {
+  // ✅ Memoizar CarruselImagenes para evitar re-renders innecesarios
+  const CarruselImagenes = memo(({ imagenes, nombre }) => {
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
     const [isPaused, setIsPaused] = useState(false);
 
-    const nextImage = (e) => {
+    const nextImage = useCallback((e) => {
       if (e) {
         e.preventDefault();
         e.stopPropagation();
@@ -48,9 +49,9 @@ const Servicios = () => {
       );
       // Resume auto-advance after 3 seconds
       setTimeout(() => setIsPaused(false), 3000);
-    };
+    }, [imagenes.length]);
 
-    const prevImage = (e) => {
+    const prevImage = useCallback((e) => {
       if (e) {
         e.preventDefault();
         e.stopPropagation();
@@ -61,9 +62,9 @@ const Servicios = () => {
       );
       // Resume auto-advance after 3 seconds
       setTimeout(() => setIsPaused(false), 3000);
-    };
+    }, [imagenes.length]);
 
-    const goToImage = (e, index) => {
+    const goToImage = useCallback((e, index) => {
       if (e) {
         e.preventDefault();
         e.stopPropagation();
@@ -72,7 +73,7 @@ const Servicios = () => {
       setCurrentImageIndex(index);
       // Resume auto-advance after 3 seconds
       setTimeout(() => setIsPaused(false), 3000);
-    };
+    }, []);
 
     // Reset index if it's out of bounds
     useEffect(() => {
@@ -113,6 +114,8 @@ const Servicios = () => {
           }`}
           alt={`${nombre} - ${currentImageIndex + 1}`}
           className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+          loading="lazy"
+          decoding="async"
         />
 
         {imagenes.length > 1 && (
@@ -178,7 +181,7 @@ const Servicios = () => {
         <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-20"></div>
       </div>
     );
-  };
+  }); // ✅ Cierre correcto de memo()
 
   if (loading) {
     return (
