@@ -6,8 +6,15 @@ import Barberos from "../components/Barberos";
 import { useState, useEffect, useRef, useCallback } from "react";
 import axios from "axios";
 
+// Lista de widgets de respaldo en caso de límite alcanzado
+const ELFSIGHT_WIDGETS = [
+  "b55caa18-3827-43a3-9056-872bfd45e534", // Widget principal
+  "db56f908-49b4-4c9c-957a-d30decec426d", // Widget de respaldo
+];
+
 const Landing = () => {
   const [horarios, setHorarios] = useState([]);
+  const [currentWidgetIndex, setCurrentWidgetIndex] = useState(0);
   const agendarRef = useRef(null);
   const footerRef = useRef(null);
 
@@ -49,15 +56,44 @@ const Landing = () => {
     const script = document.createElement("script");
     script.src = "https://elfsightcdn.com/platform.js";
     script.async = true;
+
+    // Capturar errores de Elfsight
+    const originalError = console.error;
+    const handleElfsightError = (message, ...args) => {
+      if (
+        typeof message === "string" &&
+        message.includes("APP_VIEWS_LIMIT_REACHED")
+      ) {
+        console.warn(
+          "Elfsight APP_VIEWS_LIMIT_REACHED detectado, intentando con widget de respaldo..."
+        );
+
+        // Intentar con el siguiente widget
+        if (currentWidgetIndex < ELFSIGHT_WIDGETS.length - 1) {
+          setCurrentWidgetIndex(currentWidgetIndex + 1);
+
+          // Reinicializar el script de Elfsight para que cargue el nuevo widget
+          if (window.eapps) {
+            window.eapps.Platform.go();
+          }
+        }
+      }
+
+      // Llamar al error original
+      originalError(message, ...args);
+    };
+
+    console.error = handleElfsightError;
     document.head.appendChild(script);
 
     // Cleanup function
     return () => {
+      console.error = originalError;
       if (script.parentNode) {
         script.parentNode.removeChild(script);
       }
     };
-  }, [getUserId, fetchTurnos]);
+  }, [getUserId, fetchTurnos, currentWidgetIndex]);
 
   return (
     <>
@@ -84,7 +120,11 @@ const Landing = () => {
             </h2>
             <div className="flex justify-center">
               {/* Elfsight Instagram Feed | Untitled Instagram Feed */}
-            <div className="elfsight-app-b55caa18-3827-43a3-9056-872bfd45e534" data-elfsight-app-lazy></div>
+              <div
+                key={currentWidgetIndex}
+                className={`elfsight-app-${ELFSIGHT_WIDGETS[currentWidgetIndex]}`}
+                data-elfsight-app-lazy
+              ></div>
             </div>
           </div>
         </div>

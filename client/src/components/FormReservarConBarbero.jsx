@@ -270,13 +270,14 @@ const FormReservarConBarbero = ({ turno, onCloseModal, refreshData }) => {
 
           {turnoExistenteInfo && (
             <div className="mb-4 p-4 rounded bg-yellow-100 border border-yellow-400 text-yellow-700">
-              <strong>⚠️ Ya tienes un turno reservado</strong>
+              <strong>⚠️ Ya tienes un turno próximo reservado</strong>
               <p className="mt-1">
                 Ya tienes un turno abierto para el {turnoExistenteInfo.fecha} a
                 las {turnoExistenteInfo.hora} con {turnoExistenteInfo.barbero}
               </p>
               <p className="mt-2 text-sm">
-                Debes cancelar tu turno actual antes de agendar uno nuevo.
+                Debes cancelar o completar tu turno actual (dentro de las
+                próximas 12 horas) antes de agendar uno nuevo.
               </p>
             </div>
           )}

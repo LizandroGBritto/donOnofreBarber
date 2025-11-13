@@ -439,15 +439,29 @@ module.exports = {
       const barberosActivos = await BarberoModel.find({ activo: true });
       const totalBarberos = barberosActivos.length;
 
-      // Obtener todos los turnos
-      const allTurnos = await AgendaModel.find({})
+      // ✅ OPTIMIZACIÓN: Solo obtener turnos de los próximos 30 días
+      const hoy = ParaguayDateUtil.now().startOf("day").toDate();
+      const treintaDiasDespues = ParaguayDateUtil.now()
+        .add(30, "days")
+        .endOf("day")
+        .toDate();
+
+      // Obtener solo los turnos del rango de fechas
+      const allTurnos = await AgendaModel.find({
+        fecha: { $gte: hoy, $lte: treintaDiasDespues },
+      })
         .populate("barbero", "nombre foto")
         .sort({ fecha: 1, hora: 1 });
 
-      // Log de primeros 5 turnos para análisis
-      allTurnos.slice(0, 5).forEach((turno, index) => {
-        const fechaString = new Date(turno.fecha).toISOString().split("T")[0];
-      });
+      console.log(`✅ getTurnosLanding OPTIMIZADO:`);
+      console.log(
+        `   - Rango: ${hoy.toISOString().split("T")[0]} a ${
+          treintaDiasDespues.toISOString().split("T")[0]
+        }`
+      );
+      console.log(
+        `   - Turnos encontrados: ${allTurnos.length} (antes: todos los turnos en BD)`
+      );
 
       // Agrupar turnos por fecha y hora usando un Map para mejor control
       const turnosPorFechaHora = new Map();
@@ -586,11 +600,16 @@ module.exports = {
 
       res.status(200).json({
         agendas: turnosLimpios,
-        mensaje: "Vista optimizada para landing - un turno por hora",
+        mensaje:
+          "Vista optimizada para landing - próximos 30 días, un turno por hora",
         estadisticas: {
           totalTurnos: allTurnos.length,
           gruposUnicos: turnosPorFechaHora.size,
           turnosLimpios: turnosLimpios.length,
+          rangoFechas: {
+            desde: hoy.toISOString().split("T")[0],
+            hasta: treintaDiasDespues.toISOString().split("T")[0],
+          },
         },
       });
     } catch (error) {
@@ -1162,10 +1181,16 @@ module.exports = {
         });
       }
 
+      // ✅ Calcular límite de 12 horas desde ahora
+      const ahora = ParaguayDateUtil.now().toDate();
+      const docehoras = ParaguayDateUtil.now().add(12, "hours").toDate();
+
       // Buscar turnos que estén en estados activos (no disponible ni pagado)
+      // Y que estén dentro de las próximas 12 horas
       const turnoExistente = await AgendaModel.findOne({
         numeroCliente: numeroCliente,
-        estado: { $in: ["reservado", "confirmado"] }, // Solo reservado y confirmado
+        estado: { $in: ["reservado", "confirmado"] },
+        fecha: { $gte: ahora, $lte: docehoras },
       }).populate("barbero", "nombre");
 
       if (turnoExistente) {
@@ -1187,11 +1212,14 @@ module.exports = {
             barbero: nombreBarbero,
             estado: turnoExistente.estado,
           },
+          mensaje:
+            "Ya tienes un turno reservado dentro de las próximas 12 horas",
         });
       } else {
         res.status(200).json({
           tieneTurno: false,
           turno: null,
+          mensaje: "No tienes turnos reservados en las próximas 12 horas",
         });
       }
     } catch (error) {

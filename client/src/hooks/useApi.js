@@ -11,7 +11,6 @@ const api = axios.create({
 if (config.isDevelopment()) {
   api.interceptors.request.use(
     (config) => {
-      console.log(`API Request: ${config.method?.toUpperCase()} ${config.url}`);
       return config;
     },
     (error) => {
@@ -22,7 +21,6 @@ if (config.isDevelopment()) {
 
   api.interceptors.response.use(
     (response) => {
-      console.log(`API Response: ${response.status} ${response.config.url}`);
       return response;
     },
     (error) => {

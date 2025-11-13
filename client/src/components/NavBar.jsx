@@ -12,7 +12,7 @@ const NavBar = ({ agendarRef, footerRef }) => {
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
-  const imageCacheRef = useRef(new Set()); // ✅ Usar useRef en lugar de useState para evitar re-renders
+  const imageCacheRef = useRef(new Set());
 
   // Detectar si es mobile o desktop con debounce
   useEffect(() => {

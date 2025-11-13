@@ -1,5 +1,5 @@
 import axios from "axios";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { Button, Modal } from "flowbite-react";
 import FormAgendar from "./FormAgendar";
 import FormReservarConBarbero from "./FormReservarConBarbero";
@@ -16,9 +16,8 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
   const [selectedWeek, setSelectedWeek] = useState(null);
   const [diasActivos, setDiasActivos] = useState([]);
   const [semanas, setSemanas] = useState([]);
-  const [isInitialLoad, setIsInitialLoad] = useState(true); // 🆕 Controlar carga inicial
-  const [selectedDate, setSelectedDate] = useState(null); // 🆕 Nueva forma de manejar fecha seleccionada
-  const [diasDisponibles, setDiasDisponibles] = useState([]); // 🆕 Array de 15 días disponibles
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [selectedDate, setSelectedDate] = useState(null);
 
   // Usar fechas de Paraguay
   const diaHoy = ParaguayDateUtil.getDayOfWeek();
@@ -211,64 +210,62 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
     }
   }, [horarios, UserId, loadHorariosYSemanas, refreshData]);
 
-  // 🆕 Generar los próximos días disponibles (solo los que tienen turnos)
-  useEffect(() => {
-    const generarDiasDisponibles = () => {
-      if (!horarios || horarios.length === 0) return;
+  // ✅ OPTIMIZADO: Usar useMemo para diasDisponibles (evita re-renders)
+  const diasDisponibles = useMemo(() => {
+    if (!horarios || horarios.length === 0) return [];
 
-      const dias = [];
-      const hoy = ParaguayDateUtil.now();
+    const dias = [];
+    const hoy = ParaguayDateUtil.now();
 
-      // Mapeo de días en inglés a español
-      const diasEspanol = {
-        monday: "Lun",
-        tuesday: "Mar",
-        wednesday: "Mié",
-        thursday: "Jue",
-        friday: "Vie",
-        saturday: "Sáb",
-        sunday: "Dom",
-      };
-
-      // Buscar hasta 60 días adelante para encontrar días con turnos
-      for (let i = 0; i < 60; i++) {
-        const fecha = hoy.clone().add(i, "days");
-
-        // Verificar si este día tiene al menos un turno en la agenda
-        const tieneTurnos = horarios.some((agenda) => {
-          const fechaAgenda = ParaguayDateUtil.toParaguayTime(agenda.fecha);
-          return fechaAgenda.isSame(fecha, "day");
-        });
-
-        // Solo agregar el día si tiene turnos
-        if (tieneTurnos) {
-          const diaNombreIngles = fecha.format("dddd").toLowerCase(); // monday, tuesday, etc.
-          const diaCorto = diasEspanol[diaNombreIngles] || fecha.format("ddd");
-          const diaNumero = fecha.format("DD");
-          const fechaCompleta = fecha.toDate();
-
-          dias.push({
-            diaCorto,
-            diaNumero,
-            fechaCompleta,
-            fechaISO: fecha.format("YYYY-MM-DD"),
-          });
-
-          // Limitar a 15 días con turnos
-          if (dias.length >= 15) break;
-        }
-      }
-
-      setDiasDisponibles(dias);
-
-      // Establecer el primer día como seleccionado por defecto
-      if (dias.length > 0) {
-        setSelectedDate(dias[0].fechaCompleta);
-      }
+    // Mapeo de días en inglés a español
+    const diasEspanol = {
+      monday: "Lun",
+      tuesday: "Mar",
+      wednesday: "Mié",
+      thursday: "Jue",
+      friday: "Vie",
+      saturday: "Sáb",
+      sunday: "Dom",
     };
 
-    generarDiasDisponibles();
+    // Buscar hasta 60 días adelante para encontrar días con turnos
+    for (let i = 0; i < 60; i++) {
+      const fecha = hoy.clone().add(i, "days");
+
+      // Verificar si este día tiene al menos un turno en la agenda
+      const tieneTurnos = horarios.some((agenda) => {
+        const fechaAgenda = ParaguayDateUtil.toParaguayTime(agenda.fecha);
+        return fechaAgenda.isSame(fecha, "day");
+      });
+
+      // Solo agregar el día si tiene turnos
+      if (tieneTurnos) {
+        const diaNombreIngles = fecha.format("dddd").toLowerCase();
+        const diaCorto = diasEspanol[diaNombreIngles] || fecha.format("ddd");
+        const diaNumero = fecha.format("DD");
+        const fechaCompleta = fecha.toDate();
+
+        dias.push({
+          diaCorto,
+          diaNumero,
+          fechaCompleta,
+          fechaISO: fecha.format("YYYY-MM-DD"),
+        });
+
+        // Limitar a 15 días con turnos
+        if (dias.length >= 15) break;
+      }
+    }
+
+    return dias;
   }, [horarios]);
+
+  // ✅ Establecer fecha seleccionada solo una vez cuando diasDisponibles esté listo
+  useEffect(() => {
+    if (diasDisponibles.length > 0 && !selectedDate) {
+      setSelectedDate(diasDisponibles[0].fechaCompleta);
+    }
+  }, [diasDisponibles, selectedDate]);
 
   // Calcular fecha objetivo basada en la fecha seleccionada
   const calcularFechaObjetivo = useCallback(() => {
@@ -347,27 +344,24 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
     isInitialLoad,
   ]);
 
+  // ✅ OPTIMIZADO: Usar useMemo para horariosFiltrados (ANTES del if/return para respetar reglas de Hooks)
+  const horariosFiltrados = useMemo(() => {
+    const fechaObjetivo = calcularFechaObjetivo();
+    if (!fechaObjetivo) return [];
+
+    return horarios
+      .filter((agenda) => {
+        const fechaAgenda = ParaguayDateUtil.toParaguayTime(agenda.fecha);
+        return fechaAgenda.isSame(fechaObjetivo, "day");
+      })
+      .sort((a, b) => {
+        const horaA = parseInt(a.hora.replace(":", ""), 10);
+        const horaB = parseInt(b.hora.replace(":", ""), 10);
+        return horaA - horaB;
+      });
+  }, [horarios, selectedDate, calcularFechaObjetivo]);
+
   if (isLoading) return <h1>Loading...</h1>;
-
-  // Como el backend ahora devuelve datos limpios (un turno por hora),
-  // filtrar por la fecha específica calculada
-  const horariosFiltrados = horarios
-    .filter((agenda) => {
-      const fechaObjetivo = calcularFechaObjetivo();
-      if (!fechaObjetivo) {
-        return false;
-      }
-
-      const fechaAgenda = ParaguayDateUtil.toParaguayTime(agenda.fecha);
-      const coincide = fechaAgenda.isSame(fechaObjetivo, "day");
-
-      return coincide;
-    })
-    .sort((a, b) => {
-      const horaA = parseInt(a.hora.replace(":", ""), 10);
-      const horaB = parseInt(b.hora.replace(":", ""), 10);
-      return horaA - horaB; // Orden Ascendente
-    });
 
   return (
     <div>
