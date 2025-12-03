@@ -22,13 +22,6 @@ body {
   perspective: 1000px;
 }
 
-/* Optimizar scroll en mobile */
-.will-change-scroll {
-  will-change: scroll-position;
-  -webkit-overflow-scrolling: touch;
-  transform: translateZ(0);
-}
-
 /* Optimizar imágenes */
 img {
   image-rendering: -webkit-optimize-contrast;
