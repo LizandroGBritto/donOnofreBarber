@@ -15,17 +15,10 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Reducir uso de GPU en modales y overlays */
-.modal-overlay {
-  transform: translateZ(0);
-  backface-visibility: hidden;
-  perspective: 1000px;
-}
-
-/* Optimizar imágenes */
-img {
-  image-rendering: -webkit-optimize-contrast;
-  image-rendering: crisp-edges;
+/* Performance optimization for long lists */
+.content-auto {
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 1000px; /* Estimate height to prevent scrollbar jumping */
 }
 
 /* Utilidad para truncar texto en múltiples líneas */
