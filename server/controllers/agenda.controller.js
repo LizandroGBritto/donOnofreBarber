@@ -11,7 +11,7 @@ module.exports = {
       const { startOfDay, endOfDay } = ParaguayDateUtil.createDateRange();
 
       console.log(
-        `Eliminando TODOS los turnos entre ${startOfDay.toISOString()} y ${endOfDay.toISOString()}`
+        `Eliminando TODOS los turnos entre ${startOfDay.toISOString()} y ${endOfDay.toISOString()}`,
       );
 
       const eliminados = await AgendaModel.deleteMany({
@@ -57,9 +57,8 @@ module.exports = {
 
       // Regenerar turnos para esta fecha
       console.log(`Regenerando turnos para ${fecha}...`);
-      const resultado = await AgendaGeneratorService.generarTurnosPorFecha(
-        fechaObj
-      );
+      const resultado =
+        await AgendaGeneratorService.generarTurnosPorFecha(fechaObj);
 
       res.status(200).json({
         message: "Turnos regenerados exitosamente",
@@ -118,7 +117,7 @@ module.exports = {
         eliminados += resultado.deletedCount;
 
         console.log(
-          `Eliminados ${resultado.deletedCount} duplicados para ${grupo._id.fechaStr} ${grupo._id.hora}`
+          `Eliminados ${resultado.deletedCount} duplicados para ${grupo._id.fechaStr} ${grupo._id.hora}`,
         );
       }
 
@@ -143,7 +142,7 @@ module.exports = {
       const resultado =
         await AgendaGeneratorService.limpiarTurnosBarberosExcluidos(
           fechaInicio ? new Date(fechaInicio) : null,
-          fechaFin ? new Date(fechaFin) : null
+          fechaFin ? new Date(fechaFin) : null,
         );
 
       res.status(200).json(resultado);
@@ -190,7 +189,7 @@ module.exports = {
         0,
         0,
         0,
-        0
+        0,
       );
       const finHoy = new Date(
         hoy.getFullYear(),
@@ -199,7 +198,7 @@ module.exports = {
         23,
         59,
         59,
-        999
+        999,
       );
 
       const turnosHoy = await AgendaModel.countDocuments({
@@ -267,12 +266,12 @@ module.exports = {
       .populate("barbero", "nombre foto")
       .then((allAgendas) => {
         const agendasConCosto = allAgendas.filter(
-          (a) => a.costoTotal > 0 || a.costoServicios > 0
+          (a) => a.costoTotal > 0 || a.costoServicios > 0,
         );
         res.status(200).json({ agendas: allAgendas });
       })
       .catch((err) =>
-        res.status(400).json({ message: "Algo salió mal", error: err })
+        res.status(400).json({ message: "Algo salió mal", error: err }),
       );
   },
 
@@ -317,7 +316,7 @@ module.exports = {
 
       Object.values(turnosPorFechaHora).forEach((grupo) => {
         const turnosOcupados = grupo.turnos.filter(
-          (t) => t.estado !== "disponible" && t.barbero
+          (t) => t.estado !== "disponible" && t.barbero,
         );
 
         const barberosOcupados = turnosOcupados.length;
@@ -325,7 +324,7 @@ module.exports = {
 
         // Si hay un turno del usuario, mostrarlo
         const turnoUsuario = grupo.turnos.find(
-          (t) => t.nombreCliente && t.nombreCliente !== ""
+          (t) => t.nombreCliente && t.nombreCliente !== "",
         );
 
         if (turnoUsuario) {
@@ -395,7 +394,7 @@ module.exports = {
       horasDisponibles.forEach((hora) => {
         const turnosHora = turnosFecha.filter((t) => t.hora === hora);
         const turnosOcupados = turnosHora.filter(
-          (t) => t.estado !== "disponible" && t.barbero
+          (t) => t.estado !== "disponible" && t.barbero,
         );
         const barberosOcupados = turnosOcupados.map((t) => ({
           barbero: t.barbero,
@@ -406,8 +405,8 @@ module.exports = {
           (barbero) =>
             !turnosOcupados.some(
               (turnoOcupado) =>
-                turnoOcupado.barbero._id.toString() === barbero._id.toString()
-            )
+                turnoOcupado.barbero._id.toString() === barbero._id.toString(),
+            ),
         );
 
         disponibilidadPorHora[hora] = {
@@ -457,10 +456,10 @@ module.exports = {
       console.log(
         `   - Rango: ${hoy.toISOString().split("T")[0]} a ${
           treintaDiasDespues.toISOString().split("T")[0]
-        }`
+        }`,
       );
       console.log(
-        `   - Turnos encontrados: ${allTurnos.length} (antes: todos los turnos en BD)`
+        `   - Turnos encontrados: ${allTurnos.length} (antes: todos los turnos en BD)`,
       );
 
       // Agrupar turnos por fecha y hora usando un Map para mejor control
@@ -535,18 +534,44 @@ module.exports = {
             estado: "reservado",
           };
         }
-        // Prioridad 3: Si NO hay disponibles pero hay usuarios, mostrar el primero
+        // Prioridad 3: Si NO hay disponibles pero hay usuarios...
         else if (grupo.usuarios.length > 0) {
-          turnoRepresentativo = {
-            ...grupo.usuarios[0]._doc,
-            cantidadDisponibles: 0,
-            cantidadOcupados: grupo.ocupados.length,
-            cantidadUsuarios: grupo.usuarios.length,
-            hayDisponibilidad: false,
-            esUsuario: true,
-            totalBarberos: totalBarberos,
-            barberosOcupados: barberosOcupados,
-          };
+          // 🆕 FIX: Si hay disponibilidad de barberos, mostrar como DISPONIBLE aunque este turno esté ocupado
+          if (hayDisponibilidadDeBarberos) {
+            console.log(
+              `✨ Generando turno virtual disponible para ${grupo.fecha.toISOString()} ${grupo.hora} (Ocupados: ${barberosOcupados}/${totalBarberos})`,
+            );
+            turnoRepresentativo = {
+              _id: `virt-${grupo.usuarios[0]._id}`, // ID virtual para evitar conflictos de key
+              fecha: grupo.usuarios[0].fecha,
+              hora: grupo.usuarios[0].hora,
+              diaSemana: grupo.usuarios[0].diaSemana,
+              estado: "disponible", // FORZAMOS DISPONIBLE
+              cantidadDisponibles: 0, // No hay docs reales disponibles, es virtual
+              cantidadOcupados: grupo.ocupados.length,
+              cantidadUsuarios: grupo.usuarios.length,
+              hayDisponibilidad: true,
+              esUsuario: false,
+              totalBarberos: totalBarberos,
+              barberosOcupados: barberosOcupados,
+              nombreBarbero: "", // Limpiar datos del turno base
+              nombreCliente: "",
+              numeroCliente: "",
+              barbero: null,
+            };
+          } else {
+            // Si NO hay disponibilidad de barberos, mostrar el turno del usuario
+            turnoRepresentativo = {
+              ...grupo.usuarios[0]._doc,
+              cantidadDisponibles: 0,
+              cantidadOcupados: grupo.ocupados.length,
+              cantidadUsuarios: grupo.usuarios.length,
+              hayDisponibilidad: false,
+              esUsuario: true,
+              totalBarberos: totalBarberos,
+              barberosOcupados: barberosOcupados,
+            };
+          }
         }
         // Prioridad 4: Si NO hay disponibles ni usuarios, mostrar ocupado
         else if (grupo.ocupados.length > 0) {
@@ -579,7 +604,7 @@ module.exports = {
       if (keysFinal.length !== keysUnicas.length) {
         console.log(`❗ DUPLICADOS DETECTADOS:`);
         const duplicados = keysFinal.filter(
-          (key, index) => keysFinal.indexOf(key) !== index
+          (key, index) => keysFinal.indexOf(key) !== index,
         );
         duplicados.forEach((key) => {
           console.log(`   - Key duplicada: ${key}`);
@@ -656,7 +681,7 @@ module.exports = {
           }
           resultado = await AgendaGeneratorService.generarTurnosRango(
             new Date(fechaInicio),
-            new Date(fechaFin)
+            new Date(fechaFin),
           );
           break;
         default:
@@ -680,19 +705,19 @@ module.exports = {
     AgendaModel.findOne({ _id: req.params.id })
       .populate("barbero", "nombre foto")
       .then((oneSingleAgenda) =>
-        res.status(200).json({ agenda: oneSingleAgenda })
+        res.status(200).json({ agenda: oneSingleAgenda }),
       )
       .catch((err) =>
-        res.status(400).json({ message: "Algo salió mal", error: err })
+        res.status(400).json({ message: "Algo salió mal", error: err }),
       );
   },
   createAgenda: (req, res) => {
     AgendaModel.create(req.body)
       .then((newlyCreatedAgenda) =>
-        res.status(201).json({ agenda: newlyCreatedAgenda })
+        res.status(201).json({ agenda: newlyCreatedAgenda }),
       )
       .catch((err) =>
-        res.status(400).json({ message: "Algo salió mal", error: err })
+        res.status(400).json({ message: "Algo salió mal", error: err }),
       );
   },
   updateOneAgendaById: async (req, res) => {
@@ -703,7 +728,7 @@ module.exports = {
       const updatedAgenda = await AgendaModel.findOneAndUpdate(
         { _id: req.params.id },
         req.body,
-        { new: true }
+        { new: true },
       ).populate("barbero", "nombre foto");
 
       // Detectar si el turno fue liberado (cambió a disponible)
@@ -724,7 +749,7 @@ module.exports = {
         } catch (notifError) {
           console.error(
             "Error al enviar notificación de turno liberado:",
-            notifError
+            notifError,
           );
         }
       } else if (fueEditado) {
@@ -733,7 +758,7 @@ module.exports = {
         } catch (notifError) {
           console.error(
             "Error al enviar notificación de turno editado:",
-            notifError
+            notifError,
           );
         }
       }
@@ -747,7 +772,7 @@ module.exports = {
     AgendaModel.deleteOne({ _id: req.params.id })
       .then((result) => res.status(200).json({ result: result }))
       .catch((err) =>
-        res.status(400).json({ message: "Algo salió mal", error: err })
+        res.status(400).json({ message: "Algo salió mal", error: err }),
       );
   },
   deleteAndCreateNewAgenda: async (req, res) => {
@@ -797,7 +822,7 @@ module.exports = {
       // Usar el nuevo método del servicio que genera UN turno por barbero
       const resultado = await AgendaGeneratorService.regenerarAgendaCompleta(
         fechaInicio ? new Date(fechaInicio) : null,
-        fechaFin ? new Date(fechaFin) : null
+        fechaFin ? new Date(fechaFin) : null,
       );
 
       res.status(200).json(resultado);
@@ -818,7 +843,7 @@ module.exports = {
       const duplicadosEliminados =
         await AgendaGeneratorService.eliminarDuplicados(
           fechaInicio ? new Date(fechaInicio) : null,
-          fechaFin ? new Date(fechaFin) : null
+          fechaFin ? new Date(fechaFin) : null,
         );
 
       res.status(200).json({
@@ -848,13 +873,13 @@ module.exports = {
 
       // Obtener todos los barberos activos
       const barberos = await BarberoModel.find({ activo: true }).select(
-        "_id nombre foto"
+        "_id nombre foto",
       );
 
       // Obtener todos los turnos para esta fecha
       const turnos = await AgendaModel.find({ fecha: fechaObj }).populate(
         "barbero",
-        "nombre foto"
+        "nombre foto",
       );
 
       // Organizar turnos por hora
@@ -882,7 +907,7 @@ module.exports = {
             (t) =>
               t.barbero &&
               t.barbero._id.toString() === barbero._id.toString() &&
-              ["reservado", "pagado", "en_proceso"].includes(t.estado)
+              ["reservado", "pagado", "en_proceso"].includes(t.estado),
           );
 
           if (turnoOcupado) {
@@ -989,7 +1014,9 @@ module.exports = {
         });
       }
 
-      // Antes de editar, eliminar otros turnos duplicados en la misma fecha/hora
+      // 🆕 FIX: NO eliminar otros turnos disponibles.
+      // Permitimos que existan múltiples turnos a la misma hora para diferentes barberos.
+      /*
       await AgendaModel.deleteMany({
         fecha: {
           $gte: ParaguayDateUtil.startOfDay(fechaObj).toDate(),
@@ -1005,6 +1032,7 @@ module.exports = {
           { numeroCliente: { $exists: false } },
         ],
       });
+      */
 
       // Editar el turno encontrado con los datos de la reserva
       turnoAEditar.estado = "reservado";
@@ -1029,7 +1057,7 @@ module.exports = {
       } catch (notifError) {
         console.error(
           "Error al enviar notificación de nueva reserva:",
-          notifError
+          notifError,
         );
         // No fallar la reserva por error de notificación
       }
@@ -1131,7 +1159,7 @@ module.exports = {
         // Verificar que inicioSemana sea lunes
         if (inicioSemana.getDay() !== 1) {
           console.error(
-            `❌ ERROR: inicioSemana NO es lunes! Es día ${inicioSemana.getDay()}`
+            `❌ ERROR: inicioSemana NO es lunes! Es día ${inicioSemana.getDay()}`,
           );
         }
 
@@ -1196,7 +1224,7 @@ module.exports = {
       if (turnoExistente) {
         // Formatear la fecha para mostrar
         const fechaFormateada = ParaguayDateUtil.toParaguayTime(
-          turnoExistente.fecha
+          turnoExistente.fecha,
         ).format("DD/MM/YYYY");
 
         const nombreBarbero =
