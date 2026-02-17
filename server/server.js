@@ -56,12 +56,20 @@ app.use("/api/barberos", BarberoRouter);
 const NotificationRouter = require("./routes/notification.route");
 app.use("/api/notifications", NotificationRouter);
 
+// Inicializar servicio de agenda
+const AgendaService = require("./services/agendaService");
+
+// 🆕 Inicializar Cron Jobs (WhatsApp reminders)
+const CronService = require("./services/cron.service");
+CronService.init();
+
 // Ruta temporal para migración
 const MigracionRouter = require("./routes/migracion.route");
 app.use("/api/migracion", MigracionRouter);
 
-// Inicializar servicio de agenda
-const AgendaService = require("./services/agendaService");
+// 🆕 Ruta WhatsApp
+const WhatsappRouter = require("./routes/whatsapp.route");
+app.use("/api/whatsapp", WhatsappRouter);
 
 // Importar seeder de administrador
 const { createAdminUser } = require("./scripts/createAdminSeeder");

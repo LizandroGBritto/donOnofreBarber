@@ -1054,9 +1054,36 @@ module.exports = {
       // Enviar notificación de nueva reserva
       try {
         await NotificationService.notificarNuevaReserva(turnoAEditar);
+
+        // 🆕 WhatsApp: Enviar confirmación al cliente
+        if (numeroCliente) {
+          const WhatsappService = require("../services/whatsapp.service");
+          // Obtener nombres de servicios
+          const serviciosNombres =
+            servicios.length > 0
+              ? servicios.map((s) => s.nombre).join(", ")
+              : "Corte de cabello";
+
+          const diaNombre = ParaguayDateUtil.getDayOfWeek(fechaObj);
+          const fechaFormateada = fechaObj.toLocaleDateString("es-PY");
+          const enlaceEdicion = `${process.env.CLIENT_URL || "http://localhost:5173"}/editar-turno/${turnoAEditar._id}`;
+
+          // Construir mensaje exactamente como pidió el usuario
+          let mensaje =
+            `¡Hola ${nombreCliente}! 👋\n\n` +
+            `💈 Te escribimos desde Alonzo Style para recordarte tu cita programada para el ${diaNombre} ${fechaFormateada} a las ${hora} con el barbero ${barbero.nombre}.\n\n` +
+            `💈 Servicios: ${serviciosNombres}\n\n` +
+            `💈 Se recomienda llegar 10 minutos antes de la cita, en caso de no poder asistir, por favor avísanos con anticipación para poder reprogramar tu cita.\n\n` +
+            `📍 Te esperamos aquí: Encarnación - Paraguay\n` +
+            `🗺️ Ver ubicación: https://g.co/kgs/6UKZTmH\n\n` +
+            `✏️ Si necesitas modificar tu cita, puedes hacerlo desde este enlace:\n${enlaceEdicion}\n\n` +
+            `¡Te esperamos! 💈`;
+
+          await WhatsappService.sendMessage(numeroCliente, mensaje);
+        }
       } catch (notifError) {
         console.error(
-          "Error al enviar notificación de nueva reserva:",
+          "Error al enviar notificaciones (Email/WhatsApp):",
           notifError,
         );
         // No fallar la reserva por error de notificación

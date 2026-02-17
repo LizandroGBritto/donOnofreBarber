@@ -15,6 +15,7 @@ import config from "../config/api.config";
 import { useApi } from "../hooks/useApi";
 import Dashboard from "./panel/Dashboard";
 import GestionUsuarios from "./panel/GestionUsuarios";
+import WhatsappConnection from "./panel/WhatsappConnection";
 import NotificationManager from "./NotificationManager";
 import UserContext from "../context/UserContext";
 import {
@@ -48,7 +49,7 @@ const AdminDashboard = () => {
         {},
         {
           withCredentials: true,
-        }
+        },
       );
     } catch (error) {
       console.log("Error al cerrar sesión:", error);
@@ -127,7 +128,7 @@ const AdminDashboard = () => {
     mensaje += `¡Te esperamos! 💈`;
 
     const enlaceWhatsApp = `https://api.whatsapp.com/send?phone=${numeroWhatsApp}&text=${encodeURIComponent(
-      mensaje
+      mensaje,
     )}`;
 
     window.open(enlaceWhatsApp, "_blank");
@@ -263,7 +264,7 @@ const AdminDashboard = () => {
 
     const inicioSemana = new Date(hoy);
     inicioSemana.setDate(
-      hoy.getDate() - diaActual + (diaActual === 0 ? -6 : 1)
+      hoy.getDate() - diaActual + (diaActual === 0 ? -6 : 1),
     );
 
     const finSemana = new Date(inicioSemana);
@@ -354,7 +355,7 @@ const AdminDashboard = () => {
             turno.diaSemana.toLowerCase().includes(searchTerm)) ||
           (turno.estado && turno.estado.toLowerCase().includes(searchTerm)) ||
           (turno.barbero?.nombre &&
-            turno.barbero.nombre.toLowerCase().includes(searchTerm))
+            turno.barbero.nombre.toLowerCase().includes(searchTerm)),
       );
     }
 
@@ -370,7 +371,7 @@ const AdminDashboard = () => {
       });
 
       const updatedTurnos = turnos.map((turno) =>
-        turno._id === id ? { ...turno, estado: nuevoEstado } : turno
+        turno._id === id ? { ...turno, estado: nuevoEstado } : turno,
       );
       setTurnos(updatedTurnos);
       filtrarTurnos();
@@ -502,7 +503,7 @@ const AdminDashboard = () => {
         `${import.meta.env.VITE_API_URL}/api/banners/${id}/estado`,
         {
           estado: newStatus,
-        }
+        },
       );
       fetchBanners();
     } catch (error) {
@@ -711,7 +712,7 @@ const AdminDashboard = () => {
       setLoading(true);
       const response = await api.agenda.regenerar();
       alert(
-        `Agenda regenerada exitosamente. ${response.turnosCreados} turnos creados, ${response.turnosEliminados} turnos eliminados.`
+        `Agenda regenerada exitosamente. ${response.turnosCreados} turnos creados, ${response.turnosEliminados} turnos eliminados.`,
       );
     } catch (error) {
       console.error("Error al regenerar agenda:", error);
@@ -845,10 +846,10 @@ const AdminDashboard = () => {
         await axios.delete(
           `${import.meta.env.VITE_API_URL}/api/servicios/${
             selectedServicio._id
-          }/imagen/${imagenNombre}`
+          }/imagen/${imagenNombre}`,
         );
         setImagenesServicio((prev) =>
-          prev.filter((img) => img !== imagenNombre)
+          prev.filter((img) => img !== imagenNombre),
         );
       } catch (error) {
         console.error("Error al eliminar imagen:", error);
@@ -965,12 +966,12 @@ const AdminDashboard = () => {
       await axios.delete(
         `${
           import.meta.env.VITE_API_URL
-        }/api/servicios/${currentServicioId}/imagen/${imagenNombre}`
+        }/api/servicios/${currentServicioId}/imagen/${imagenNombre}`,
       );
 
       // Actualizar la lista actual de imágenes
       const nuevasImagenes = currentImagenes.filter(
-        (img) => img !== imagenNombre
+        (img) => img !== imagenNombre,
       );
       setCurrentImagenes(nuevasImagenes);
 
@@ -1338,6 +1339,21 @@ const AdminDashboard = () => {
                 Usuarios
               </button>
 
+              <button
+                onClick={() => {
+                  setActiveView("whatsapp");
+                  setIsSidebarOpen(false);
+                }}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                  activeView === "whatsapp"
+                    ? "bg-purple-100 text-purple-700 font-medium"
+                    : "text-gray-700 hover:bg-gray-100"
+                }`}
+              >
+                <HiPhone className="w-5 h-5" />
+                Conexión WhatsApp
+              </button>
+
               <div className="border-t my-2"></div>
 
               <button
@@ -1476,6 +1492,18 @@ const AdminDashboard = () => {
               Usuarios
             </button>
 
+            <button
+              onClick={() => setActiveView("whatsapp")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all whitespace-nowrap ${
+                activeView === "whatsapp"
+                  ? "bg-purple-100 text-purple-700 shadow-sm"
+                  : "text-gray-600 hover:bg-gray-100"
+              }`}
+            >
+              <HiPhone className="w-5 h-5" />
+              Conexión WhatsApp
+            </button>
+
             <div className="border-l mx-2"></div>
 
             <button
@@ -1502,6 +1530,12 @@ const AdminDashboard = () => {
         {activeView === "usuarios" && (
           <div className="space-y-6">
             <GestionUsuarios />
+          </div>
+        )}
+
+        {activeView === "whatsapp" && (
+          <div className="space-y-6">
+            <WhatsappConnection />
           </div>
         )}
 
@@ -2503,7 +2537,7 @@ const AdminDashboard = () => {
                                 onClick={() =>
                                   toggleHorarioStatus(
                                     horario._id,
-                                    horario.estado
+                                    horario.estado,
                                   )
                                 }
                                 className="text-xs w-full sm:w-auto"
@@ -2746,7 +2780,7 @@ const AdminDashboard = () => {
                               onClick={() =>
                                 toggleServicioStatus(
                                   servicio._id,
-                                  servicio.activo
+                                  servicio.activo,
                                 )
                               }
                               className="flex-1"
@@ -2797,7 +2831,7 @@ const AdminDashboard = () => {
                                   onClick={() =>
                                     openImageModal(
                                       servicio.imagenes,
-                                      servicio._id
+                                      servicio._id,
                                     )
                                   }
                                 >
@@ -2863,7 +2897,7 @@ const AdminDashboard = () => {
                                   onClick={() =>
                                     toggleServicioStatus(
                                       servicio._id,
-                                      servicio.activo
+                                      servicio.activo,
                                     )
                                   }
                                 >
@@ -3595,8 +3629,8 @@ const AdminDashboard = () => {
                 notificationType === "success"
                   ? "success"
                   : notificationType === "error"
-                  ? "failure"
-                  : "gray"
+                    ? "failure"
+                    : "gray"
               }
               onClick={() => setShowNotificationModal(false)}
             >

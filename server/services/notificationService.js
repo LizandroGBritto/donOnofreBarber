@@ -6,13 +6,13 @@ class NotificationService {
   static async enviarNotificacionATodos(payload) {
     try {
       console.log(
-        "🔔 [NOTIFICATION SERVICE] Buscando suscripciones activas..."
+        "🔔 [NOTIFICATION SERVICE] Buscando suscripciones activas...",
       );
       const suscripciones = await Suscripcion.find({ activa: true });
 
       if (suscripciones.length === 0) {
         console.log(
-          "❌ [NOTIFICATION SERVICE] No hay suscripciones activas para enviar notificaciones"
+          "❌ [NOTIFICATION SERVICE] No hay suscripciones activas para enviar notificaciones",
         );
         return;
       }
@@ -29,21 +29,21 @@ class NotificationService {
 
           await webpush.sendNotification(
             pushSubscription,
-            JSON.stringify(payload)
+            JSON.stringify(payload),
           );
           console.log(
             `Notificación enviada exitosamente a: ${suscripcion.endpoint.substring(
               0,
-              50
-            )}...`
+              50,
+            )}...`,
           );
         } catch (error) {
           console.error(
             `Error al enviar notificación a ${suscripcion.endpoint.substring(
               0,
-              50
+              50,
             )}:`,
-            error.message
+            error.message,
           );
 
           // Si la suscripción no es válida, marcarla como inactiva
@@ -52,7 +52,7 @@ class NotificationService {
               activa: false,
             });
             console.log(
-              `Suscripción marcada como inactiva: ${suscripcion._id}`
+              `Suscripción marcada como inactiva: ${suscripcion._id}`,
             );
           }
         }
@@ -60,7 +60,7 @@ class NotificationService {
 
       await Promise.all(promesas);
       console.log(
-        `Proceso de notificaciones completado. Total suscripciones: ${suscripciones.length}`
+        `Proceso de notificaciones completado. Total suscripciones: ${suscripciones.length}`,
       );
     } catch (error) {
       console.error("Error en el servicio de notificaciones:", error);
@@ -70,8 +70,10 @@ class NotificationService {
 
   // Enviar notificación específica para nuevas reservas
   static async notificarNuevaReserva(turno) {
+    const nombreBarbero =
+      turno.barbero?.nombre || turno.nombreBarbero || "General";
     const payload = {
-      title: "🆕 Nueva Reserva",
+      title: `🆕 Nueva Reserva - ${nombreBarbero}`,
       body: `${turno.nombreCliente} reservó una cita para ${turno.fecha} a las ${turno.hora}`,
       icon: "/AlonzoStylev2.webp",
       badge: "/AlonzoStylev2.webp",
