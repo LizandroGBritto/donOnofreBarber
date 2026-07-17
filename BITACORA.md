@@ -4,6 +4,36 @@ Registro histórico de auditorías, decisiones técnicas e incidentes del proyec
 
 ---
 
+## 2026-07-17 — Despliegue a producción (VPS Dattatec, alonzostyle.com)
+
+**Alcance:** primer despliegue real del proyecto, sobre una VPS Ubuntu 22.04 nueva (Dattatec, 1 vCPU / ~1GB RAM / 15GB disco) contratada para este fin. Ejecutado en 6 fases (hardening de SO → runtime → deploy de la app → seed de datos reales → verificación de seguridad y e2e → esta entrada de cierre), con verificación después de cada paso. Sin Docker (fuera de presupuesto de RAM); WhatsApp/Evolution API y pagos Adam's Pay quedan **fuera de alcance** por ahora — el código ya tolera su ausencia (solo loguea un warning).
+
+**Arquitectura elegida:**
+- Un solo origen: Nginx sirve el build estático de `client/dist` y hace proxy de `/api` y `/uploads` al proceso Node local (127.0.0.1:8000). Sin subdominio `api.*`, evita CORS cross-origin y un certificado extra.
+- `systemd` en vez de PM2 para correr Node (sin daemon residente extra, RAM ajustada). Unit con `MemoryMax=450M`, `--max-old-space-size=384`, más hardening (`ProtectSystem=strict`, `NoNewPrivileges`, `ProtectHome`), corriendo como usuario de sistema sin privilegios (`dononofre`), no root.
+- MongoDB 7.0 local (no Atlas), `bindIp: 127.0.0.1` (nunca expuesto), `wiredTigerCacheSizeGB: 0.25`, `security.authorization: enabled` con usuario dedicado de la app (permisos solo sobre `OnofreDb`, no admin global).
+- Swap de 2GB en disco (con <1GB de RAM real, protección barata contra OOM-kill en picos como `npm install` o `sharp` procesando imágenes).
+- TLS con Let's Encrypt/Certbot (snap), renovación automática verificada con `--dry-run` y timer de systemd activo.
+- fail2ban con jail sobre los dos puertos SSH (22 y 5749) — verificado de punta a punta con un ban/unban real de prueba (IP de TEST-NET-2), no solo revisando el archivo de config.
+- UFW activo, únicamente 22/5749/80/443 abiertos; confirmado desde afuera de la VPS que Mongo (27017) y el puerto directo de Node (8000) no responden.
+- Rate limiting en Nginx sobre el login (`/api/auth/login` **y** `/api/user/login`, mismo router montado en ambos prefijos — se detectó que solo cubrir uno dejaba un bypass trivial del límite) y sobre `/api/` en general.
+- Headers de seguridad agregados en Nginx (no existían): `Strict-Transport-Security`, `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`.
+
+**Datos de producción:** seed dirigido (no migración cruda de los datos de prueba locales) vía `server/scripts/seedProduccion.js` (idempotente, contraseñas de los usuarios del panel pasadas por variable de entorno al momento de ejecutar, nunca hardcodeadas en el script). Se cargaron: 11 horarios (09:00–19:00, lunes a sábado), 2 barberos con nombre público real ("Lisandro Alonzo", "Elias Lugo", con foto placeholder hasta que se suban las reales), 3 usuarios de panel (`admin` + los 2 barberos), 3 servicios (Corte ₲50.000, Corte y Barba ₲80.000, Ceja ₲20.000), banner (texto "prueba"/"prueba" — **pendiente de cambiar desde el panel**), ubicación y contacto reales.
+
+**Bug encontrado y corregido durante el seed:** al arrancar el server por primera vez con la base vacía, el generador automático de turnos (ruta legacy, la misma clase de bug ya documentada en la entrada de abajo: "veo el botón de agendar pero no veo disponibilidad") creó 243 documentos fantasma (`barbero: null`, `estado: "disponible"`) antes de que existieran barberos reales. Se ejecutó `regenerarAgendaCompleta()` después del seed, que limpió los que caían dentro del rango regenerado; quedaron 135 fantasmas fuera de rango (fechas ya pasadas) que se confirmaron sin datos de cliente real y se eliminaron a mano (con confirmación explícita del usuario, por ser un `deleteMany` en producción). Estado final: 1760 turnos reales, 0 documentos fantasma.
+
+**Verificación e2e:** ciclo completo de reserva pública probado contra el dominio real (reservar → confirmar que la respuesta de `/api/agenda/landing` no filtra `editToken`/`numeroCliente`/`emailCliente` en ninguno de los 286 turnos devueltos → editar vía token → intento con token inválido rechazado (403) → liberar vía token → turno vuelve a `disponible` con `editToken: null`). Login verificado para los 3 usuarios con cookie `HttpOnly; Secure; SameSite=Lax`.
+
+**Pendiente que requiere acción manual del usuario:**
+- Rotar la contraseña root de SSH (se usó la existente para todo este despliegue con permiso explícito del usuario, quien indicó que la rotaría al finalizar).
+- Guardar en un lugar seguro la contraseña autogenerada del usuario `admin` (se mostró una única vez en el log de arranque del servicio — comunicada directamente, no queda en este archivo ni en ningún commit).
+- Cambiar el texto placeholder del banner ("prueba"/"prueba") desde el panel.
+- Subir las fotos reales de los barberos (hoy usan una imagen placeholder genérica) y de los servicios.
+- Si en algún momento se decide habilitar WhatsApp real, hace falta instalar Docker (fuera del presupuesto de RAM actual de 1GB — probablemente requiera upgradear el plan de la VPS antes) y configurar `EVOLUTION_API_KEY` en el `.env` de producción.
+
+---
+
 ## 2026-07-17 — Remediación de los 38 hallazgos de la auditoría (plan de 6 fases)
 
 **Alcance:** implementación completa del plan de remediación derivado de la auditoría del 2026-07-16 (ver entrada de abajo y `C:\Users\Lizan\.claude\plans\lista-los-problemas-del-concurrent-nebula.md`). Ejecutado en 6 fases contra el servidor real (`localhost:8000`) y la base de datos real (`OnofreDb`), con verificación HTTP (curl) después de cada cambio y limpieza de todos los datos de prueba al cierre de cada fase.
