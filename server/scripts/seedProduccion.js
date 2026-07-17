@@ -88,7 +88,7 @@ const UBICACION = {
 
 const CONTACTO = {
   whatsapp: "+595992323733",
-  instagram: "@lizanaxx",
+  instagram: "@alonzo_style",
   correo: "brittolizandro@gmail.com",
 };
 
