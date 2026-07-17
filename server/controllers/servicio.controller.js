@@ -200,24 +200,6 @@ const servicioController = {
     }
   },
 
-  // Obtener servicios por categoría
-  getServiciosByCategoria: async (req, res) => {
-    try {
-      const { categoria } = req.params;
-      const servicios = await ServicioModel.find({
-        categoria,
-        activo: true,
-      }).sort({ nombre: 1 });
-
-      res.status(200).json({ servicios });
-    } catch (error) {
-      console.error("Error al obtener servicios por categoría:", error);
-      res
-        .status(500)
-        .json({ message: "Error interno del servidor", error: error.message });
-    }
-  },
-
   // Activar/desactivar servicio
   toggleServicio: async (req, res) => {
     try {
@@ -252,6 +234,13 @@ const servicioController = {
       const servicio = await ServicioModel.findById(servicioId);
       if (!servicio) {
         return res.status(404).json({ message: "Servicio no encontrado" });
+      }
+
+      // Whitelist: solo se puede borrar una imagen que realmente pertenezca
+      // a este servicio. Evita que imagenNombre (viene de req.params) se use
+      // para borrar archivos arbitrarios del servidor.
+      if (!servicio.imagenes.includes(imagenNombre)) {
+        return res.status(404).json({ message: "Imagen no encontrada" });
       }
 
       // Eliminar la imagen del array

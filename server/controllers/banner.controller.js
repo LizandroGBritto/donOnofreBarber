@@ -87,9 +87,9 @@ const obtenerBanners = async (req, res) => {
 
     let query = {};
 
-    if (estado) query.estado = estado;
-    if (tipo) query.tipo = tipo;
-    if (version && version !== "ambos") {
+    if (estado && typeof estado === "string") query.estado = estado;
+    if (tipo && typeof tipo === "string") query.tipo = tipo;
+    if (version && typeof version === "string" && version !== "ambos") {
       query.$or = [{ version: version }, { version: "ambos" }];
     }
 

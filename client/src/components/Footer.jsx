@@ -230,10 +230,10 @@ const Footer = ({ footerRef }) => {
 
               <div className="text-center md:text-right">
                 <p className="text-gray-400 text-sm">
-                  © 2025 Alonzo Style. Todos los derechos reservados.
+                  © 2026 Alonzo Style. Todos los derechos reservados.
                 </p>
                 <p className="text-gray-500 text-xs mt-1">
-                  Diseñado con ❤️ para la mejor experiencia
+                  Desarrollado por LIZANDEV
                 </p>
               </div>
             </div>

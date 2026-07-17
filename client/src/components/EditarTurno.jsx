@@ -1,11 +1,19 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { Card, Button, TextInput, Label, Modal, Alert } from "flowbite-react";
 import axios from "axios";
+import config from "../config/api.config";
 
 const EditarTurno = () => {
   const { turnoId } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  // El token puede venir en el link (?t=...) o, si ya se reservó desde este
+  // mismo dispositivo, haber quedado guardado en localStorage.
+  const tokenDeUrl = searchParams.get("t");
+  const editToken =
+    tokenDeUrl || localStorage.getItem(`editToken:${turnoId}`);
 
   const [turno, setTurno] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -34,7 +42,6 @@ const EditarTurno = () => {
         );
         const serviciosActivos =
           response.data.filter((servicio) => servicio.activo) || [];
-        console.log("Servicios disponibles cargados:", serviciosActivos);
         setServiciosDisponibles(serviciosActivos);
       } catch (error) {
         console.error("Error al cargar servicios:", error);
@@ -62,13 +69,6 @@ const EditarTurno = () => {
         })
         .filter(Boolean);
 
-      console.log("Sincronizando servicios - Turno:", turno.servicios);
-      console.log(
-        "Servicios disponibles:",
-        serviciosDisponibles.map((s) => s._id)
-      );
-      console.log("Servicios finales seleccionados:", serviciosIds);
-
       setServiciosSeleccionados(serviciosIds);
     }
   }, [turno, serviciosDisponibles]);
@@ -92,6 +92,20 @@ const EditarTurno = () => {
           return;
         }
 
+        // Sin el token del link, no se puede editar/cancelar este turno.
+        if (!editToken) {
+          setError(
+            "Este enlace no es válido o ya expiró. Solicitá uno nuevo por WhatsApp."
+          );
+          return;
+        }
+
+        // Si el token vino por la URL, lo guardamos para que este mismo
+        // dispositivo pueda volver a esta página sin el parámetro ?t=.
+        if (tokenDeUrl) {
+          localStorage.setItem(`editToken:${turnoId}`, tokenDeUrl);
+        }
+
         setTurno(turnoData);
         setFormData({
           nombreCliente: turnoData.nombreCliente || "",
@@ -99,7 +113,6 @@ const EditarTurno = () => {
         });
 
         // Los servicios se sincronizarán en el useEffect dedicado
-        console.log("Turno cargado:", turnoData);
       } catch (error) {
         console.error("Error al cargar turno:", error);
         setError("Error al cargar la información del turno");
@@ -111,7 +124,8 @@ const EditarTurno = () => {
     if (turnoId) {
       fetchTurno();
     }
-  }, [turnoId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [turnoId, editToken]);
 
   // Manejar cambios en el formulario
   const handleInputChange = (e) => {
@@ -160,46 +174,42 @@ const EditarTurno = () => {
       return;
     }
 
+    if (!editToken) {
+      setError(
+        "Este enlace no es válido o ya expiró. Solicitá uno nuevo por WhatsApp."
+      );
+      return;
+    }
+
     try {
       setSaving(true);
       setError("");
 
-      // Obtener datos completos de los servicios seleccionados
-      const serviciosCompletos = serviciosSeleccionados
-        .map((servicioId) => {
-          const servicio = serviciosDisponibles.find(
-            (s) => s._id === servicioId
-          );
-          if (!servicio) {
-            console.warn(`Servicio con ID ${servicioId} no encontrado`);
-            return null;
-          }
-          return {
-            _id: servicio._id,
-            nombre: servicio.nombre,
-            precio: servicio.precio,
-          };
-        })
-        .filter(Boolean); // Remover servicios null/undefined
+      // El servidor recalcula nombre/precio/duración reales de cada
+      // servicio a partir de su ID — no confiamos en lo que haya en el
+      // estado local para el costo final, solo lo usamos para mostrar un
+      // estimado inmediato en pantalla.
+      const costoEstimado = calcularCostoTotal();
 
-      const costoTotal = calcularCostoTotal();
-
-      await axios.put(`${import.meta.env.VITE_API_URL}/api/agenda/${turnoId}`, {
-        ...turno,
-        ...formData,
-        servicios: serviciosCompletos,
-        costoTotal: costoTotal,
-        costoServicios: costoTotal,
-      });
+      const response = await axios.put(
+        config.getApiUrl(config.api.agenda.editarMiTurno(turnoId)),
+        {
+          nombreCliente: formData.nombreCliente,
+          numeroCliente: formData.numeroCliente,
+          servicios: serviciosSeleccionados,
+        },
+        { params: { t: editToken } }
+      );
 
       setSuccess("Turno actualizado exitosamente");
 
-      // Actualizar el estado local
+      // Actualizar el estado local con lo que confirmó el servidor
+      const agendaActualizada = response.data?.agenda;
       setTurno((prev) => ({
         ...prev,
         ...formData,
-        servicios: serviciosCompletos,
-        costoTotal: costoTotal,
+        servicios: agendaActualizada?.servicios || [],
+        costoTotal: agendaActualizada?.costoTotal ?? costoEstimado,
       }));
 
       // Limpiar mensaje de éxito después de 3 segundos
@@ -208,7 +218,11 @@ const EditarTurno = () => {
       }, 3000);
     } catch (error) {
       console.error("Error al actualizar turno:", error);
-      setError("Error al actualizar el turno. Inténtalo de nuevo.");
+      const mensaje =
+        error.response?.status === 403
+          ? "Este enlace no es válido o ya expiró."
+          : "Error al actualizar el turno. Inténtalo de nuevo.";
+      setError(mensaje);
     } finally {
       setSaving(false);
     }
@@ -216,24 +230,26 @@ const EditarTurno = () => {
 
   // Cancelar turno - Cambiar estado a disponible y limpiar datos del cliente
   const handleCancelTurno = async () => {
+    if (!editToken) {
+      setError(
+        "Este enlace no es válido o ya expiró. Solicitá uno nuevo por WhatsApp."
+      );
+      setShowCancelModal(false);
+      return;
+    }
+
     try {
       setSaving(true);
       setError("");
 
-      await axios.put(`${import.meta.env.VITE_API_URL}/api/agenda/${turnoId}`, {
-        ...turno,
-        estado: "disponible", // Cambiar a disponible en lugar de cancelado
-        nombreCliente: "",
-        numeroCliente: "",
-        emailCliente: "",
-        notas: "",
-        servicios: [],
-        costoTotal: 0,
-        costoServicios: 0,
-        // Mantener barbero y nombreBarbero asignados
-        // barbero: turno.barbero, // Se mantiene el barbero
-        // nombreBarbero: turno.nombreBarbero, // Se mantiene el nombre del barbero
-      });
+      await axios.post(
+        config.getApiUrl(config.api.agenda.liberarMiTurno(turnoId)),
+        {},
+        { params: { t: editToken } }
+      );
+
+      // El token ya no sirve una vez liberado el turno: limpiar lo guardado.
+      localStorage.removeItem(`editToken:${turnoId}`);
 
       setSuccess(
         "Turno liberado exitosamente. Ahora está disponible para nuevas reservas con el mismo barbero."
@@ -246,7 +262,11 @@ const EditarTurno = () => {
       }, 2000);
     } catch (error) {
       console.error("Error al liberar turno:", error);
-      setError("Error al liberar el turno. Inténtalo de nuevo.");
+      const mensaje =
+        error.response?.status === 403
+          ? "Este enlace no es válido o ya expiró."
+          : "Error al liberar el turno. Inténtalo de nuevo.";
+      setError(mensaje);
       setShowCancelModal(false);
     } finally {
       setSaving(false);
@@ -422,12 +442,6 @@ const EditarTurno = () => {
                             servicio._id
                           )}
                           onChange={() => {
-                            console.log(
-                              "Cambiando servicio:",
-                              servicio._id,
-                              "Actuales:",
-                              serviciosSeleccionados
-                            );
                             handleServicioChange(servicio._id);
                           }}
                           className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"

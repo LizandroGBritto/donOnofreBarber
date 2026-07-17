@@ -3,9 +3,14 @@ const axios = require("axios");
 class WhatsappService {
   constructor() {
     this.baseUrl = process.env.EVOLUTION_API_URL || "http://localhost:8081";
-    this.apiKey =
-      process.env.EVOLUTION_API_KEY || "B6D711FCDE4D4FD5936544120E713976";
+    this.apiKey = process.env.EVOLUTION_API_KEY || null;
     this.instanceName = process.env.EVOLUTION_INSTANCE_NAME || "donOnofre";
+
+    if (!this.apiKey) {
+      console.warn(
+        "⚠️  EVOLUTION_API_KEY no está configurada. Las funciones de WhatsApp fallarán hasta que se defina en .env."
+      );
+    }
   }
 
   // Helper para headers

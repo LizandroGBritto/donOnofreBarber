@@ -111,6 +111,14 @@ const AgendaSchema = new mongoose.Schema(
       default: true, // true para turnos generados automáticamente
     },
 
+    // Token secreto generado al reservar. Requerido para editar/cancelar el
+    // turno desde el link público (/editar-turno/:id) sin necesitar login.
+    // Se limpia (null) cuando el turno se libera.
+    editToken: {
+      type: String,
+      default: null,
+    },
+
     // Fechas importantes
     fechaReserva: Date,
     fechaConfirmacion: Date,

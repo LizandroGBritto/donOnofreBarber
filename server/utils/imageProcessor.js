@@ -51,7 +51,17 @@ const convertToWebP = async (input, outputPath, options = {}) => {
  */
 const deleteImage = async (filename, uploadsDir = "./uploads") => {
   try {
-    const filePath = path.join(uploadsDir, filename);
+    // Sanear el nombre: descartar cualquier segmento de directorio (../, /, etc.)
+    // para que nunca se pueda resolver fuera de uploadsDir.
+    const safeFilename = path.basename(filename);
+    const resolvedUploadsDir = path.resolve(uploadsDir);
+    const filePath = path.resolve(resolvedUploadsDir, safeFilename);
+
+    if (!filePath.startsWith(resolvedUploadsDir + path.sep)) {
+      console.error("Intento de eliminar archivo fuera de uploadsDir:", filename);
+      return false;
+    }
+
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
       return true;

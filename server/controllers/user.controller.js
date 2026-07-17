@@ -1,6 +1,7 @@
 const { UserModel } = require("../models/user.model");
-const bcrypt = require("bcrypt");
+const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const config = require("../config/app.config");
 
 module.exports = {
   register: (req, res) => {
@@ -16,7 +17,12 @@ module.exports = {
   login: (req, res) => {
     // Verifica que los datos recibidos en req.body sean correctos
 
-    if (!req.body.userName || !req.body.password) {
+    if (
+      !req.body.userName ||
+      !req.body.password ||
+      typeof req.body.userName !== "string" ||
+      typeof req.body.password !== "string"
+    ) {
       return res
         .status(400)
         .json({ msg: "Username and password are required" });
@@ -50,6 +56,8 @@ module.exports = {
               res
                 .cookie("usertoken", newJWT, {
                   httpOnly: true,
+                  secure: config.isProduction,
+                  sameSite: "lax",
                   expires: new Date(Date.now() + 900000000),
                 })
                 .json({ msg: "success!", user: userInfo });
@@ -73,6 +81,8 @@ module.exports = {
     res
       .clearCookie("usertoken", {
         httpOnly: true,
+        secure: config.isProduction,
+        sameSite: "lax",
       })
       .json({ msg: "Logout successful" });
   },
@@ -137,6 +147,16 @@ module.exports = {
   // Eliminar usuario
   deleteUser: async (req, res) => {
     try {
+      // No permitir dejar el sistema sin ningún usuario: nadie podría
+      // volver a loguearse para crear uno nuevo (el seeder solo corre si
+      // la colección está vacía en el arranque del servidor).
+      const totalUsuarios = await UserModel.countDocuments();
+      if (totalUsuarios <= 1) {
+        return res.status(400).json({
+          msg: "No se puede eliminar el último usuario del sistema",
+        });
+      }
+
       const user = await UserModel.findByIdAndDelete(req.params.id);
       if (!user) {
         return res.status(404).json({ msg: "Usuario no encontrado" });

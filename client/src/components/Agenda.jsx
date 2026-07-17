@@ -1,15 +1,14 @@
 import axios from "axios";
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
-import { Button, Modal } from "flowbite-react";
-import FormAgendar from "./FormAgendar";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
+import { Button } from "flowbite-react";
 import FormReservarConBarbero from "./FormReservarConBarbero";
 import ParaguayDateUtil from "../utils/paraguayDate";
 
-const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
+const Agenda = ({ horarios, setHorarios, agendarRef }) => {
+  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
-  const [openModal, setOpenModal] = useState(false);
   const [openBarberoModal, setOpenBarberoModal] = useState(false);
-  const [selectedId, setSelectedId] = useState(null);
   const [selectedTurno, setSelectedTurno] = useState(null);
   const [userHasReservation, setUserHasReservation] = useState(false);
   const [selectedDay, setSelectedDay] = useState(null);
@@ -23,8 +22,6 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
   const diaHoy = ParaguayDateUtil.getDayOfWeek();
   // Capitalizar la primera letra para mostrar en el dropdown
   const diaHoyCapitalizado = diaHoy.charAt(0).toUpperCase() + diaHoy.slice(1);
-
-  const UserId = getUserId();
 
   // Función para verificar si un turno ya pasó
   const turnoYaPaso = (fecha, hora) => {
@@ -47,21 +44,6 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
       return false; // En caso de error, permitir agendar
     }
   };
-
-  // Función para verificar si el usuario ya tiene un turno abierto
-  const verificarTurnoExistente = useCallback(async (numeroCliente) => {
-    try {
-      const response = await axios.get(
-        `${
-          import.meta.env.VITE_API_URL
-        }/api/agenda/verificar-turno/${numeroCliente}`
-      );
-      return response.data; // { tieneTurno: boolean, turno: objeto|null }
-    } catch (error) {
-      console.error("Error verificando turno existente:", error);
-      return { tieneTurno: false, turno: null };
-    }
-  }, []);
 
   // Cargar información de horarios y semanas
   const loadHorariosYSemanas = useCallback(async () => {
@@ -123,22 +105,22 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
   }, [diaHoyCapitalizado]);
 
   function onCloseModal() {
-    setOpenModal(false);
     setOpenBarberoModal(false);
-    setSelectedId(null);
     setSelectedTurno(null);
   }
 
   const refreshData = useCallback(() => {
+    const numeroCliente = localStorage.getItem("numeroCliente");
     axios
-      .get(`${import.meta.env.VITE_API_URL}/api/agenda/landing`)
+      .get(`${import.meta.env.VITE_API_URL}/api/agenda/landing`, {
+        params: numeroCliente ? { numero: numeroCliente } : {},
+      })
       .then((res) => {
         setHorarios(res.data.agendas);
         setIsLoading(false);
 
         const hasReservation = res.data.agendas.some(
-          (agenda) =>
-            agenda.nombreCliente !== "" && agenda.nombreCliente === UserId
+          (agenda) => agenda.esMio
         );
         setUserHasReservation(hasReservation);
       })
@@ -146,51 +128,7 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
         console.log(err);
         setIsLoading(false);
       });
-  }, [setHorarios, UserId]);
-
-  // Función para avanzar al siguiente día disponible
-  const avanzarAlSiguienteDia = useCallback(() => {
-    if (!selectedDay || !selectedWeek || !diasActivos.length) return;
-
-    const ordenDias = [
-      "Lunes",
-      "Martes",
-      "Miercoles",
-      "Jueves",
-      "Viernes",
-      "Sabado",
-      "Domingo",
-    ];
-
-    const currentDayIndex = ordenDias.indexOf(selectedDay);
-
-    // Buscar el siguiente día activo
-    let nextDayIndex = (currentDayIndex + 1) % 7;
-    let nextDay = ordenDias[nextDayIndex];
-
-    // Si el siguiente día no está en diasActivos, buscar el próximo día activo
-    while (!diasActivos.includes(nextDay) && nextDayIndex !== currentDayIndex) {
-      nextDayIndex = (nextDayIndex + 1) % 7;
-      nextDay = ordenDias[nextDayIndex];
-    }
-
-    // Si el día siguiente está en la misma semana, solo cambiar el día
-    if (
-      nextDayIndex > currentDayIndex ||
-      (currentDayIndex === 6 && nextDayIndex === 0)
-    ) {
-      setSelectedDay(nextDay);
-    } else {
-      // Si necesitamos cambiar de semana
-      const currentWeekIndex = semanas.findIndex(
-        (semana) => semana.label === selectedWeek.label
-      );
-      if (currentWeekIndex < semanas.length - 1) {
-        setSelectedWeek(semanas[currentWeekIndex + 1]);
-        setSelectedDay(nextDay);
-      }
-    }
-  }, [selectedDay, selectedWeek, diasActivos, semanas]);
+  }, [setHorarios]);
 
   useEffect(() => {
     // Cargar horarios y semanas al montar el componente
@@ -199,16 +137,13 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
     // Si ya se pasaron horarios como props, usarlos directamente
     if (horarios && horarios.length > 0) {
       setIsLoading(false);
-      const hasReservation = horarios.some(
-        (agenda) =>
-          agenda.nombreCliente !== "" && agenda.nombreCliente === UserId
-      );
+      const hasReservation = horarios.some((agenda) => agenda.esMio);
       setUserHasReservation(hasReservation);
     } else if (horarios.length === 0) {
       // Si no hay horarios en props, hacer la llamada a la API (compatibilidad hacia atrás)
       refreshData();
     }
-  }, [horarios, UserId, loadHorariosYSemanas, refreshData]);
+  }, [horarios, loadHorariosYSemanas, refreshData]);
 
   // ✅ OPTIMIZADO: Usar useMemo para diasDisponibles (evita re-renders)
   const diasDisponibles = useMemo(() => {
@@ -510,7 +445,7 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
               </h3>
               {agenda.estado !== "disponible" ? (
                 <div className="flex justify-center w-full md:w-auto">
-                  {agenda.nombreCliente === UserId ? (
+                  {agenda.esMio ? (
                     <Button
                       disabled={turnoYaPaso(agenda.fecha, agenda.hora)}
                       className={`flex justify-center w-full md:w-auto ${
@@ -520,8 +455,7 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
                       } rounded-lg text-black text-sm md:text-lg items-center px-4 py-2`}
                       onClick={() => {
                         if (!turnoYaPaso(agenda.fecha, agenda.hora)) {
-                          setSelectedId(agenda._id);
-                          setOpenModal(true);
+                          navigate(`/editar-turno/${agenda._id}`);
                         }
                       }}
                     >
@@ -540,13 +474,11 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
                 </div>
               ) : (
                 <Button
-                  // Si el UserId es "Reservado", el botón cambia a "RESERVADO" y se deshabilita
+                  // Si el usuario ya tiene otro turno reservado, se deshabilita AGENDAR
                   disabled={
                     agenda.estado !== "disponible" ||
                     turnoYaPaso(agenda.fecha, agenda.hora) ||
-                    (userHasReservation &&
-                      agenda.nombreCliente !== "" &&
-                      agenda.nombreCliente !== UserId)
+                    userHasReservation
                   }
                   className={`flex justify-center w-full md:w-auto ${
                     agenda.estado !== "disponible" ||
@@ -555,7 +487,6 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
                       : "bg-white"
                   } rounded-lg text-black text-sm md:text-lg items-center px-4 py-2`}
                   onClick={() => {
-                    // Para turnos disponibles, abrir modal de barberos
                     if (
                       agenda.estado === "disponible" &&
                       !turnoYaPaso(agenda.fecha, agenda.hora)
@@ -567,10 +498,6 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
                         diaSemana: agenda.diaSemana,
                       });
                       setOpenBarberoModal(true);
-                    } else {
-                      // Para modificaciones, usar el modal tradicional
-                      setSelectedId(agenda._id);
-                      setOpenModal(true);
                     }
                   }}
                 >
@@ -582,39 +509,12 @@ const Agenda = ({ horarios, setHorarios, getUserId, agendarRef }) => {
                 </Button>
               )}
 
-              <Modal
-                className="flex justify-center items-center bg-black bg-opacity-50 p-4 md:p-0"
-                show={openModal}
-                size="lg"
-                onClose={onCloseModal}
-                popup
-                position="center"
-              >
-                <Modal.Header />
-                <Modal.Body>
-                  <div className="space-y-6">
-                    <h3 className="text-xl font-medium text-gray-900 dark:text-white">
-                      Datos para la reserva
-                    </h3>
-                    <div className="AgendarForm">
-                      <FormAgendar
-                        id={selectedId}
-                        onCloseModal={onCloseModal}
-                        refreshData={refreshData}
-                        getUserId={getUserId}
-                      />
-                    </div>
-                  </div>
-                </Modal.Body>
-              </Modal>
-
               {/* Modal para reservas con barberos */}
               {openBarberoModal && selectedTurno && (
                 <FormReservarConBarbero
                   turno={selectedTurno}
                   onCloseModal={onCloseModal}
                   refreshData={refreshData}
-                  getUserId={getUserId}
                 />
               )}
             </div>

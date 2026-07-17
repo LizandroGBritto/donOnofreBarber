@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from "react-router-dom";
-import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import axios from "axios";
 import DownButton from "../assets/DownButton.svg";
 import logoCenter from "../assets/assets_template/AlonzoStylev2.webp";
@@ -9,6 +9,7 @@ const NavBar = ({ agendarRef, footerRef }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [banners, setBanners] = useState([]);
+  const [bannersLoading, setBannersLoading] = useState(true);
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
@@ -38,12 +39,12 @@ const NavBar = ({ agendarRef, footerRef }) => {
   useEffect(() => {
     const fetchBanners = async () => {
       try {
+        // Endpoint público: ya viene filtrado por estado "activo" desde el
+        // servidor (GET /api/banners es administrativo y requiere sesión).
         const response = await axios.get(
-          `${import.meta.env.VITE_API_URL}/api/banners`
+          `${import.meta.env.VITE_API_URL}/api/banners/activos`
         );
-        const activeBanners = response.data.banners.filter(
-          (banner) => banner.estado === "activo"
-        );
+        const activeBanners = response.data.banners || [];
         setBanners(activeBanners);
 
         // Precargar todas las imágenes de los banners usando link preload (mayor prioridad)
@@ -70,6 +71,8 @@ const NavBar = ({ agendarRef, footerRef }) => {
         });
       } catch (error) {
         console.error("Error al cargar banners:", error);
+      } finally {
+        setBannersLoading(false);
       }
     };
 
@@ -147,6 +150,13 @@ const NavBar = ({ agendarRef, footerRef }) => {
   const currentBanner =
     appropriateBanners[currentBannerIndex % appropriateBanners.length];
 
+  // Mientras se está cargando la lista de banners, no mostrar todavía el
+  // fallback (backImg) ni ningún banner de una carga anterior — evita el
+  // flash de "imagen equivocada" que se veía antes de que llegue la
+  // respuesta real. Recién cuando termina la carga se decide entre el
+  // banner real o el fallback.
+  const showSkeleton = bannersLoading;
+
   // Determinar la imagen de fondo
   // Prioridad: Banner > backImg
   const backgroundImage = currentBanner?.imagen
@@ -173,9 +183,13 @@ const NavBar = ({ agendarRef, footerRef }) => {
   return (
     <div
       className={`bg-cover bg-no-repeat bg-center h-screen relative transition-all duration-700 ease-in-out ${
-        isTransitioning ? "opacity-90" : "opacity-100"
+        showSkeleton
+          ? "bg-gray-800 animate-pulse"
+          : isTransitioning
+          ? "opacity-90"
+          : "opacity-100"
       }`}
-      style={{ backgroundImage: `url(${backgroundImage})` }}
+      style={showSkeleton ? undefined : { backgroundImage: `url(${backgroundImage})` }}
     >
       <div
         className="navBar flex justify-evenly items-center backdrop-blur-sm p-4 rounded-lg mx-4 mt-4"

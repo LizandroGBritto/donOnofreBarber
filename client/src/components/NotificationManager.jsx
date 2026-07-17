@@ -9,8 +9,6 @@ const NotificationManager = () => {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState("info");
-  const [subscriptionInfo, setSubscriptionInfo] = useState(null);
-  const [debugInfo, setDebugInfo] = useState(null);
 
   useEffect(() => {
     checkNotificationStatus();
@@ -27,8 +25,7 @@ const NotificationManager = () => {
       setIsSubscribed(subscribed);
 
       if (subscribed) {
-        const subscription = await notificationService.getCurrentSubscription();
-        setSubscriptionInfo(subscription);
+        await notificationService.getCurrentSubscription();
       }
     }
   };
@@ -48,7 +45,6 @@ const NotificationManager = () => {
       timestamp: new Date().toISOString(),
     };
 
-    setDebugInfo(debugData);
     console.log("🔍 Debug Info iOS Notifications:", debugData);
   };
 
@@ -67,8 +63,7 @@ const NotificationManager = () => {
       setMessage("¡Notificaciones activadas exitosamente!");
       setMessageType("success");
 
-      const subscription = await notificationService.getCurrentSubscription();
-      setSubscriptionInfo(subscription);
+      await notificationService.getCurrentSubscription();
     } catch (error) {
       setMessage(`Error al activar notificaciones: ${error.message}`);
       setMessageType("failure");
@@ -84,7 +79,6 @@ const NotificationManager = () => {
     try {
       await notificationService.unsubscribe();
       setIsSubscribed(false);
-      setSubscriptionInfo(null);
       setMessage("Notificaciones desactivadas");
       setMessageType("info");
     } catch (error) {

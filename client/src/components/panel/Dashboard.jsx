@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { Card } from "flowbite-react";
-import axios from "axios";
+import { useApi } from "../../hooks/useApi";
 
 const Dashboard = () => {
+  const api = useApi();
   const [stats, setStats] = useState({
     today: { scheduled: 0, available: 0, generated: 0 },
     week: { scheduled: 0, available: 0, generated: 0 },
@@ -13,29 +14,27 @@ const Dashboard = () => {
   // Función para obtener las estadísticas de turnos
   const fetchStats = async () => {
     try {
-      const response = await axios.get(
-        `${import.meta.env.VITE_API_URL}/api/agenda/dashboard/estadisticas`
-      );
+      const data = await api.agenda.getEstadisticas();
       setStats({
         today: {
-          scheduled: response.data.estadisticas.hoy.agendados,
-          available: response.data.estadisticas.hoy.disponibles,
-          generated: response.data.estadisticas.hoy.generado,
+          scheduled: data.estadisticas.hoy.agendados,
+          available: data.estadisticas.hoy.disponibles,
+          generated: data.estadisticas.hoy.generado,
         },
         week: {
-          scheduled: response.data.estadisticas.semana.agendados,
-          available: response.data.estadisticas.semana.disponibles,
-          generated: response.data.estadisticas.semana.generado,
+          scheduled: data.estadisticas.semana.agendados,
+          available: data.estadisticas.semana.disponibles,
+          generated: data.estadisticas.semana.generado,
         },
         month: {
-          scheduled: response.data.estadisticas.mes.agendados,
-          available: response.data.estadisticas.mes.disponibles,
-          generated: response.data.estadisticas.mes.generado,
+          scheduled: data.estadisticas.mes.agendados,
+          available: data.estadisticas.mes.disponibles,
+          generated: data.estadisticas.mes.generado,
         },
         year: {
-          scheduled: response.data.estadisticas.año.agendados,
-          available: response.data.estadisticas.año.disponibles,
-          generated: response.data.estadisticas.año.generado,
+          scheduled: data.estadisticas.año.agendados,
+          available: data.estadisticas.año.disponibles,
+          generated: data.estadisticas.año.generado,
         },
       });
     } catch (error) {

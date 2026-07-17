@@ -1,8 +1,10 @@
+const crypto = require("crypto");
 const AgendaModel = require("../models/agenda.model");
 const AgendaGeneratorService = require("../services/agendaGenerator.service");
 const HorarioModel = require("../models/horario.model");
 const ParaguayDateUtil = require("../utils/paraguayDate");
 const NotificationService = require("../services/notificationService");
+const ServicioModel = require("../models/servicio.model");
 
 module.exports = {
   // Endpoint para eliminar todos los turnos de hoy (usando hora de Paraguay)
@@ -155,112 +157,6 @@ module.exports = {
     }
   },
 
-  // Endpoint de diagnóstico para verificar horarios y turnos
-  diagnosticoHorarios: async (req, res) => {
-    try {
-      const hoy = new Date();
-      const diaSemana = [
-        "domingo",
-        "lunes",
-        "martes",
-        "miercoles",
-        "jueves",
-        "viernes",
-        "sabado",
-      ][hoy.getDay()];
-
-      // Obtener horarios configurados
-      const horarios = await HorarioModel.find({}).lean();
-      const horarioHoy = await HorarioModel.findOne({
-        diaSemana,
-        activo: true,
-      });
-
-      let slotsHoy = [];
-      if (horarioHoy) {
-        slotsHoy = horarioHoy.generarSlots(hoy);
-      }
-
-      // Contar turnos de hoy con rango correcto
-      const inicioHoy = new Date(
-        hoy.getFullYear(),
-        hoy.getMonth(),
-        hoy.getDate(),
-        0,
-        0,
-        0,
-        0,
-      );
-      const finHoy = new Date(
-        hoy.getFullYear(),
-        hoy.getMonth(),
-        hoy.getDate(),
-        23,
-        59,
-        59,
-        999,
-      );
-
-      const turnosHoy = await AgendaModel.countDocuments({
-        fecha: { $gte: inicioHoy, $lte: finHoy },
-      });
-
-      const turnosEjemplo = await AgendaModel.find({
-        fecha: { $gte: inicioHoy, $lte: finHoy },
-      })
-        .limit(10)
-        .lean();
-
-      // Contar también por cada fecha específica
-      const conteosPorFechaExacta = await AgendaModel.aggregate([
-        {
-          $match: { fecha: { $gte: inicioHoy, $lte: finHoy } },
-        },
-        {
-          $group: {
-            _id: "$fecha",
-            count: { $sum: 1 },
-            horas: { $addToSet: "$hora" },
-          },
-        },
-        {
-          $sort: { _id: 1 },
-        },
-      ]);
-
-      res.status(200).json({
-        fecha: hoy.toISOString().split("T")[0],
-        diaSemana,
-        horarios: horarios.map((h) => ({
-          dia: h.diaSemana,
-          activo: h.activo,
-          configuraciones: h.horarios,
-        })),
-        horarioHoy: horarioHoy
-          ? {
-              dia: horarioHoy.diaSemana,
-              activo: horarioHoy.activo,
-              configuraciones: horarioHoy.horarios,
-            }
-          : null,
-        slotsGenerados: slotsHoy.length,
-        primerosSlots: slotsHoy.slice(0, 10),
-        turnosEnBD: turnosHoy,
-        conteosPorFechaExacta: conteosPorFechaExacta,
-        ejemplosTurnos: turnosEjemplo.map((t) => ({
-          hora: t.hora,
-          estado: t.estado,
-          fecha: t.fecha,
-        })),
-      });
-    } catch (error) {
-      console.error("Error en diagnóstico:", error);
-      res
-        .status(500)
-        .json({ message: "Error en diagnóstico", error: error.message });
-    }
-  },
-
   getAllAgendas: (req, res) => {
     AgendaModel.find({})
       .populate("barbero", "nombre foto")
@@ -322,13 +218,31 @@ module.exports = {
         const barberosOcupados = turnosOcupados.length;
         const hayDisponibilidad = barberosOcupados < totalBarberos;
 
-        // Si hay un turno del usuario, mostrarlo
+        // Si hay un turno de un cliente, mostrarlo sin exponer su PII ni
+        // su editToken — este endpoint es público y no tiene forma de
+        // verificar quién lo está consultando.
         const turnoUsuario = grupo.turnos.find(
           (t) => t.nombreCliente && t.nombreCliente !== "",
         );
 
         if (turnoUsuario) {
-          turnosVirtuales.push(turnoUsuario);
+          turnosVirtuales.push({
+            _id: turnoUsuario._id,
+            fecha: turnoUsuario.fecha,
+            hora: turnoUsuario.hora,
+            diaSemana: turnoUsuario.diaSemana,
+            estado: turnoUsuario.estado,
+            nombreCliente: "",
+            numeroCliente: "",
+            emailCliente: "",
+            barbero: null,
+            nombreBarbero: "",
+            servicios: [],
+            costoTotal: 0,
+            costoServicios: 0,
+            barberosDisponibles: totalBarberos - barberosOcupados,
+            totalBarberos: totalBarberos,
+          });
         } else {
           // Crear un turno virtual que represente la disponibilidad general
           const turnoVirtual = {
@@ -396,9 +310,12 @@ module.exports = {
         const turnosOcupados = turnosHora.filter(
           (t) => t.estado !== "disponible" && t.barbero,
         );
+        // Endpoint público: nunca exponer PII del cliente ni el editToken
+        // del turno, solo lo necesario para saber que el barbero está
+        // ocupado a esta hora.
         const barberosOcupados = turnosOcupados.map((t) => ({
           barbero: t.barbero,
-          turno: t,
+          turno: { _id: t._id, hora: t.hora, estado: t.estado },
         }));
 
         const barberosDisponibles = barberosActivos.filter(
@@ -623,8 +540,34 @@ module.exports = {
         return horaA - horaB;
       });
 
+      // Sanitizar PII y secretos antes de responder: este endpoint es
+      // público y no debe exponer numeroCliente/emailCliente de terceros,
+      // ni el editToken (que es el secreto que protege la edición del
+      // turno) de NADIE, ni siquiera del propio dueño. Si el visitante
+      // manda su propio número (?numero=...), se marca esMio y solo en
+      // ese caso se conserva su nombre.
+      const numeroSolicitante = req.query.numero;
+      const turnosSanitizados = turnosLimpios.map((turno) => {
+        const esMio = Boolean(
+          numeroSolicitante && turno.numeroCliente === numeroSolicitante,
+        );
+        // eslint-disable-next-line no-unused-vars
+        const {
+          numeroCliente,
+          emailCliente,
+          nombreCliente,
+          editToken,
+          ...resto
+        } = turno;
+        return {
+          ...resto,
+          esMio,
+          nombreCliente: esMio ? nombreCliente : "",
+        };
+      });
+
       res.status(200).json({
-        agendas: turnosLimpios,
+        agendas: turnosSanitizados,
         mensaje:
           "Vista optimizada para landing - próximos 30 días, un turno por hora",
         estadisticas: {
@@ -711,8 +654,36 @@ module.exports = {
         res.status(400).json({ message: "Algo salió mal", error: err }),
       );
   },
+
+  // Admin: (re)generar el token de edición de un turno. Necesario para
+  // turnos reservados antes de que existiera editToken, o si se quiere
+  // invalidar un link ya compartido generando uno nuevo.
+  generarTokenEdicion: async (req, res) => {
+    try {
+      const turno = await AgendaModel.findById(req.params.id);
+      if (!turno) {
+        return res.status(404).json({ message: "Turno no encontrado" });
+      }
+
+      turno.editToken = crypto.randomBytes(24).toString("hex");
+      await turno.save();
+
+      res.status(200).json({ editToken: turno.editToken });
+    } catch (error) {
+      console.error("Error al generar token de edición:", error);
+      res
+        .status(500)
+        .json({ message: "Error al generar token", error: error.message });
+    }
+  },
+  // Estos endpoints (createAgenda, updateOneAgendaById) requieren sesión de
+  // admin. Aun así, se excluyen campos administrados por el propio sistema
+  // para que nunca se puedan sobreescribir por accidente desde el cliente.
   createAgenda: (req, res) => {
-    AgendaModel.create(req.body)
+    // eslint-disable-next-line no-unused-vars
+    const { _id, createdAt, updatedAt, __v, editToken, ...datosPermitidos } =
+      req.body;
+    AgendaModel.create(datosPermitidos)
       .then((newlyCreatedAgenda) =>
         res.status(201).json({ agenda: newlyCreatedAgenda }),
       )
@@ -722,12 +693,16 @@ module.exports = {
   },
   updateOneAgendaById: async (req, res) => {
     try {
+      // eslint-disable-next-line no-unused-vars
+      const { _id, createdAt, updatedAt, __v, editToken, ...datosPermitidos } =
+        req.body;
+
       // Obtener el turno anterior para comparar cambios
       const turnoAnterior = await AgendaModel.findById(req.params.id);
 
       const updatedAgenda = await AgendaModel.findOneAndUpdate(
         { _id: req.params.id },
-        req.body,
+        datosPermitidos,
         { new: true },
       ).populate("barbero", "nombre foto");
 
@@ -870,17 +845,22 @@ module.exports = {
       }
 
       const fechaObj = ParaguayDateUtil.toParaguayTime(fecha).toDate();
+      const { startOfDay, endOfDay } = ParaguayDateUtil.createDateRange(fechaObj);
 
       // Obtener todos los barberos activos
       const barberos = await BarberoModel.find({ activo: true }).select(
         "_id nombre foto",
       );
 
-      // Obtener todos los turnos para esta fecha
-      const turnos = await AgendaModel.find({ fecha: fechaObj }).populate(
-        "barbero",
-        "nombre foto",
-      );
+      // Obtener todos los turnos para esta fecha. Se usa un rango del día
+      // (no un match exacto de `fecha`) porque turnos generados por el
+      // sistema antiguo pueden tener una hora del día ligeramente distinta
+      // guardada en el campo `fecha` — con match exacto, esos turnos (y
+      // cualquier reserva real que coincida solo por rango) quedaban
+      // invisibles para este endpoint.
+      const turnos = await AgendaModel.find({
+        fecha: { $gte: startOfDay, $lte: endOfDay },
+      }).populate("barbero", "nombre foto");
 
       // Organizar turnos por hora
       const turnosPorHora = {};
@@ -911,11 +891,33 @@ module.exports = {
           );
 
           if (turnoOcupado) {
+            // Endpoint público: nunca exponer PII del cliente (nombre,
+            // teléfono, email) ni el editToken del turno — el cliente solo
+            // necesita saber que el barbero está ocupado a esta hora.
             disponibilidad[hora].barberosOcupados.push({
               barbero: barbero,
-              turno: turnoOcupado,
+              turno: {
+                _id: turnoOcupado._id,
+                hora: turnoOcupado.hora,
+                estado: turnoOcupado.estado,
+              },
             });
-          } else {
+            return;
+          }
+
+          // Solo se ofrece un barbero como disponible si existe un turno
+          // real con estado "disponible" para él en este horario. No se
+          // asume disponibilidad por la sola ausencia de un turno ocupado
+          // (eso es lo que hacía que un barbero sin ningún turno generado
+          // para este horario apareciera igual como seleccionable).
+          const turnoDisponible = turnosHora.find(
+            (t) =>
+              t.barbero &&
+              t.barbero._id.toString() === barbero._id.toString() &&
+              t.estado === "disponible",
+          );
+
+          if (turnoDisponible) {
             disponibilidad[hora].barberosDisponibles.push(barbero);
           }
         });
@@ -973,24 +975,55 @@ module.exports = {
           .json({ message: "Barbero no encontrado o inactivo" });
       }
 
-      // Buscar turno disponible del barbero en esa fecha/hora
-      let turnoAEditar = await AgendaModel.findOne({
-        fecha: {
-          $gte: ParaguayDateUtil.startOfDay(fechaObj).toDate(),
-          $lte: ParaguayDateUtil.endOfDay(fechaObj).toDate(),
-        },
-        hora: hora,
-        barbero: barberoId,
-        estado: "disponible",
-      });
+      const rangoFecha = {
+        $gte: ParaguayDateUtil.startOfDay(fechaObj).toDate(),
+        $lte: ParaguayDateUtil.endOfDay(fechaObj).toDate(),
+      };
 
-      // Si no existe turno disponible, verificar si hay conflicto
+      // Calcular costo total de los servicios seleccionados por adelantado
+      // (se necesita antes del update atómico).
+      let costoServicios = 0;
+      if (servicios.length > 0) {
+        costoServicios = servicios.reduce(
+          (total, s) => total + (s.precio || 0),
+          0,
+        );
+      }
+
+      const datosReserva = {
+        estado: "reservado",
+        nombreCliente,
+        numeroCliente,
+        servicios,
+        fechaReserva: new Date(),
+        // Token secreto para poder editar/cancelar este turno desde el link
+        // público sin login (ver /editar-mi-turno/:id y /liberar-mi-turno/:id).
+        editToken: crypto.randomBytes(24).toString("hex"),
+        costoServicios,
+        costoTotal: costoServicios,
+      };
+
+      // Intento atómico: reclamar un turno "disponible" ya existente para
+      // este barbero/fecha/hora. findOneAndUpdate es atómico a nivel de
+      // documento en MongoDB, así que si dos clientes reservan el mismo
+      // slot casi simultáneamente, solo uno de los dos matchea
+      // estado:"disponible" (el otro llega tarde y no encuentra nada que
+      // actualizar) — evita el doble booking por condición de carrera.
+      let turnoAEditar = await AgendaModel.findOneAndUpdate(
+        {
+          fecha: rangoFecha,
+          hora: hora,
+          barbero: barberoId,
+          estado: "disponible",
+        },
+        { $set: datosReserva },
+        { new: true },
+      );
+
       if (!turnoAEditar) {
+        // No había turno disponible: verificar si ya está ocupado.
         const turnoOcupado = await AgendaModel.findOne({
-          fecha: {
-            $gte: ParaguayDateUtil.startOfDay(fechaObj).toDate(),
-            $lte: ParaguayDateUtil.endOfDay(fechaObj).toDate(),
-          },
+          fecha: rangoFecha,
           hora: hora,
           barbero: barberoId,
           estado: { $in: ["reservado", "pagado", "en_proceso"] },
@@ -1002,51 +1035,30 @@ module.exports = {
           });
         }
 
-        // Crear nuevo turno si no existe ninguno
-        turnoAEditar = new AgendaModel({
-          fecha: ParaguayDateUtil.startOfDay(fechaObj).toDate(),
-          hora: hora,
-          diaSemana: ParaguayDateUtil.getDayOfWeek(fechaObj),
-          barbero: barberoId,
-          nombreBarbero: barbero.nombre,
-          estado: "disponible",
-          creadoAutomaticamente: false,
-        });
+        // No existe ningún turno para esta combinación: crearlo ya
+        // reservado directamente (evita la ventana entre "crear disponible"
+        // y "guardar como reservado" que existía antes).
+        try {
+          turnoAEditar = await AgendaModel.create({
+            fecha: ParaguayDateUtil.startOfDay(fechaObj).toDate(),
+            hora: hora,
+            diaSemana: ParaguayDateUtil.getDayOfWeek(fechaObj),
+            barbero: barberoId,
+            nombreBarbero: barbero.nombre,
+            creadoAutomaticamente: false,
+            ...datosReserva,
+          });
+        } catch (createError) {
+          console.error(
+            "Error creando turno en reserva (posible carrera):",
+            createError,
+          );
+          return res.status(409).json({
+            message:
+              "No se pudo reservar el turno, es posible que otra persona lo haya tomado justo antes. Probá de nuevo.",
+          });
+        }
       }
-
-      // 🆕 FIX: NO eliminar otros turnos disponibles.
-      // Permitimos que existan múltiples turnos a la misma hora para diferentes barberos.
-      /*
-      await AgendaModel.deleteMany({
-        fecha: {
-          $gte: ParaguayDateUtil.startOfDay(fechaObj).toDate(),
-          $lte: ParaguayDateUtil.endOfDay(fechaObj).toDate(),
-        },
-        hora: hora,
-        _id: { $ne: turnoAEditar._id }, // Excluir el turno que vamos a editar
-        estado: "disponible",
-        $or: [
-          { nombreCliente: "" },
-          { nombreCliente: { $exists: false } },
-          { numeroCliente: "" },
-          { numeroCliente: { $exists: false } },
-        ],
-      });
-      */
-
-      // Editar el turno encontrado con los datos de la reserva
-      turnoAEditar.estado = "reservado";
-      turnoAEditar.nombreCliente = nombreCliente;
-      turnoAEditar.numeroCliente = numeroCliente;
-      turnoAEditar.servicios = servicios;
-      turnoAEditar.fechaReserva = new Date();
-
-      // Calcular costo total si hay servicios
-      if (servicios.length > 0) {
-        turnoAEditar.calcularCostoTotal();
-      }
-
-      await turnoAEditar.save();
 
       // Populate el barbero para la respuesta
       await turnoAEditar.populate("barbero", "nombre foto");
@@ -1066,7 +1078,7 @@ module.exports = {
 
           const diaNombre = ParaguayDateUtil.getDayOfWeek(fechaObj);
           const fechaFormateada = fechaObj.toLocaleDateString("es-PY");
-          const enlaceEdicion = `${process.env.CLIENT_URL || "http://localhost:5173"}/editar-turno/${turnoAEditar._id}`;
+          const enlaceEdicion = `${process.env.CLIENT_URL || "http://localhost:5173"}/editar-turno/${turnoAEditar._id}?t=${turnoAEditar.editToken}`;
 
           // Construir mensaje exactamente como pidió el usuario
           let mensaje =
@@ -1099,6 +1111,118 @@ module.exports = {
         message: "Error al reservar turno",
         error: error.message,
       });
+    }
+  },
+
+  // Endpoint público (sin login) para que un cliente edite su propio turno
+  // usando el link que recibió por WhatsApp. Requiere el editToken del
+  // turno; sin él, se rechaza aunque se conozca el ID. Los precios se
+  // recalculan siempre en el servidor a partir de ServicioModel, nunca se
+  // confía en lo que mande el cliente.
+  editarMiTurno: async (req, res) => {
+    try {
+      const { id } = req.params;
+      const token = req.query.t || req.body.t;
+      const { nombreCliente, numeroCliente, servicios = [] } = req.body;
+
+      if (!token) {
+        return res
+          .status(403)
+          .json({ message: "Token de edición requerido" });
+      }
+
+      const turno = await AgendaModel.findById(id);
+      if (!turno) {
+        return res.status(404).json({ message: "Turno no encontrado" });
+      }
+
+      if (!turno.editToken || turno.editToken !== token) {
+        return res.status(403).json({ message: "Token de edición inválido" });
+      }
+
+      if (!nombreCliente || !numeroCliente) {
+        return res.status(400).json({
+          message: "Nombre y número de teléfono son requeridos",
+        });
+      }
+
+      // Resolver los servicios reales desde la base de datos: nunca se
+      // confía en nombre/precio/duración que pueda mandar el cliente.
+      const servicioIds = servicios
+        .map((s) => (typeof s === "string" ? s : s.servicioId || s._id))
+        .filter(Boolean);
+
+      const serviciosReales = servicioIds.length
+        ? await ServicioModel.find({ _id: { $in: servicioIds } })
+        : [];
+
+      turno.nombreCliente = nombreCliente;
+      turno.numeroCliente = numeroCliente;
+      turno.servicios = serviciosReales.map((s) => ({
+        servicioId: s._id,
+        nombre: s.nombre,
+        precio: s.precio,
+        duracion: s.duracion,
+      }));
+      turno.calcularCostoTotal();
+
+      await turno.save();
+      await turno.populate("barbero", "nombre foto");
+
+      res.status(200).json({
+        message: "Turno actualizado exitosamente",
+        agenda: turno,
+      });
+    } catch (error) {
+      console.error("Error al editar turno público:", error);
+      res
+        .status(500)
+        .json({ message: "Error al editar turno", error: error.message });
+    }
+  },
+
+  // Endpoint público (sin login) para que un cliente libere su propio
+  // turno usando el link que recibió por WhatsApp. Mismo chequeo de token
+  // que editarMiTurno. El editToken se limpia al liberar: el link deja de
+  // servir para evitar que alguien lo reutilice sobre un turno ya vacío.
+  liberarMiTurno: async (req, res) => {
+    try {
+      const { id } = req.params;
+      const token = req.query.t || req.body.t;
+
+      if (!token) {
+        return res
+          .status(403)
+          .json({ message: "Token de edición requerido" });
+      }
+
+      const turno = await AgendaModel.findById(id);
+      if (!turno) {
+        return res.status(404).json({ message: "Turno no encontrado" });
+      }
+
+      if (!turno.editToken || turno.editToken !== token) {
+        return res.status(403).json({ message: "Token de edición inválido" });
+      }
+
+      turno.estado = "disponible";
+      turno.nombreCliente = "";
+      turno.numeroCliente = "";
+      turno.emailCliente = "";
+      turno.servicios = [];
+      turno.costoTotal = 0;
+      turno.costoServicios = 0;
+      turno.notas = "";
+      turno.editToken = null;
+
+      await turno.save();
+
+      res.status(200).json({ message: "Turno liberado exitosamente" });
+    } catch (error) {
+      console.error("Error al liberar turno público:", error);
+      res
+        .status(500)
+        .json({ message: "Error al liberar turno", error: error.message });
     }
   },
 

@@ -128,3 +128,8 @@ out
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+
+# Claude Code: configuración/estado local y skills instaladas (no es
+# código del proyecto, es específico de cada máquina/usuario)
+.claude/
+.agents/

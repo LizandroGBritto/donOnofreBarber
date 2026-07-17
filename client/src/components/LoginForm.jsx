@@ -1,14 +1,16 @@
-import { Button, Checkbox, Label, TextInput } from "flowbite-react";
+import { Alert, Button, Label, TextInput } from "flowbite-react";
 import * as Yup from "yup";
 import { ErrorMessage, Formik, Field, Form } from "formik";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useContext } from "react";
 import UserContext from "../context/UserContext";
 
 const LoginForm = ({ formType }) => {
   const { setUser } = useContext(UserContext);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const sessionExpired = searchParams.get("sessionExpired") === "1";
 
   const handleSubmit = (values, { setSubmitting, setErrors, resetForm }) => {
     if (formType === "Registrarse") {
@@ -89,6 +91,11 @@ const LoginForm = ({ formType }) => {
             <h2 className="text-pretty font-semibold text-gray-800 mb-3">
               {formType === "Iniciar Sesion" ? "Iniciar Sesión" : "Registrarse"}
             </h2>
+            {sessionExpired && (
+              <Alert color="warning">
+                Tu sesión expiró o ya no es válida. Iniciá sesión de nuevo.
+              </Alert>
+            )}
             {errors?.general && (
               <div className="text-red-600">{errors.general}</div>
             )}

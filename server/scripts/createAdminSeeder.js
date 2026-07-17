@@ -1,5 +1,5 @@
 const { UserModel } = require("../models/user.model");
-const bcrypt = require("bcrypt");
+const crypto = require("crypto");
 
 const createAdminUser = async () => {
   try {
@@ -15,11 +15,16 @@ const createAdminUser = async () => {
 
     console.log("👤 Creando usuario administrador por defecto...");
 
+    // Si no se define ADMIN_PASSWORD, generar una aleatoria en vez de
+    // usar una contraseña trivial hardcodeada.
+    const adminPassword =
+      process.env.ADMIN_PASSWORD || crypto.randomBytes(12).toString("hex");
+
     // Crear usuario administrador por defecto
     const adminUser = new UserModel({
       userName: "admin",
-      password: "admin123", // Esta contraseña será hasheada automáticamente por el pre-save hook
-      confirmPassword: "admin123", // Requerido por la validación del modelo
+      password: adminPassword, // Esta contraseña será hasheada automáticamente por el pre-save hook
+      confirmPassword: adminPassword, // Requerido por la validación del modelo
     });
 
     await adminUser.save();
@@ -27,9 +32,9 @@ const createAdminUser = async () => {
     console.log("✅ Usuario administrador creado exitosamente");
     console.log("📋 Credenciales por defecto:");
     console.log("   Usuario: admin");
-    console.log("   Contraseña: admin123");
+    console.log(`   Contraseña: ${adminPassword}`);
     console.log(
-      "⚠️  IMPORTANTE: Cambia estas credenciales después del primer login"
+      "⚠️  IMPORTANTE: Guarda esta contraseña ahora y cámbiala después del primer login. No se volverá a mostrar."
     );
   } catch (error) {
     console.error("❌ Error creando usuario administrador:", error);

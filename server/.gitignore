@@ -6,6 +6,7 @@
 .env.production
 .env.staging
 vapid-keys-generated.txt
+db-backups/
 
 # =================================
 # ARCHIVOS SUBIDOS POR USUARIOS

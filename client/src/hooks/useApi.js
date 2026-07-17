@@ -1,11 +1,14 @@
 import axios from "axios";
 import config from "../config/api.config";
+import { attachSessionExpiredHandler } from "../utils/sessionInterceptor";
 
 // Configurar axios con base URL
 const api = axios.create({
   baseURL: config.api.base,
   withCredentials: true,
 });
+
+attachSessionExpiredHandler(api);
 
 // Interceptor para logging en desarrollo
 if (config.isDevelopment()) {

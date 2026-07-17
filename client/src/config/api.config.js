@@ -38,6 +38,9 @@ const config = {
       disponibilidadBarberos: (fecha) =>
         `/api/agenda/disponibilidad-barberos/${fecha}`,
       estadisticas: "/api/agenda/dashboard/estadisticas",
+      editarMiTurno: (id) => `/api/agenda/editar-mi-turno/${id}`,
+      liberarMiTurno: (id) => `/api/agenda/liberar-mi-turno/${id}`,
+      generarToken: (id) => `/api/agenda/${id}/generar-token`,
     },
 
     barberos: {

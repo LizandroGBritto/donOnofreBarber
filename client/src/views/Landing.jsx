@@ -38,8 +38,11 @@ const Landing = () => {
   // Función para cargar turnos desde la API usando el endpoint de landing filtrado
   const fetchTurnos = useCallback(async () => {
     try {
+      const numeroCliente = localStorage.getItem("numeroCliente");
+      const params = numeroCliente ? { numero: numeroCliente } : {};
       const response = await axios.get(
-        `${import.meta.env.VITE_API_URL}/api/agenda/landing`
+        `${import.meta.env.VITE_API_URL}/api/agenda/landing`,
+        { params }
       );
       setHorarios(response.data.agendas || []);
     } catch (error) {
@@ -103,7 +106,6 @@ const Landing = () => {
           <Agenda
             horarios={horarios}
             setHorarios={setHorarios}
-            getUserId={getUserId}
             agendarRef={agendarRef}
           />
         </div>

@@ -309,6 +309,7 @@ class NotificationService {
           headers: {
             "Content-Type": "application/json",
           },
+          credentials: "include",
         }
       );
 
@@ -345,7 +346,7 @@ class NotificationService {
   setupMessageListener() {
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.addEventListener("message", (event) => {
-        const { type, url, notificationData } = event.data;
+        const { type, url } = event.data;
 
         if (type === "NAVIGATE" && url) {
           // Navegar a la URL especificada

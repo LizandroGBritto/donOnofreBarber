@@ -18,6 +18,7 @@ const WhatsappConnection = () => {
     try {
       const response = await axios.get(
         `${import.meta.env.VITE_API_URL}/api/whatsapp/status`,
+        { withCredentials: true },
       );
       // El estado viene en response.data.instance.state
       const connectionState = response.data?.instance?.state || "close";
@@ -49,6 +50,7 @@ const WhatsappConnection = () => {
     try {
       const response = await axios.get(
         `${import.meta.env.VITE_API_URL}/api/whatsapp/connect`,
+        { withCredentials: true },
       );
 
       // La API devuelve { base64: "...", code: "..." } o similar dependiendo de Evolution API
@@ -62,13 +64,14 @@ const WhatsappConnection = () => {
           try {
             const statusRes = await axios.get(
               `${import.meta.env.VITE_API_URL}/api/whatsapp/status`,
+              { withCredentials: true },
             );
             if (statusRes.data?.instance?.state === "open") {
               setStatus("connected");
               setQrCode(null);
               clearInterval(interval);
             }
-          } catch (e) {
+          } catch {
             // Ignorar errores en polling
           }
         }, 3000);

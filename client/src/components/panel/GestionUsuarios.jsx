@@ -48,14 +48,9 @@ const GestionUsuarios = () => {
       setUsuarios(response.data);
     } catch (error) {
       console.error("Error al obtener usuarios:", error);
-      if (error.response?.status === 401) {
-        showAlert(
-          "Sesión expirada. Por favor, inicia sesión nuevamente.",
-          "failure"
-        );
-        // Opcional: redirigir al login
-        // window.location.href = "/admin";
-      } else {
+      // Un 401 aquí ya dispara el redirect global a /admin (ver
+      // src/utils/sessionInterceptor.js) — no hace falta manejarlo acá.
+      if (error.response?.status !== 401) {
         showAlert("Error al cargar usuarios", "failure");
       }
     } finally {

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Formik, Field, Form as FormikForm, ErrorMessage } from "formik";
 import * as Yup from "yup";
 import axios from "axios";
@@ -6,9 +6,11 @@ import Swal from "sweetalert2";
 
 const FormReservarConBarbero = ({ turno, onCloseModal, refreshData }) => {
   const [barberos, setBarberos] = useState([]);
+  const [barberosLoading, setBarberosLoading] = useState(true);
   const [disponibilidad, setDisponibilidad] = useState({});
   const [loading, setLoading] = useState(false);
   const [services, setServices] = useState([]);
+  const [serviciosLoading, setServiciosLoading] = useState(true);
   const [selectedServices, setSelectedServices] = useState([]);
   const [turnoExistenteInfo, setTurnoExistenteInfo] = useState(null);
 
@@ -22,6 +24,8 @@ const FormReservarConBarbero = ({ turno, onCloseModal, refreshData }) => {
         setBarberos(response.data);
       } catch (error) {
         console.error("Error loading barberos:", error);
+      } finally {
+        setBarberosLoading(false);
       }
     };
 
@@ -44,6 +48,8 @@ const FormReservarConBarbero = ({ turno, onCloseModal, refreshData }) => {
           { nombre: "Barbería", precio: 40000 },
           { nombre: "Cejas", precio: 20000 },
         ]);
+      } finally {
+        setServiciosLoading(false);
       }
     };
 
@@ -174,6 +180,23 @@ const FormReservarConBarbero = ({ turno, onCloseModal, refreshData }) => {
         reservaData
       );
 
+      // Guardar el número y el token de edición del turno reservado para
+      // poder mostrar "MODIFICAR" sobre el turno propio y habilitar la
+      // edición pública desde este mismo dispositivo sin depender de
+      // WhatsApp.
+      try {
+        localStorage.setItem("numeroCliente", values.numeroCliente);
+        const turnoReservado = response.data?.turno;
+        if (turnoReservado?._id && turnoReservado?.editToken) {
+          localStorage.setItem(
+            `editToken:${turnoReservado._id}`,
+            turnoReservado.editToken
+          );
+        }
+      } catch (storageError) {
+        console.error("No se pudo guardar en localStorage:", storageError);
+      }
+
       await refreshData();
 
       Swal.fire({
@@ -206,37 +229,33 @@ const FormReservarConBarbero = ({ turno, onCloseModal, refreshData }) => {
   };
 
   // 🚀 Optimización: Memoizar cálculos pesados
-  const {
-    barberosOcupadosIds,
-    barberosDisponiblesFiltrados,
-    unicoBarberoDisponible,
-  } = useMemo(() => {
+  // Un barbero solo se ofrece como seleccionable si el servidor confirma un
+  // turno real con estado "disponible" para él en ese horario (no basta con
+  // que no aparezca como ocupado — eso permitía seleccionar barberos sin
+  // ningún turno generado para ese horario).
+  const { barberosDisponiblesIds, unicoBarberoDisponible } = useMemo(() => {
     if (!turno?.hora || !disponibilidad || !barberos.length) {
       return {
-        barberosOcupadosIds: new Set(),
-        barberosDisponiblesFiltrados: [],
+        barberosDisponiblesIds: new Set(),
         unicoBarberoDisponible: null,
       };
     }
 
-    // Obtener barberos ocupados en la hora seleccionada
-    const barberosOcupados = disponibilidad[turno.hora]?.barberosOcupados || [];
+    const infoHora = disponibilidad[turno.hora];
+    const barberosDisponiblesServer = infoHora?.barberosDisponibles || [];
 
-    // Crear un Set con IDs de barberos ocupados para búsqueda rápida
-    const ocupadosIds = new Set(
-      barberosOcupados.map((bo) => bo.barbero?._id?.toString()).filter(Boolean)
+    const disponiblesIds = new Set(
+      barberosDisponiblesServer.map((b) => b._id?.toString()).filter(Boolean)
     );
 
-    // Verificar si hay solo un barbero disponible
-    const disponibles = barberos.filter(
-      (b) => !ocupadosIds.has(b._id.toString())
+    const disponibles = barberos.filter((b) =>
+      disponiblesIds.has(b._id.toString())
     );
 
     const unico = disponibles.length === 1 ? disponibles[0] : null;
 
     return {
-      barberosOcupadosIds: ocupadosIds,
-      barberosDisponiblesFiltrados: disponibles,
+      barberosDisponiblesIds: disponiblesIds,
       unicoBarberoDisponible: unico,
     };
   }, [disponibilidad, turno?.hora, barberos]);
@@ -288,7 +307,7 @@ const FormReservarConBarbero = ({ turno, onCloseModal, refreshData }) => {
             onSubmit={handleSubmit}
             enableReinitialize={true}
           >
-            {({ isSubmitting, setFieldValue, values, errors }) => {
+            {({ isSubmitting, setFieldValue, values }) => {
               return (
                 <FormikForm
                   className={`space-y-6 ${
@@ -338,17 +357,32 @@ const FormReservarConBarbero = ({ turno, onCloseModal, refreshData }) => {
                       <h3 className="text-base md:text-lg font-medium text-gray-900 mb-3 md:mb-4">
                         Seleccionar Barbero *
                       </h3>
-                      {loading ? (
-                        <div className="text-center py-4">
-                          Cargando disponibilidad...
+                      {loading || barberosLoading ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+                          {[0, 1].map((i) => (
+                            <div
+                              key={i}
+                              className="border border-gray-200 rounded-lg p-3 md:p-4 animate-pulse"
+                            >
+                              <div className="flex items-center space-x-3">
+                                <div className="flex-shrink-0 w-10 h-10 md:w-12 md:h-12 rounded-full bg-gray-200" />
+                                <div className="flex-1 min-w-0 space-y-2">
+                                  <div className="h-4 bg-gray-200 rounded w-2/3" />
+                                  <div className="h-3 bg-gray-200 rounded w-1/3" />
+                                </div>
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
                           {barberos.map((barbero) => {
-                            // 🔧 SOLUCIÓN: Verificación correcta del estado del barbero
+                            // Solo es seleccionable si el servidor confirmó
+                            // un turno "disponible" real para este barbero
+                            // en este horario (ver comentario en el useMemo).
                             const barberoIdStr = barbero._id.toString();
                             const estaOcupado =
-                              barberosOcupadosIds.has(barberoIdStr);
+                              !barberosDisponiblesIds.has(barberoIdStr);
 
                             return (
                               <div
@@ -460,41 +494,58 @@ const FormReservarConBarbero = ({ turno, onCloseModal, refreshData }) => {
                     <h3 className="text-lg font-medium text-gray-900 mb-4">
                       Seleccionar Servicios *
                     </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {services.map((service) => (
-                        <label
-                          key={service._id || service.nombre}
-                          className="flex items-center space-x-3 p-2 md:p-3 border rounded-lg hover:bg-gray-50 cursor-pointer"
-                        >
-                          <Field
-                            type="checkbox"
-                            name="servicios"
-                            value={service._id || service.nombre}
-                            checked={selectedServices.some(
-                              (s) =>
-                                (s._id && s._id === service._id) ||
-                                (!s._id && s.nombre === service.nombre)
-                            )}
-                            className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500 flex-shrink-0"
-                            onChange={(e) =>
-                              handleServiceChange(
-                                service,
-                                e.target.checked,
-                                setFieldValue
-                              )
-                            }
-                          />
-                          <div className="flex-1 min-w-0">
-                            <div className="font-medium text-gray-900 text-sm md:text-base">
-                              {service.nombre}
-                            </div>
-                            <div className="text-xs md:text-sm text-gray-500">
-                              ₲{service.precio?.toLocaleString()}
+                    {serviciosLoading ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {[0, 1, 2, 3].map((i) => (
+                          <div
+                            key={i}
+                            className="flex items-center space-x-3 p-2 md:p-3 border rounded-lg animate-pulse"
+                          >
+                            <div className="w-4 h-4 rounded bg-gray-200 flex-shrink-0" />
+                            <div className="flex-1 min-w-0 space-y-2">
+                              <div className="h-4 bg-gray-200 rounded w-1/2" />
+                              <div className="h-3 bg-gray-200 rounded w-1/4" />
                             </div>
                           </div>
-                        </label>
-                      ))}
-                    </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {services.map((service) => (
+                          <label
+                            key={service._id || service.nombre}
+                            className="flex items-center space-x-3 p-2 md:p-3 border rounded-lg hover:bg-gray-50 cursor-pointer"
+                          >
+                            <Field
+                              type="checkbox"
+                              name="servicios"
+                              value={service._id || service.nombre}
+                              checked={selectedServices.some(
+                                (s) =>
+                                  (s._id && s._id === service._id) ||
+                                  (!s._id && s.nombre === service.nombre)
+                              )}
+                              className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500 flex-shrink-0"
+                              onChange={(e) =>
+                                handleServiceChange(
+                                  service,
+                                  e.target.checked,
+                                  setFieldValue
+                                )
+                              }
+                            />
+                            <div className="flex-1 min-w-0">
+                              <div className="font-medium text-gray-900 text-sm md:text-base">
+                                {service.nombre}
+                              </div>
+                              <div className="text-xs md:text-sm text-gray-500">
+                                ₲{service.precio?.toLocaleString()}
+                              </div>
+                            </div>
+                          </label>
+                        ))}
+                      </div>
+                    )}
                     <ErrorMessage
                       name="servicios"
                       component="div"

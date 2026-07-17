@@ -21,7 +21,7 @@ const horarioController = {
   getAllHorarios: async (req, res) => {
     try {
       const { estado } = req.query;
-      const filter = estado ? { estado } : {};
+      const filter = estado && typeof estado === "string" ? { estado } : {};
       const horarios = await HorarioModel.find(filter).sort({ hora: 1 });
       res.status(200).json({ horarios });
     } catch (error) {

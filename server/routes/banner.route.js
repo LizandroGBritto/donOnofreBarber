@@ -1,4 +1,5 @@
 const express = require("express");
+const { authenticate } = require("../middleware/auth.middleware");
 const {
   crearBanner,
   obtenerBanners,
@@ -17,12 +18,12 @@ const router = express.Router();
 router.get("/activos", obtenerBannersActivos);
 
 // Rutas administrativas
-router.get("/", obtenerBanners);
-router.get("/estadisticas", obtenerEstadisticas);
-router.get("/:id", obtenerBannerPorId);
-router.post("/", upload, crearBanner);
-router.put("/:id", upload, actualizarBanner);
-router.patch("/:id/estado", cambiarEstadoBanner);
-router.delete("/:id", eliminarBanner);
+router.get("/", authenticate, obtenerBanners);
+router.get("/estadisticas", authenticate, obtenerEstadisticas);
+router.get("/:id", authenticate, obtenerBannerPorId);
+router.post("/", authenticate, upload, crearBanner);
+router.put("/:id", authenticate, upload, actualizarBanner);
+router.patch("/:id/estado", authenticate, cambiarEstadoBanner);
+router.delete("/:id", authenticate, eliminarBanner);
 
 module.exports = router;

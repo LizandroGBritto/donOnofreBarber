@@ -214,7 +214,6 @@ const AdminDashboard = () => {
   const [showImageModal, setShowImageModal] = useState(false);
   const [currentImagenes, setCurrentImagenes] = useState([]);
   const [currentServicioId, setCurrentServicioId] = useState(null);
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   // Estados para gestión de barberos
   const [barberos, setBarberos] = useState([]);
@@ -247,16 +246,6 @@ const AdminDashboard = () => {
   };
 
   // Función para obtener fecha de mañana
-  const obtenerFechaManana = () => {
-    const manana = new Date();
-    // 🔧 FIX: Sumar SOLO 1 día, no 2
-    manana.setDate(manana.getDate() + 1);
-    const year = manana.getFullYear();
-    const month = String(manana.getMonth() + 1).padStart(2, "0");
-    const day = String(manana.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
-  };
-
   // Función para obtener fechas de la semana actual
   const obtenerFechasSemanaActual = () => {
     const hoy = new Date();
@@ -504,6 +493,7 @@ const AdminDashboard = () => {
         {
           estado: newStatus,
         },
+        { withCredentials: true },
       );
       fetchBanners();
     } catch (error) {
@@ -668,7 +658,7 @@ const AdminDashboard = () => {
     }
   };
 
-  const toggleHorarioStatus = async (id, currentStatus) => {
+  const toggleHorarioStatus = async (id) => {
     try {
       await api.horarios.toggle(id);
       fetchHorarios();
@@ -751,12 +741,6 @@ const AdminDashboard = () => {
         formData.append("mantenerImagenes", "true");
       }
 
-      const config = {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      };
-
       if (selectedServicio) {
         await api.servicios.update(selectedServicio._id, formData);
       } else {
@@ -782,7 +766,7 @@ const AdminDashboard = () => {
     }
   };
 
-  const toggleServicioStatus = async (id, currentStatus) => {
+  const toggleServicioStatus = async (id) => {
     try {
       await api.servicios.toggle(id);
       fetchServicios();
@@ -834,9 +818,8 @@ const AdminDashboard = () => {
     await removeImagenExistente(imagenNombre);
   };
 
-  const openImageGallery = (imagenes, startIndex = 0) => {
+  const openImageGallery = (imagenes) => {
     setCurrentImagenes(imagenes);
-    setCurrentImageIndex(startIndex);
     setShowImageModal(true);
   };
 
@@ -847,6 +830,7 @@ const AdminDashboard = () => {
           `${import.meta.env.VITE_API_URL}/api/servicios/${
             selectedServicio._id
           }/imagen/${imagenNombre}`,
+          { withCredentials: true },
         );
         setImagenesServicio((prev) =>
           prev.filter((img) => img !== imagenNombre),
@@ -967,6 +951,7 @@ const AdminDashboard = () => {
         `${
           import.meta.env.VITE_API_URL
         }/api/servicios/${currentServicioId}/imagen/${imagenNombre}`,
+        { withCredentials: true },
       );
 
       // Actualizar la lista actual de imágenes
@@ -2630,7 +2615,7 @@ const AdminDashboard = () => {
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input
                       type="checkbox"
-                      className="sr-only"
+                      className="sr-only peer"
                       checked={horarioForm.estado === "activo"}
                       onChange={(e) =>
                         setHorarioForm({
@@ -2639,7 +2624,7 @@ const AdminDashboard = () => {
                         })
                       }
                     />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
                   </label>
                   <span
                     className={`text-sm ${

@@ -1,4 +1,4 @@
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const mongoose = require('mongoose');
 const uniqueValidator = require('mongoose-unique-validator');
 
@@ -15,8 +15,8 @@ const UserSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 UserSchema.virtual('confirmPassword')
-    .get(() => this._confirmPassword)
-    .set(value => this._confirmPassword = value);
+    .get(function () { return this._confirmPassword; })
+    .set(function (value) { this._confirmPassword = value; });
 
 UserSchema.pre('validate', function (next) {
     if (this.password !== this.confirmPassword) {

@@ -21,8 +21,17 @@ app.options("*", cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Servir archivos estáticos (uploads)
-app.use("/uploads", express.static("uploads"));
+// Servir archivos estáticos (uploads). Los nombres de archivo son únicos
+// por subida (timestamp + random en generateUniqueFilename), nunca se
+// reescribe el mismo nombre con contenido distinto — se puede cachear
+// agresivamente en el navegador sin riesgo de servir una imagen vieja.
+app.use(
+  "/uploads",
+  express.static("uploads", {
+    maxAge: "30d",
+    immutable: true,
+  })
+);
 
 // Conectar a MongoDB
 require("./config/mongoose.config");
