@@ -11,48 +11,53 @@ const FormReservarConBarbero = ({ turno, onCloseModal, refreshData }) => {
   const [loading, setLoading] = useState(false);
   const [services, setServices] = useState([]);
   const [serviciosLoading, setServiciosLoading] = useState(true);
+  const [serviciosError, setServiciosError] = useState(false);
   const [selectedServices, setSelectedServices] = useState([]);
   const [turnoExistenteInfo, setTurnoExistenteInfo] = useState(null);
+  const [barberosError, setBarberosError] = useState(false);
 
   // Cargar barberos activos incluidos en agenda
-  useEffect(() => {
-    const loadBarberos = async () => {
-      try {
-        const response = await axios.get(
-          `${import.meta.env.VITE_API_URL}/api/barberos/agenda`
-        );
-        setBarberos(response.data);
-      } catch (error) {
-        console.error("Error loading barberos:", error);
-      } finally {
-        setBarberosLoading(false);
-      }
-    };
+  const loadBarberos = async () => {
+    try {
+      setBarberosLoading(true);
+      setBarberosError(false);
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_URL}/api/barberos/agenda`
+      );
+      setBarberos(response.data);
+    } catch (error) {
+      console.error("Error loading barberos:", error);
+      setBarberosError(true);
+    } finally {
+      setBarberosLoading(false);
+    }
+  };
 
+  useEffect(() => {
     loadBarberos();
   }, []);
 
-  // Cargar servicios
-  useEffect(() => {
-    const loadServices = async () => {
-      try {
-        const response = await axios.get(
-          `${import.meta.env.VITE_API_URL}/api/servicios`
-        );
-        setServices(response.data || []);
-      } catch (error) {
-        console.error("Error loading services:", error);
-        setServices([
-          { nombre: "Corte de Pelo", precio: 50000 },
-          { nombre: "Decoloración", precio: 200000 },
-          { nombre: "Barbería", precio: 40000 },
-          { nombre: "Cejas", precio: 20000 },
-        ]);
-      } finally {
-        setServiciosLoading(false);
-      }
-    };
+  // Cargar servicios. Si falla, no se muestra ningún dato inventado: se
+  // informa el error y se ofrece reintentar (mostrar precios falsos podía
+  // llevar a un cliente a reservar un servicio que no existe).
+  const loadServices = async () => {
+    try {
+      setServiciosLoading(true);
+      setServiciosError(false);
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_URL}/api/servicios`
+      );
+      setServices(response.data || []);
+    } catch (error) {
+      console.error("Error loading services:", error);
+      setServices([]);
+      setServiciosError(true);
+    } finally {
+      setServiciosLoading(false);
+    }
+  };
 
+  useEffect(() => {
     loadServices();
   }, []);
 
@@ -374,6 +379,20 @@ const FormReservarConBarbero = ({ turno, onCloseModal, refreshData }) => {
                             </div>
                           ))}
                         </div>
+                      ) : barberosError ? (
+                        <div className="border border-red-200 bg-red-50 rounded-lg p-4 text-center">
+                          <p className="text-red-600 text-sm mb-2">
+                            No se pudieron cargar los barberos. Revisá tu
+                            conexión e intentá de nuevo.
+                          </p>
+                          <button
+                            type="button"
+                            onClick={loadBarberos}
+                            className="text-sm text-purple-600 underline"
+                          >
+                            Reintentar
+                          </button>
+                        </div>
                       ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
                           {barberos.map((barbero) => {
@@ -508,6 +527,20 @@ const FormReservarConBarbero = ({ turno, onCloseModal, refreshData }) => {
                             </div>
                           </div>
                         ))}
+                      </div>
+                    ) : serviciosError ? (
+                      <div className="border border-red-200 bg-red-50 rounded-lg p-4 text-center">
+                        <p className="text-red-600 text-sm mb-2">
+                          No se pudieron cargar los servicios. Revisá tu
+                          conexión e intentá de nuevo.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={loadServices}
+                          className="text-sm text-purple-600 underline"
+                        >
+                          Reintentar
+                        </button>
                       </div>
                     ) : (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
