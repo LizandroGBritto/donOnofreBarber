@@ -16,29 +16,25 @@ import { useApi } from "../hooks/useApi";
 import Dashboard from "./panel/Dashboard";
 import GestionUsuarios from "./panel/GestionUsuarios";
 import WhatsappConnection from "./panel/WhatsappConnection";
+import MisPrecios from "./panel/MisPrecios";
+import MisHorarios from "./panel/MisHorarios";
+import { itemsParaRol, vistaInicialParaRol } from "./panel/navItems";
 import NotificationManager from "./NotificationManager";
 import UserContext from "../context/UserContext";
-import {
-  HiChartBar,
-  HiCalendar,
-  HiPhotograph,
-  HiPhone,
-  HiLocationMarker,
-  HiClock,
-  HiTag,
-  HiUserGroup,
-  HiBell,
-  HiUsers,
-  HiLogout,
-  HiHome,
-  HiMenu,
-  HiX,
-} from "react-icons/hi";
+// Los iconos del menú ahora viven en panel/navItems.js, junto con su ítem.
+import { HiLogout, HiHome, HiMenu, HiX } from "react-icons/hi";
 
 const AdminDashboard = () => {
-  const { setUser } = useContext(UserContext);
+  const { user, setUser } = useContext(UserContext);
   const navigate = useNavigate();
   const api = useApi();
+
+  // Un usuario sin `rol` (anterior a la migración) se trata como admin, igual
+  // criterio que usa el backend en authenticate.
+  const rol = user?.rol === "barbero" ? "barbero" : "admin";
+  const esBarbero = rol === "barbero";
+  const miBarberoId = user?.barbero || null;
+  const itemsVisibles = itemsParaRol(rol);
 
   // Función para cerrar sesión
   const handleLogout = async () => {
@@ -134,7 +130,7 @@ const AdminDashboard = () => {
     window.open(enlaceWhatsApp, "_blank");
   };
 
-  const [activeView, setActiveView] = useState("dashboard");
+  const [activeView, setActiveView] = useState(() => vistaInicialParaRol(rol));
   const [turnos, setTurnos] = useState([]);
   const [filteredTurnos, setFilteredTurnos] = useState([]);
   const [fechaDesde, setFechaDesde] = useState("");
@@ -225,6 +221,8 @@ const AdminDashboard = () => {
     incluirEnAgenda: true,
   });
   const [showBarberoModal, setShowBarberoModal] = useState(false);
+  // Barbero cuyos precios está editando el admin (null = panel cerrado).
+  const [barberoPrecios, setBarberoPrecios] = useState(null);
   const [barberoFoto, setBarberoFoto] = useState(null);
   const [barberoLogo, setBarberoLogo] = useState(null);
   const [showNotificationModal, setShowNotificationModal] = useState(false);
@@ -1174,170 +1172,23 @@ const AdminDashboard = () => {
           {/* Opciones del menú */}
           <div className="overflow-y-auto h-[calc(100vh-180px)]">
             <nav className="p-2 space-y-1">
-              <button
-                onClick={() => {
-                  setActiveView("dashboard");
-                  setIsSidebarOpen(false);
-                }}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                  activeView === "dashboard"
-                    ? "bg-purple-100 text-purple-700 font-medium"
-                    : "text-gray-700 hover:bg-gray-100"
-                }`}
-              >
-                <HiChartBar className="w-5 h-5" />
-                Dashboard
-              </button>
-
-              <button
-                onClick={() => {
-                  setActiveView("turnos");
-                  setIsSidebarOpen(false);
-                }}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                  activeView === "turnos"
-                    ? "bg-purple-100 text-purple-700 font-medium"
-                    : "text-gray-700 hover:bg-gray-100"
-                }`}
-              >
-                <HiCalendar className="w-5 h-5" />
-                Turnos
-              </button>
-
-              <button
-                onClick={() => {
-                  setActiveView("banners");
-                  setIsSidebarOpen(false);
-                }}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                  activeView === "banners"
-                    ? "bg-purple-100 text-purple-700 font-medium"
-                    : "text-gray-700 hover:bg-gray-100"
-                }`}
-              >
-                <HiPhotograph className="w-5 h-5" />
-                Banners
-              </button>
-
-              <button
-                onClick={() => {
-                  setActiveView("contacto");
-                  setIsSidebarOpen(false);
-                }}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                  activeView === "contacto"
-                    ? "bg-purple-100 text-purple-700 font-medium"
-                    : "text-gray-700 hover:bg-gray-100"
-                }`}
-              >
-                <HiPhone className="w-5 h-5" />
-                Contacto
-              </button>
-
-              <button
-                onClick={() => {
-                  setActiveView("ubicacion");
-                  setIsSidebarOpen(false);
-                }}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                  activeView === "ubicacion"
-                    ? "bg-purple-100 text-purple-700 font-medium"
-                    : "text-gray-700 hover:bg-gray-100"
-                }`}
-              >
-                <HiLocationMarker className="w-5 h-5" />
-                Ubicación
-              </button>
-
-              <button
-                onClick={() => {
-                  setActiveView("horarios");
-                  setIsSidebarOpen(false);
-                }}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                  activeView === "horarios"
-                    ? "bg-purple-100 text-purple-700 font-medium"
-                    : "text-gray-700 hover:bg-gray-100"
-                }`}
-              >
-                <HiClock className="w-5 h-5" />
-                Horarios
-              </button>
-
-              <button
-                onClick={() => {
-                  setActiveView("servicios");
-                  setIsSidebarOpen(false);
-                }}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                  activeView === "servicios"
-                    ? "bg-purple-100 text-purple-700 font-medium"
-                    : "text-gray-700 hover:bg-gray-100"
-                }`}
-              >
-                <HiTag className="w-5 h-5" />
-                Servicios
-              </button>
-
-              <button
-                onClick={() => {
-                  setActiveView("barberos");
-                  setIsSidebarOpen(false);
-                }}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                  activeView === "barberos"
-                    ? "bg-purple-100 text-purple-700 font-medium"
-                    : "text-gray-700 hover:bg-gray-100"
-                }`}
-              >
-                <HiUserGroup className="w-5 h-5" />
-                Barberos
-              </button>
-
-              <button
-                onClick={() => {
-                  setActiveView("notificaciones");
-                  setIsSidebarOpen(false);
-                }}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                  activeView === "notificaciones"
-                    ? "bg-purple-100 text-purple-700 font-medium"
-                    : "text-gray-700 hover:bg-gray-100"
-                }`}
-              >
-                <HiBell className="w-5 h-5" />
-                Notificaciones
-              </button>
-
-              <button
-                onClick={() => {
-                  setActiveView("usuarios");
-                  setIsSidebarOpen(false);
-                }}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                  activeView === "usuarios"
-                    ? "bg-purple-100 text-purple-700 font-medium"
-                    : "text-gray-700 hover:bg-gray-100"
-                }`}
-              >
-                <HiUsers className="w-5 h-5" />
-                Usuarios
-              </button>
-
-              <button
-                onClick={() => {
-                  setActiveView("whatsapp");
-                  setIsSidebarOpen(false);
-                }}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                  activeView === "whatsapp"
-                    ? "bg-purple-100 text-purple-700 font-medium"
-                    : "text-gray-700 hover:bg-gray-100"
-                }`}
-              >
-                <HiPhone className="w-5 h-5" />
-                Conexión WhatsApp
-              </button>
+              {itemsVisibles.map(({ id, label, icon: Icono }) => (
+                <button
+                  key={id}
+                  onClick={() => {
+                    setActiveView(id);
+                    setIsSidebarOpen(false);
+                  }}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                    activeView === id
+                      ? "bg-purple-100 text-purple-700 font-medium"
+                      : "text-gray-700 hover:bg-gray-100"
+                  }`}
+                >
+                  <Icono className="w-5 h-5" />
+                  {label}
+                </button>
+              ))}
 
               <div className="border-t my-2"></div>
 
@@ -1357,137 +1208,20 @@ const AdminDashboard = () => {
       <div className="hidden md:block bg-white shadow-sm border-b sticky top-16 z-30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex gap-1 py-2 overflow-x-auto">
-            <button
-              onClick={() => setActiveView("dashboard")}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all whitespace-nowrap ${
-                activeView === "dashboard"
-                  ? "bg-purple-100 text-purple-700 shadow-sm"
-                  : "text-gray-600 hover:bg-gray-100"
-              }`}
-            >
-              <HiChartBar className="w-5 h-5" />
-              Dashboard
-            </button>
-
-            <button
-              onClick={() => setActiveView("turnos")}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all whitespace-nowrap ${
-                activeView === "turnos"
-                  ? "bg-purple-100 text-purple-700 shadow-sm"
-                  : "text-gray-600 hover:bg-gray-100"
-              }`}
-            >
-              <HiCalendar className="w-5 h-5" />
-              Turnos
-            </button>
-
-            <button
-              onClick={() => setActiveView("banners")}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all whitespace-nowrap ${
-                activeView === "banners"
-                  ? "bg-purple-100 text-purple-700 shadow-sm"
-                  : "text-gray-600 hover:bg-gray-100"
-              }`}
-            >
-              <HiPhotograph className="w-5 h-5" />
-              Banners
-            </button>
-
-            <button
-              onClick={() => setActiveView("contacto")}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all whitespace-nowrap ${
-                activeView === "contacto"
-                  ? "bg-purple-100 text-purple-700 shadow-sm"
-                  : "text-gray-600 hover:bg-gray-100"
-              }`}
-            >
-              <HiPhone className="w-5 h-5" />
-              Contacto
-            </button>
-
-            <button
-              onClick={() => setActiveView("ubicacion")}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all whitespace-nowrap ${
-                activeView === "ubicacion"
-                  ? "bg-purple-100 text-purple-700 shadow-sm"
-                  : "text-gray-600 hover:bg-gray-100"
-              }`}
-            >
-              <HiLocationMarker className="w-5 h-5" />
-              Ubicación
-            </button>
-
-            <button
-              onClick={() => setActiveView("horarios")}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all whitespace-nowrap ${
-                activeView === "horarios"
-                  ? "bg-purple-100 text-purple-700 shadow-sm"
-                  : "text-gray-600 hover:bg-gray-100"
-              }`}
-            >
-              <HiClock className="w-5 h-5" />
-              Horarios
-            </button>
-
-            <button
-              onClick={() => setActiveView("servicios")}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all whitespace-nowrap ${
-                activeView === "servicios"
-                  ? "bg-purple-100 text-purple-700 shadow-sm"
-                  : "text-gray-600 hover:bg-gray-100"
-              }`}
-            >
-              <HiTag className="w-5 h-5" />
-              Servicios
-            </button>
-
-            <button
-              onClick={() => setActiveView("barberos")}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all whitespace-nowrap ${
-                activeView === "barberos"
-                  ? "bg-purple-100 text-purple-700 shadow-sm"
-                  : "text-gray-600 hover:bg-gray-100"
-              }`}
-            >
-              <HiUserGroup className="w-5 h-5" />
-              Barberos
-            </button>
-
-            <button
-              onClick={() => setActiveView("notificaciones")}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all whitespace-nowrap ${
-                activeView === "notificaciones"
-                  ? "bg-purple-100 text-purple-700 shadow-sm"
-                  : "text-gray-600 hover:bg-gray-100"
-              }`}
-            >
-              <HiBell className="w-5 h-5" />
-              Notificaciones
-            </button>
-
-            <button
-              onClick={() => setActiveView("usuarios")}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all whitespace-nowrap ${
-                activeView === "usuarios"
-                  ? "bg-purple-100 text-purple-700 shadow-sm"
-                  : "text-gray-600 hover:bg-gray-100"
-              }`}
-            >
-              <HiUsers className="w-5 h-5" />
-              Usuarios
-            </button>
-
-            <button
-              onClick={() => setActiveView("whatsapp")}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all whitespace-nowrap ${
-                activeView === "whatsapp"
-                  ? "bg-purple-100 text-purple-700 shadow-sm"
-                  : "text-gray-600 hover:bg-gray-100"
-              }`}
-            >
-              <HiPhone className="w-5 h-5" />
-              Conexión WhatsApp
-            </button>
+            {itemsVisibles.map(({ id, label, icon: Icono }) => (
+              <button
+                key={id}
+                onClick={() => setActiveView(id)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all whitespace-nowrap ${
+                  activeView === id
+                    ? "bg-purple-100 text-purple-700 shadow-sm"
+                    : "text-gray-600 hover:bg-gray-100"
+                }`}
+              >
+                <Icono className="w-5 h-5" />
+                {label}
+              </button>
+            ))}
 
             <div className="border-l mx-2"></div>
 
@@ -1505,6 +1239,31 @@ const AdminDashboard = () => {
       {/* Contenido Principal */}
       <div className="p-4 md:p-6">
         {activeView === "dashboard" && <Dashboard />}
+
+        {activeView === "mis-precios" && <MisPrecios barberoId={miBarberoId} />}
+
+        {/* El admin edita los precios de un barbero desde la ficha de ese
+            barbero, no desde el servicio: el precio es del barbero, mientras
+            que el del servicio es el del local (el que rige por defecto). */}
+        <Modal
+          show={Boolean(barberoPrecios)}
+          onClose={() => setBarberoPrecios(null)}
+          size="4xl"
+        >
+          <Modal.Header>
+            Precios de {barberoPrecios?.nombre}
+          </Modal.Header>
+          <Modal.Body>
+            {barberoPrecios && (
+              <MisPrecios
+                barberoId={barberoPrecios._id}
+                nombreBarbero={barberoPrecios.nombre}
+              />
+            )}
+          </Modal.Body>
+        </Modal>
+
+        {activeView === "mis-horarios" && <MisHorarios barberoId={miBarberoId} />}
 
         {activeView === "notificaciones" && (
           <div className="space-y-6">
@@ -1576,24 +1335,28 @@ const AdminDashboard = () => {
                     </Select>
                   </div>
 
-                  {/* 🆕 NUEVO: Select de Barbero */}
-                  <div>
-                    <Label htmlFor="filtroBarbero" className="text-white">
-                      Barbero
-                    </Label>
-                    <Select
-                      id="filtroBarbero"
-                      value={filtroBarbero}
-                      onChange={(e) => setFiltroBarbero(e.target.value)}
-                    >
-                      <option value="">Todos los barberos</option>
-                      {barberos.map((barbero) => (
-                        <option key={barbero._id} value={barbero._id}>
-                          {barbero.nombre}
-                        </option>
-                      ))}
-                    </Select>
-                  </div>
+                  {/* Filtro por barbero: solo para admin. Un barbero ya recibe
+                      únicamente sus turnos desde el servidor, así que filtrar
+                      no tendría nada que filtrar. */}
+                  {!esBarbero && (
+                    <div>
+                      <Label htmlFor="filtroBarbero" className="text-white">
+                        Barbero
+                      </Label>
+                      <Select
+                        id="filtroBarbero"
+                        value={filtroBarbero}
+                        onChange={(e) => setFiltroBarbero(e.target.value)}
+                      >
+                        <option value="">Todos los barberos</option>
+                        {barberos.map((barbero) => (
+                          <option key={barbero._id} value={barbero._id}>
+                            {barbero.nombre}
+                          </option>
+                        ))}
+                      </Select>
+                    </div>
+                  )}
 
                   <div>
                     <Label htmlFor="busqueda" className="text-white">
@@ -3012,6 +2775,14 @@ const AdminDashboard = () => {
                               </Button>
                               <Button
                                 size="xs"
+                                color="purple"
+                                onClick={() => setBarberoPrecios(barbero)}
+                                className="flex-1"
+                              >
+                                Precios
+                              </Button>
+                              <Button
+                                size="xs"
                                 color="red"
                                 onClick={() => deleteBarbero(barbero._id)}
                                 className="flex-1"
@@ -3312,7 +3083,11 @@ const AdminDashboard = () => {
               </div>
 
               <div>
-                <Label htmlFor="precio">Precio *</Label>
+                <Label htmlFor="precio">Precio del local *</Label>
+                <p className="text-xs text-gray-500 mb-1">
+                  Es el precio que rige por defecto. Cada barbero puede fijar el
+                  suyo desde Barberos → Precios; los que no lo hagan cobran este.
+                </p>
                 <TextInput
                   id="precio"
                   type="number"

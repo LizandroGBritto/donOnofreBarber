@@ -4,6 +4,38 @@ Registro histórico de auditorías, decisiones técnicas e incidentes del proyec
 
 ---
 
+## 2026-08-22 — Regeneración de agenda rota + limpieza en producción
+
+**Contexto:** al preparar la funcionalidad de precios/horarios por barbero (ver `docs/plan-barberos-precios-horarios.md`) se detectó que los horarios editados el 2026-08-17 desde el panel no tenían ningún efecto sobre la agenda visible. El usuario lo notó primero: "esos horarios no los veo en la home como seleccionables".
+
+**Causa raíz:** `horario.controller.js:7` regenera la agenda haciendo `axios.post` a su **propio** endpoint `/api/agenda/regenerar-por-horarios`, sin adjuntar la cookie de sesión. Desde el refactor de seguridad `daf5c87` (2026-07-17) esa ruta exige `authenticate`, así que devuelve **401** y el error se traga en el `catch` con un `console.error`. El panel igual muestra "agenda regenerada" porque ese texto está hardcodeado en la respuesta del controller y no verifica el resultado. **Toda edición de horarios hecha entre el 2026-07-17 y hoy fue silenciosamente inútil.**
+
+**Impacto medido en producción (17-ago, 03:26–03:33):**
+- Se les quitó `lunes` a los horarios 09:00–12:00 → los turnos de lunes por la mañana **nunca se borraron y seguían siendo reservables** (64 turnos, 8 lunes hasta el 12-oct × 4 horas × 2 barberos). Ninguno llegó a tener cliente.
+- Se crearon los horarios `20:20` y `23:33` (pruebas) → **nunca generaron un solo turno**, por eso eran invisibles en la home.
+
+**Detalle no obvio:** la home no dibuja los `Horario` configurados sino los documentos `Agenda` existentes. El `Horario` es solo la plantilla; sin que corra el generador, crear o editar un horario no cambia nada de lo que ve el cliente.
+
+**Acciones sobre producción (con backup previo y confirmación explícita del usuario):**
+1. Backup completo antes de tocar nada: `mongodump --archive --gzip` + `mongoexport` de las 9 colecciones → `server/db-backups/prod-2026-08-22-ANTES-limpieza/` (gitignorado). Snapshot: 1760 agendas, 3 users, 2 barberos, 13 horarios, 3 servicios.
+2. Dry-run del filtro de borrado, con controles cruzados (lunes 13:00–19:00 a futuro = 112, no se tocan; turnos con cliente = 131, no se tocan).
+3. `deleteMany` de los **64** turnos de lunes 09:00–12:00 a futuro, todos en `estado: "disponible"` y sin `nombreCliente`.
+4. `deleteMany` de los **2** horarios de prueba (`20:20`, `23:33`) — 0 turnos colgaban de ellos.
+5. Verificación desde la API pública (no solo desde la base): los lunes ahora arrancan 13:00 y quedan 11 horarios. Totales: 1760 → 1696 agendas, 131 turnos con cliente intactos.
+6. Segundo snapshot post-limpieza en `server/db-backups/prod-2026-08-22-actual/`, importado a la base local `OnofreDb_prod` para desarrollar contra datos reales (`server/scripts/importarExportProd.js`, creado para esto porque en Windows no están instaladas las MongoDB Database Tools y el `.archive.gz` no se puede cargar sin `mongorestore`).
+
+**Orden que importa para el arreglo:** hay que borrar los horarios de prueba **antes** de arreglar la regeneración. Si se arreglase primero, al volver a funcionar el generador se crearían de golpe decenas de turnos a las 20:20 y 23:33 (este último marcado casi todos los días). Ya está hecho en ese orden.
+
+**Pendiente:** el arreglo de fondo de `horario.controller.js` (llamar al servicio directo en vez de auto-HTTP) va en el Sprint 3 del plan. **Hasta entonces, editar horarios desde el panel sigue sin tener efecto.**
+
+**Hallazgos secundarios:**
+- **0 turnos huérfanos** (todos tienen `barbero` asignado, 848 y 848) — la migración usuario↔barbero del Sprint 1 no va a perder ningún turno.
+- 73 turnos en estado `pagado` sin cliente, sin servicios y con `costoTotal: 0`, todos pasados. No es un bug: es cómo los barberos marcan un turno atendido sin reserva online (walk-in). Relevante porque las estadísticas de ingresos suman `costoTotal` de los `pagado`, así que esos aportan 0.
+- Revisión de fuerza bruta pedida por el usuario. **Bien:** fail2ban activo (jail `sshd`, 69 fallos acumulados, 2 IPs baneadas), UFW solo con 22/5749/80/443, mongod en `127.0.0.1` con `authorization: enabled`, rate limit de Nginx en el login (`5r/m`, burst 3) y en `/api/` (`30r/s`). **A corregir:** `PermitRootLogin yes` y `PasswordAuthentication yes` siguen habilitados (ya hay clave autorizada, se puede cerrar); el puerto 22 sigue abierto además del 5749; `user.controller.js` distingue "Usuario no encontrado" de "Contraseña incorrecta" (enumeración de usuarios); no hay rate limiting a nivel app (toda la defensa está en Nginx); y `app.config.js:25` declara `sessionExpiry: 900000000, // 25 horas` cuando en realidad son **250 horas (10,4 días)** — parece un cero de más.
+- Durante la sesión el usuario tipeó por error la contraseña root de SSH en el campo *usuario* de un script de login, enviándola en un POST a `/api/auth/login`. Viajó por TLS y el controller no loguea el `userName`, pero **queda pendiente rotar esa contraseña**.
+
+---
+
 ## 2026-07-17 — Despliegue a producción (VPS Dattatec, alonzostyle.com)
 
 **Alcance:** primer despliegue real del proyecto, sobre una VPS Ubuntu 22.04 nueva (Dattatec, 1 vCPU / ~1GB RAM / 15GB disco) contratada para este fin. Ejecutado en 6 fases (hardening de SO → runtime → deploy de la app → seed de datos reales → verificación de seguridad y e2e → esta entrada de cierre), con verificación después de cada paso. Sin Docker (fuera de presupuesto de RAM); WhatsApp/Evolution API y pagos Adam's Pay quedan **fuera de alcance** por ahora — el código ya tolera su ausencia (solo loguea un warning).

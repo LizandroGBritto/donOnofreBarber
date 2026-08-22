@@ -88,8 +88,10 @@ export const useApi = () => {
         api
           .get(config.api.agenda.disponibilidadBarberos(fecha))
           .then((res) => res.data),
-      getEstadisticas: () =>
-        api.get(config.api.agenda.estadisticas).then((res) => res.data),
+      getMetricas: (dias) =>
+        api
+          .get(config.api.agenda.metricas, { params: dias ? { dias } : {} })
+          .then((res) => res.data),
     },
 
     // Barberos

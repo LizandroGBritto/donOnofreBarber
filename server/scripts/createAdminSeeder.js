@@ -25,6 +25,9 @@ const createAdminUser = async () => {
       userName: "admin",
       password: adminPassword, // Esta contraseña será hasheada automáticamente por el pre-save hook
       confirmPassword: adminPassword, // Requerido por la validación del modelo
+      // Explícito a propósito: el default del modelo es "barbero", así que sin
+      // esto el primer y único usuario del sistema no podría administrar nada.
+      rol: "admin",
     });
 
     await adminUser.save();

@@ -22,7 +22,20 @@ const config = {
   // Seguridad
   security: {
     jwtSecret: process.env.JWT_SECRET || process.env.SECRET || "defaultSecret",
-    sessionExpiry: 900000000, // 25 horas
+    // Duración de la sesión, en milisegundos.
+    //
+    // Son 250 horas (~10,4 días) a propósito: el panel lo usan 3 personas del
+    // negocio desde el celular y se busca que no tengan que re-loguearse casi
+    // nunca. El comentario anterior decía "25 horas" para el mismo número, que
+    // era falso; se expresa como producto para que valor y comentario no
+    // puedan volver a divergir.
+    //
+    // Ojo: esta duración NO es lo que mantiene vivas las notificaciones push.
+    // /api/notifications/subscribe es público y el Service Worker recibe los
+    // push sin sesión (verificado 2026-08-22: hay suscripciones activas desde
+    // julio que nunca se renovaron). Si en algún momento se quiere acortar la
+    // sesión, las notificaciones no son un impedimento.
+    sessionExpiry: 250 * 60 * 60 * 1000, // 250 horas (~10,4 días)
   },
 
   // VAPID para notificaciones push

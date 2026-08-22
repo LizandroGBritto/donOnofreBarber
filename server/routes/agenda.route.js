@@ -1,9 +1,16 @@
 const express = require("express");
-const { authenticate } = require("../middleware/auth.middleware");
+const {
+  authenticate,
+  requireAdmin,
+} = require("../middleware/auth.middleware");
+const { requireTurnoPropio } = require("../middleware/turnoPropio.middleware");
 
 const AgendaController = require("../controllers/agenda.controller");
 const AgendaRouter = express.Router();
 
+// Accesible para cualquier usuario logueado a propósito: un barbero necesita
+// ver sus turnos. El filtrado por barbero se hace del lado del servidor en el
+// Sprint 5 — hasta entonces un barbero ve todos.
 AgendaRouter.get("/", authenticate, AgendaController.getAllAgendas);
 AgendaRouter.get(
   "/disponibilidad",
@@ -31,45 +38,56 @@ AgendaRouter.get(
   AgendaController.verificarTurnoExistente
 );
 
-// Nuevas rutas para estadísticas y generación de turnos (administrativas)
+// Operaciones destructivas y de generación masiva: solo admin.
+// Borran o recrean turnos de TODOS los barberos, así que no puede dispararlas
+// un barbero desde su panel.
 AgendaRouter.delete(
   "/limpiar-duplicados",
   authenticate,
+  requireAdmin,
   AgendaController.limpiarTurnosDuplicados
 );
 AgendaRouter.delete(
   "/limpiar-barberos-excluidos",
   authenticate,
+  requireAdmin,
   AgendaController.limpiarTurnosBarberosExcluidos
 );
 AgendaRouter.delete(
   "/eliminar-hoy",
   authenticate,
+  requireAdmin,
   AgendaController.eliminarTurnosHoy
 );
 AgendaRouter.post(
   "/regenerar-fecha",
   authenticate,
+  requireAdmin,
   AgendaController.regenerarTurnosFecha
 );
 AgendaRouter.post(
   "/regenerar-por-horarios",
   authenticate,
+  requireAdmin,
   AgendaController.regenerarAgendaPorHorarios
 );
 AgendaRouter.post(
   "/limpiar-duplicados-nuevos",
   authenticate,
+  requireAdmin,
   AgendaController.limpiarDuplicados
 );
+// Métricas. El controller acota el alcance según el rol: un barbero ve las
+// suyas, el admin las del negocio completo. Por eso NO lleva requireAdmin.
 AgendaRouter.get(
-  "/dashboard/estadisticas",
+  "/dashboard/metricas",
   authenticate,
-  AgendaController.getEstadisticas
+  AgendaController.getMetricas
 );
 AgendaRouter.post(
   "/generar-turnos",
   authenticate,
+  requireAdmin,
   AgendaController.generarTurnosMes
 );
 
@@ -77,6 +95,7 @@ AgendaRouter.post(
 AgendaRouter.post(
   "/migrar-multi-barbero",
   authenticate,
+  requireAdmin,
   AgendaController.migrarAgendaMultiBarbero
 );
 
@@ -109,13 +128,34 @@ AgendaRouter.post(
 // Pública: la necesita la página de edición de turno sin login (/editar-turno/:id)
 AgendaRouter.get("/:id", AgendaController.getOneAgenda);
 
-AgendaRouter.post("/new", authenticate, AgendaController.createAgenda);
+// Crear turnos sueltos es tarea de scheduling: los genera el generador a
+// partir de los horarios. Solo admin.
+AgendaRouter.post(
+  "/new",
+  authenticate,
+  requireAdmin,
+  AgendaController.createAgenda
+);
 
 // PUT /:id genérico: solo admin. La edición pública de turnos ahora pasa
 // por /editar-mi-turno/:id (restringido por token), no por esta ruta.
-AgendaRouter.put("/:id", authenticate, AgendaController.updateOneAgendaById);
+// Un barbero puede operar sobre SUS turnos (marcarlos pagados, completados,
+// liberarlos); el admin sobre cualquiera.
+AgendaRouter.put(
+  "/:id",
+  authenticate,
+  requireTurnoPropio,
+  AgendaController.updateOneAgendaById
+);
 
-AgendaRouter.delete("/:id", authenticate, AgendaController.deleteOneAgendaById);
+// Borrar un turno es destructivo (se pierde el histórico): solo admin. Un
+// barbero que quiere liberar un turno usa PUT con estado "disponible".
+AgendaRouter.delete(
+  "/:id",
+  authenticate,
+  requireAdmin,
+  AgendaController.deleteOneAgendaById
+);
 
 // Nueva ruta para eliminar una agenda y crear una nueva con los mismos datos de día y hora
 AgendaRouter.post(

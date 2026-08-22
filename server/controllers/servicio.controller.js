@@ -6,6 +6,7 @@ const {
   processMultipleImages,
   deleteImage,
 } = require("../utils/imageProcessor");
+const PreciosService = require("../services/precios.service");
 
 // Configuración de multer para upload de archivos
 const storage = multer.memoryStorage();
@@ -188,9 +189,16 @@ const servicioController = {
         return res.status(404).json({ message: "Servicio no encontrado" });
       }
 
+      // Si el servicio sale del catálogo, los precios propios que los barberos
+      // le habían puesto quedan huérfanos: se borran para que no reaparezcan
+      // con datos viejos si el servicio se vuelve a crear.
+      const overridesBorrados =
+        await PreciosService.limpiarOverridesDeServicio(req.params.id);
+
       res.status(200).json({
         message: "Servicio desactivado exitosamente",
         servicio: servicioEliminado,
+        overridesBorrados,
       });
     } catch (error) {
       console.error("Error al eliminar servicio:", error);

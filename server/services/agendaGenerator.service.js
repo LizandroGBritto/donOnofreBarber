@@ -1,23 +1,29 @@
+const mongoose = require("mongoose");
 const Agenda = require("../models/agenda.model");
 const HorarioModel = require("../models/horario.model");
 const BarberoModel = require("../models/barbero.model");
 const ParaguayDateUtil = require("../utils/paraguayDate");
+const HorariosService = require("./horarios.service");
 
 class AgendaGeneratorService {
   /**
-   * Genera turnos por fecha considerando TODOS los barberos activos
-   * Crea UN turno por barbero por cada horario configurado
+   * Genera los turnos de una fecha, uno por barbero activo por cada horario
+   * que le corresponda (los del local, o los suyos si personalizó).
+   *
+   * `opciones.soloBarberoId` acota la generación a un único barbero: lo usa
+   * `regenerarAgendaDeBarbero` para no recorrer la agenda ajena.
    */
-  async generarTurnosPorFecha(fecha) {
+  async generarTurnosPorFecha(fecha, opciones = {}) {
     try {
       const fechaObj = ParaguayDateUtil.toParaguayTime(fecha).toDate();
       const diaSemana = ParaguayDateUtil.getDayOfWeek(fechaObj);
 
       // 1. Obtener barberos activos que estén incluidos en agenda
-      const barberosActivos = await BarberoModel.find({
-        activo: true,
-        incluirEnAgenda: true,
-      });
+      const filtroBarberos = { activo: true, incluirEnAgenda: true };
+      if (opciones.soloBarberoId) {
+        filtroBarberos._id = opciones.soloBarberoId;
+      }
+      const barberosActivos = await BarberoModel.find(filtroBarberos);
 
       if (barberosActivos.length === 0) {
         return {
@@ -27,60 +33,64 @@ class AgendaGeneratorService {
         };
       }
 
-      // 2. Obtener horarios configurados para este día
-      const horariosDelDia = await HorarioModel.find({
-        dias: diaSemana,
-        estado: "activo",
-      });
+      // 2. Cada barbero puede tener sus propios horarios: ya no se cruza un
+      //    único set global por todos. HorariosService decide, para cada uno,
+      //    si rigen los del local o los suyos.
+      const inicioDia = ParaguayDateUtil.startOfDay(fechaObj).toDate();
+      const finDia = ParaguayDateUtil.endOfDay(fechaObj).toDate();
 
-      if (horariosDelDia.length === 0) {
+      // Un solo query de los turnos ya existentes del día, en vez de un
+      // findOne por cada combinación barbero×hora.
+      const existentes = await Agenda.find({
+        fecha: { $gte: inicioDia, $lte: finDia },
+      })
+        .select("hora barbero")
+        .lean();
+
+      const yaExiste = new Set(
+        existentes.map((t) => `${String(t.barbero)}|${t.hora}`)
+      );
+
+      const turnosACrear = [];
+      let horariosVistos = 0;
+
+      for (const barbero of barberosActivos) {
+        const horariosDelBarbero =
+          await HorariosService.resolverHorariosDeBarbero(barbero, diaSemana);
+        horariosVistos += horariosDelBarbero.length;
+
+        for (const horario of horariosDelBarbero) {
+          if (yaExiste.has(`${String(barbero._id)}|${horario.hora}`)) continue;
+
+          turnosACrear.push({
+            fecha: inicioDia,
+            hora: horario.hora,
+            diaSemana: diaSemana,
+            barbero: barbero._id,
+            nombreBarbero: barbero.nombre,
+            nombreCliente: "",
+            numeroCliente: "",
+            emailCliente: "",
+            estado: "disponible",
+            estadoPago: "pendiente",
+            costoTotal: 0,
+            costoServicios: 0,
+            descuento: 0,
+            notas: "",
+            creadoAutomaticamente: true,
+            servicios: [],
+          });
+        }
+      }
+
+      if (horariosVistos === 0) {
         return {
           mensaje: `No hay horarios configurados para ${diaSemana}`,
           turnosCreados: 0,
         };
       }
 
-      horariosDelDia.forEach((h) => console.log(`   - ${h.hora}`));
-
-      // 3. Generar turnos: uno por barbero por cada horario
-      const turnosACrear = [];
-
-      for (const horario of horariosDelDia) {
-        for (const barbero of barberosActivos) {
-          // Verificar si ya existe este turno específico
-          const turnoExistente = await Agenda.findOne({
-            fecha: {
-              $gte: ParaguayDateUtil.startOfDay(fechaObj).toDate(),
-              $lte: ParaguayDateUtil.endOfDay(fechaObj).toDate(),
-            },
-            hora: horario.hora,
-            barbero: barbero._id,
-          });
-
-          if (!turnoExistente) {
-            turnosACrear.push({
-              fecha: ParaguayDateUtil.startOfDay(fechaObj).toDate(),
-              hora: horario.hora,
-              diaSemana: diaSemana,
-              barbero: barbero._id,
-              nombreBarbero: barbero.nombre,
-              nombreCliente: "",
-              numeroCliente: "",
-              emailCliente: "",
-              estado: "disponible",
-              estadoPago: "pendiente",
-              costoTotal: 0,
-              costoServicios: 0,
-              descuento: 0,
-              notas: "",
-              creadoAutomaticamente: true,
-              servicios: [],
-            });
-          }
-        }
-      }
-
-      // 4. Insertar turnos en la base de datos
+      // 3. Insertar turnos en la base de datos
       if (turnosACrear.length > 0) {
         await Agenda.insertMany(turnosACrear);
       }
@@ -89,7 +99,7 @@ class AgendaGeneratorService {
         mensaje: "Turnos generados exitosamente",
         turnosCreados: turnosACrear.length,
         barberos: barberosActivos.length,
-        horarios: horariosDelDia.length,
+        horarios: horariosVistos,
       };
     } catch (error) {
       console.error("❌ Error generando turnos por fecha:", error);
@@ -153,172 +163,137 @@ class AgendaGeneratorService {
   }
 
   /**
-   * Obtener estadísticas de la agenda
+   * Obtener métricas de demanda de la agenda: días, horas, servicios,
+   * barberos y clientes más solicitados. No incluye ingresos.
+   * @param {number|null} periodoDias - Ventana en días hacia atrás desde hoy
+   *   (null = todo el historial).
    */
-  async obtenerEstadisticas() {
+  /**
+   * Métricas del dashboard.
+   *
+   * `barberoId` acota todo el cálculo a un solo barbero: lo usa el panel de un
+   * usuario con rol "barbero", que solo debe ver lo suyo. Sin el parámetro, las
+   * métricas son del negocio completo (vista de admin).
+   */
+  async obtenerMetricasDashboard(periodoDias = null, barberoId = null) {
     try {
-      const hoy = ParaguayDateUtil.now().toDate();
-      const inicioSemana = ParaguayDateUtil.now().startOf("week").toDate();
-      const finSemana = ParaguayDateUtil.now().endOf("week").toDate();
-      const inicioMes = ParaguayDateUtil.now().startOf("month").toDate();
-      const finMes = ParaguayDateUtil.now().endOf("month").toDate();
-      const inicioAño = ParaguayDateUtil.now().startOf("year").toDate();
-      const finAño = ParaguayDateUtil.now().endOf("year").toDate();
+      // "Solicitado" = todo turno que un cliente llegó a pedir, más allá de
+      // cómo haya terminado (incluye no_show: igual fue una solicitud real).
+      const estadosSolicitados = [
+        "reservado",
+        "pagado",
+        "en_proceso",
+        "completado",
+        "no_show",
+      ];
+
+      const matchBase = { estado: { $in: estadosSolicitados } };
+      if (barberoId) {
+        matchBase.barbero = new mongoose.Types.ObjectId(String(barberoId));
+      }
+      let desde = null;
+      if (periodoDias) {
+        desde = ParaguayDateUtil.now()
+          .subtract(periodoDias, "days")
+          .startOf("day")
+          .toDate();
+        matchBase.fecha = { $gte: desde };
+      }
 
       const [
-        turnosAgendadosHoy,
-        turnosDisponiblesHoy,
-        turnosAgendadosSemana,
-        turnosDisponiblesSemana,
-        turnosAgendadosMes,
-        turnosDisponiblesMes,
-        turnosAgendadosAño,
-        turnosDisponiblesAño,
+        totalSolicitados,
+        porDiaRaw,
+        porHoraRaw,
+        porServicioRaw,
+        porBarberoRaw,
+        porClienteRaw,
       ] = await Promise.all([
-        // Turnos agendados hoy
-        Agenda.countDocuments({
-          fecha: {
-            $gte: ParaguayDateUtil.startOfDay(hoy).toDate(),
-            $lte: ParaguayDateUtil.endOfDay(hoy).toDate(),
+        Agenda.countDocuments(matchBase),
+        Agenda.aggregate([
+          { $match: matchBase },
+          { $group: { _id: "$diaSemana", total: { $sum: 1 } } },
+        ]),
+        Agenda.aggregate([
+          { $match: matchBase },
+          { $group: { _id: "$hora", total: { $sum: 1 } } },
+        ]),
+        Agenda.aggregate([
+          { $match: matchBase },
+          { $unwind: "$servicios" },
+          { $group: { _id: "$servicios.nombre", total: { $sum: 1 } } },
+          { $sort: { total: -1 } },
+          { $limit: 8 },
+        ]),
+        Agenda.aggregate([
+          { $match: { ...matchBase, nombreBarbero: { $nin: [null, ""] } } },
+          { $group: { _id: "$nombreBarbero", total: { $sum: 1 } } },
+          { $sort: { total: -1 } },
+          { $limit: 8 },
+        ]),
+        Agenda.aggregate([
+          { $match: { ...matchBase, numeroCliente: { $nin: [null, ""] } } },
+          { $sort: { createdAt: 1 } },
+          {
+            $group: {
+              _id: "$numeroCliente",
+              nombre: { $last: "$nombreCliente" },
+              total: { $sum: 1 },
+            },
           },
-          estado: { $ne: "disponible" },
-        }),
-        // Turnos disponibles hoy
-        Agenda.countDocuments({
-          fecha: {
-            $gte: ParaguayDateUtil.startOfDay(hoy).toDate(),
-            $lte: ParaguayDateUtil.endOfDay(hoy).toDate(),
-          },
-          estado: "disponible",
-        }),
-        // Turnos agendados esta semana
-        Agenda.countDocuments({
-          fecha: { $gte: inicioSemana, $lte: finSemana },
-          estado: { $ne: "disponible" },
-        }),
-        // Turnos disponibles esta semana
-        Agenda.countDocuments({
-          fecha: { $gte: inicioSemana, $lte: finSemana },
-          estado: "disponible",
-        }),
-        // Turnos agendados este mes
-        Agenda.countDocuments({
-          fecha: { $gte: inicioMes, $lte: finMes },
-          estado: { $ne: "disponible" },
-        }),
-        // Turnos disponibles este mes
-        Agenda.countDocuments({
-          fecha: { $gte: inicioMes, $lte: finMes },
-          estado: "disponible",
-        }),
-        // Turnos agendados este año
-        Agenda.countDocuments({
-          fecha: { $gte: inicioAño, $lte: finAño },
-          estado: { $ne: "disponible" },
-        }),
-        // Turnos disponibles este año
-        Agenda.countDocuments({
-          fecha: { $gte: inicioAño, $lte: finAño },
-          estado: "disponible",
-        }),
+          { $sort: { total: -1 } },
+          { $limit: 10 },
+        ]),
       ]);
 
-      // Consultas separadas para calcular ingresos generados (suma de costoTotal)
-      const [
-        ingresosPagadosHoy,
-        ingresosPagadosSemana,
-        ingresosPagadosMes,
-        ingresosPagadosAño,
-      ] = await Promise.all([
-        // Ingresos generados hoy
-        Agenda.aggregate([
-          {
-            $match: {
-              fecha: {
-                $gte: ParaguayDateUtil.startOfDay(hoy).toDate(),
-                $lte: ParaguayDateUtil.endOfDay(hoy).toDate(),
-              },
-              estado: "pagado",
-            },
-          },
-          {
-            $group: {
-              _id: null,
-              total: { $sum: "$costoTotal" },
-            },
-          },
-        ]),
-        // Ingresos generados esta semana
-        Agenda.aggregate([
-          {
-            $match: {
-              fecha: { $gte: inicioSemana, $lte: finSemana },
-              estado: "pagado",
-            },
-          },
-          {
-            $group: {
-              _id: null,
-              total: { $sum: "$costoTotal" },
-            },
-          },
-        ]),
-        // Ingresos generados este mes
-        Agenda.aggregate([
-          {
-            $match: {
-              fecha: { $gte: inicioMes, $lte: finMes },
-              estado: "pagado",
-            },
-          },
-          {
-            $group: {
-              _id: null,
-              total: { $sum: "$costoTotal" },
-            },
-          },
-        ]),
-        // Ingresos generados este año
-        Agenda.aggregate([
-          {
-            $match: {
-              fecha: { $gte: inicioAño, $lte: finAño },
-              estado: "pagado",
-            },
-          },
-          {
-            $group: {
-              _id: null,
-              total: { $sum: "$costoTotal" },
-            },
-          },
-        ]),
-      ]);
+      const ordenDias = [
+        "lunes",
+        "martes",
+        "miercoles",
+        "jueves",
+        "viernes",
+        "sabado",
+        "domingo",
+      ];
+      const porDia = ordenDias.map((dia) => ({
+        dia,
+        total: porDiaRaw.find((d) => d._id === dia)?.total || 0,
+      }));
+
+      const minutosDeHora = (hora) => {
+        const [hh, mm] = hora.split(":").map(Number);
+        return hh * 60 + mm;
+      };
+      const porHora = porHoraRaw
+        .map((h) => ({ hora: h._id, total: h.total }))
+        .sort((a, b) => minutosDeHora(a.hora) - minutosDeHora(b.hora));
+
+      const porServicio = porServicioRaw.map((s) => ({
+        servicio: s._id,
+        total: s.total,
+      }));
+
+      const porBarbero = porBarberoRaw.map((b) => ({
+        barbero: b._id,
+        total: b.total,
+      }));
+
+      const porCliente = porClienteRaw.map((c) => ({
+        numero: c._id,
+        nombre: c.nombre || c._id,
+        total: c.total,
+      }));
 
       return {
-        hoy: {
-          agendados: turnosAgendadosHoy,
-          disponibles: turnosDisponiblesHoy,
-          generado: ingresosPagadosHoy[0]?.total || 0,
-        },
-        semana: {
-          agendados: turnosAgendadosSemana,
-          disponibles: turnosDisponiblesSemana,
-          generado: ingresosPagadosSemana[0]?.total || 0,
-        },
-        mes: {
-          agendados: turnosAgendadosMes,
-          disponibles: turnosDisponiblesMes,
-          generado: ingresosPagadosMes[0]?.total || 0,
-        },
-        año: {
-          agendados: turnosAgendadosAño,
-          disponibles: turnosDisponiblesAño,
-          generado: ingresosPagadosAño[0]?.total || 0,
-        },
+        periodo: { dias: periodoDias, desde: desde ? desde.toISOString() : null },
+        totalSolicitados,
+        porDia,
+        porHora,
+        porServicio,
+        porBarbero,
+        porCliente,
       };
     } catch (error) {
-      console.error("Error obteniendo estadísticas:", error);
+      console.error("Error obteniendo métricas del dashboard:", error);
       throw error;
     }
   }
@@ -415,6 +390,72 @@ class AgendaGeneratorService {
       return duplicadosEliminados;
     } catch (error) {
       console.error("❌ Error eliminando duplicados:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Regenera SOLO los turnos de un barbero, y solo a futuro.
+   *
+   * Es la que hay que usar cuando un barbero cambia sus horarios.
+   * `regenerarAgendaCompleta` borra y recrea los turnos disponibles de TODOS
+   * los barberos en un rango de 3 meses: correrla cada vez que alguien toca
+   * una hora es lento y arriesga la agenda ajena sin motivo.
+   *
+   * Nunca toca turnos con cliente ni fechas pasadas.
+   */
+  async regenerarAgendaDeBarbero(barberoId, fechaInicio, fechaFin) {
+    try {
+      // Desde hoy: los turnos pasados son historia, no se reescriben.
+      const hoy = ParaguayDateUtil.now().startOf("day");
+      const inicioPedido = fechaInicio
+        ? ParaguayDateUtil.toParaguayTime(fechaInicio).startOf("day")
+        : hoy.clone();
+      const inicio = inicioPedido.isBefore(hoy) ? hoy.clone() : inicioPedido;
+
+      const fin = fechaFin
+        ? ParaguayDateUtil.toParaguayTime(fechaFin).endOf("day")
+        : ParaguayDateUtil.now().add(3, "months").endOf("day");
+
+      const barbero = await BarberoModel.findById(barberoId).lean();
+      if (!barbero) {
+        throw new Error(`Barbero ${barberoId} no encontrado`);
+      }
+
+      // Solo los libres y autogenerados de ESTE barbero.
+      const eliminados = await Agenda.deleteMany({
+        barbero: barberoId,
+        fecha: { $gte: inicio.toDate(), $lte: fin.toDate() },
+        estado: "disponible",
+        creadoAutomaticamente: true,
+      });
+
+      let turnosCreados = 0;
+      const activo = barbero.activo && barbero.incluirEnAgenda;
+
+      // Un barbero inactivo o excluido no debe recuperar sus turnos.
+      if (activo) {
+        const fechaActual = inicio.clone();
+        while (fechaActual.isSameOrBefore(fin, "day")) {
+          const resultado = await this.generarTurnosPorFecha(
+            fechaActual.toDate(),
+            { soloBarberoId: barberoId }
+          );
+          turnosCreados += resultado.turnosCreados;
+          fechaActual.add(1, "day");
+        }
+      }
+
+      return {
+        mensaje: `Agenda de ${barbero.nombre} regenerada`,
+        barbero: barbero.nombre,
+        turnosEliminados: eliminados.deletedCount,
+        turnosCreados,
+        desde: inicio.format("YYYY-MM-DD"),
+        hasta: fin.format("YYYY-MM-DD"),
+      };
+    } catch (error) {
+      console.error("❌ Error regenerando agenda del barbero:", error);
       throw error;
     }
   }

@@ -2,10 +2,20 @@ import axios from "axios";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "flowbite-react";
-import FormReservarConBarbero from "./FormReservarConBarbero";
+import { HiOutlineExclamationCircle } from "react-icons/hi";
+import FormReservarTurno from "./FormReservarTurno";
 import ParaguayDateUtil from "../utils/paraguayDate";
 
-const Agenda = ({ horarios, setHorarios, agendarRef }) => {
+/**
+ * Agenda.
+ *
+ * Con barbero elegido muestra SUS horarios y sus turnos. Sin barbero muestra
+ * igual la grilla completa del local (la unión de los horarios de todos), para
+ * que el cliente vea la oferta; el barbero se le pide recién al momento de
+ * agendar, con un modal.
+ */
+const Agenda = ({ horarios, setHorarios, agendarRef, barbero, onElegirBarbero }) => {
+  const [pedirBarbero, setPedirBarbero] = useState(false);
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
   const [openBarberoModal, setOpenBarberoModal] = useState(false);
@@ -48,8 +58,11 @@ const Agenda = ({ horarios, setHorarios, agendarRef }) => {
   // Cargar información de horarios y semanas
   const loadHorariosYSemanas = useCallback(async () => {
     try {
+      // Sin barberoId el servidor devuelve la unión de los horarios de todos
+      // los barberos activos, que es la grilla correcta para "todavía no elegí".
       const response = await axios.get(
-        `${import.meta.env.VITE_API_URL}/api/agenda/horarios-semanas`
+        `${import.meta.env.VITE_API_URL}/api/agenda/horarios-semanas`,
+        { params: barbero?._id ? { barberoId: barbero._id } : {} }
       );
       const data = response.data;
 
@@ -102,7 +115,7 @@ const Agenda = ({ horarios, setHorarios, agendarRef }) => {
       ]);
       setSelectedDay(diaHoyCapitalizado);
     }
-  }, [diaHoyCapitalizado]);
+  }, [diaHoyCapitalizado, barbero?._id]);
 
   function onCloseModal() {
     setOpenBarberoModal(false);
@@ -113,7 +126,12 @@ const Agenda = ({ horarios, setHorarios, agendarRef }) => {
     const numeroCliente = localStorage.getItem("numeroCliente");
     axios
       .get(`${import.meta.env.VITE_API_URL}/api/agenda/landing`, {
-        params: numeroCliente ? { numero: numeroCliente } : {},
+        params: {
+          // Sin barbero, el endpoint devuelve la vista agregada de siempre:
+          // un turno representativo por hora entre todos los barberos.
+          ...(barbero?._id ? { barberoId: barbero._id } : {}),
+          ...(numeroCliente ? { numero: numeroCliente } : {}),
+        },
       })
       .then((res) => {
         setHorarios(res.data.agendas);
@@ -128,22 +146,25 @@ const Agenda = ({ horarios, setHorarios, agendarRef }) => {
         console.log(err);
         setIsLoading(false);
       });
-  }, [setHorarios]);
+  }, [setHorarios, barbero?._id]);
 
+  // Al cambiar de barbero hay que rehacer todo: la grilla de días, los turnos
+  // y la fecha elegida son distintos para cada uno. También corre al montar
+  // sin barbero, para traer la vista general.
   useEffect(() => {
-    // Cargar horarios y semanas al montar el componente
-    loadHorariosYSemanas();
+    setIsLoading(true);
+    setSelectedDate(null);
+    setIsInitialLoad(true);
 
-    // Si ya se pasaron horarios como props, usarlos directamente
-    if (horarios && horarios.length > 0) {
-      setIsLoading(false);
-      const hasReservation = horarios.some((agenda) => agenda.esMio);
-      setUserHasReservation(hasReservation);
-    } else if (horarios.length === 0) {
-      // Si no hay horarios en props, hacer la llamada a la API (compatibilidad hacia atrás)
-      refreshData();
-    }
-  }, [horarios, loadHorariosYSemanas, refreshData]);
+    loadHorariosYSemanas();
+    refreshData();
+  }, [barbero?._id, loadHorariosYSemanas, refreshData]);
+
+  // Mantener sincronizado el aviso de "ya tenés un turno" con los datos que
+  // bajaron (los setea refreshData a través de setHorarios).
+  useEffect(() => {
+    setUserHasReservation((horarios || []).some((agenda) => agenda.esMio));
+  }, [horarios]);
 
   // ✅ OPTIMIZADO: Usar useMemo para diasDisponibles (evita re-renders)
   const diasDisponibles = useMemo(() => {
@@ -488,17 +509,26 @@ const Agenda = ({ horarios, setHorarios, agendarRef }) => {
                   } rounded-lg text-black text-sm md:text-lg items-center px-4 py-2`}
                   onClick={() => {
                     if (
-                      agenda.estado === "disponible" &&
-                      !turnoYaPaso(agenda.fecha, agenda.hora)
+                      agenda.estado !== "disponible" ||
+                      turnoYaPaso(agenda.fecha, agenda.hora)
                     ) {
-                      setSelectedTurno({
-                        _id: agenda._id,
-                        fecha: agenda.fecha,
-                        hora: agenda.hora,
-                        diaSemana: agenda.diaSemana,
-                      });
-                      setOpenBarberoModal(true);
+                      return;
                     }
+
+                    // El barbero se pide recién acá: hasta este momento el
+                    // cliente pudo mirar horarios y servicios sin elegir nada.
+                    if (!barbero) {
+                      setPedirBarbero(true);
+                      return;
+                    }
+
+                    setSelectedTurno({
+                      _id: agenda._id,
+                      fecha: agenda.fecha,
+                      hora: agenda.hora,
+                      diaSemana: agenda.diaSemana,
+                    });
+                    setOpenBarberoModal(true);
                   }}
                 >
                   {agenda.estado !== "disponible"
@@ -509,10 +539,11 @@ const Agenda = ({ horarios, setHorarios, agendarRef }) => {
                 </Button>
               )}
 
-              {/* Modal para reservas con barberos */}
+              {/* Modal de reserva. El barbero ya viene elegido de la landing. */}
               {openBarberoModal && selectedTurno && (
-                <FormReservarConBarbero
+                <FormReservarTurno
                   turno={selectedTurno}
+                  barbero={barbero}
                   onCloseModal={onCloseModal}
                   refreshData={refreshData}
                 />
@@ -521,6 +552,53 @@ const Agenda = ({ horarios, setHorarios, agendarRef }) => {
           );
         })}
       </div>
+
+      {/* Aviso cuando se intenta agendar sin haber elegido barbero */}
+      {pedirBarbero && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="titulo-elegir-barbero"
+          onClick={() => setPedirBarbero(false)}
+        >
+          <div
+            className="bg-white rounded-lg max-w-md w-full p-6 text-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <HiOutlineExclamationCircle
+              className="mx-auto mb-3 h-14 w-14 text-purple-500"
+              aria-hidden="true"
+            />
+            <h3
+              id="titulo-elegir-barbero"
+              className="text-xl font-bold text-gray-900 mb-2"
+            >
+              ¡Te olvidaste de algo!
+            </h3>
+            <p className="text-gray-600 mb-6">
+              Antes de elegir un horario debés elegir con quién cortarte.
+            </p>
+            <div className="flex flex-col md:flex-row gap-2 justify-center">
+              <button
+                onClick={() => {
+                  setPedirBarbero(false);
+                  onElegirBarbero?.();
+                }}
+                className="px-6 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-md font-medium hover:from-purple-700 hover:to-blue-700 transition-colors"
+              >
+                Seleccionar barbero
+              </button>
+              <button
+                onClick={() => setPedirBarbero(false)}
+                className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

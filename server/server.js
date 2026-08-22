@@ -1,3 +1,6 @@
+// Bootstrap del servidor: valida configuración, conecta a MongoDB, levanta los
+// cron jobs y arranca a escuchar. La app de Express en sí vive en app.js, que
+// no tiene efectos de arranque para poder montarla en los tests.
 require("dotenv").config();
 const config = require("./config/app.config");
 
@@ -5,65 +8,11 @@ const config = require("./config/app.config");
 config.validate();
 
 const PORT = config.port;
-const express = require("express");
-const cors = require("cors");
-const cookieParser = require("cookie-parser");
-const app = express();
 
-app.use(cookieParser());
-
-const corsOptions = config.cors;
-app.use(cors(corsOptions));
-
-// Maneja solicitudes preflight para todos los endpoints
-app.options("*", cors(corsOptions));
-
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-// Servir archivos estáticos (uploads). Los nombres de archivo son únicos
-// por subida (timestamp + random en generateUniqueFilename), nunca se
-// reescribe el mismo nombre con contenido distinto — se puede cachear
-// agresivamente en el navegador sin riesgo de servir una imagen vieja.
-app.use(
-  "/uploads",
-  express.static("uploads", {
-    maxAge: "30d",
-    immutable: true,
-  })
-);
-
-// Conectar a MongoDB
+// Conectar a MongoDB (el require dispara la conexión)
 require("./config/mongoose.config");
 
-// Rutas
-const AgendaRouter = require("./routes/agenda.route");
-app.use("/api/agenda", AgendaRouter);
-
-const UserRouter = require("./routes/user.route");
-app.use("/api/auth", UserRouter); // Para login/register
-app.use("/api/user", UserRouter); // Para CRUD de usuarios
-
-const BannerRouter = require("./routes/banner.route");
-app.use("/api/banners", BannerRouter);
-
-const ContactoRouter = require("./routes/contacto.route");
-app.use("/api/contacto", ContactoRouter);
-
-const UbicacionRouter = require("./routes/ubicacion.route");
-app.use("/api/ubicacion", UbicacionRouter);
-
-const ServicioRouter = require("./routes/servicio.route");
-app.use("/api/servicios", ServicioRouter);
-
-const HorarioRouter = require("./routes/horario.route");
-app.use("/api/horarios", HorarioRouter);
-
-const BarberoRouter = require("./routes/barbero.route");
-app.use("/api/barberos", BarberoRouter);
-
-const NotificationRouter = require("./routes/notification.route");
-app.use("/api/notifications", NotificationRouter);
+const app = require("./app");
 
 // Inicializar servicio de agenda
 const AgendaService = require("./services/agendaService");
@@ -71,14 +20,6 @@ const AgendaService = require("./services/agendaService");
 // 🆕 Inicializar Cron Jobs (WhatsApp reminders)
 const CronService = require("./services/cron.service");
 CronService.init();
-
-// Ruta temporal para migración
-const MigracionRouter = require("./routes/migracion.route");
-app.use("/api/migracion", MigracionRouter);
-
-// 🆕 Ruta WhatsApp
-const WhatsappRouter = require("./routes/whatsapp.route");
-app.use("/api/whatsapp", WhatsappRouter);
 
 // Importar seeder de administrador
 const { createAdminUser } = require("./scripts/createAdminSeeder");

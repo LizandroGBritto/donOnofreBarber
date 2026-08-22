@@ -3,15 +3,56 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const config = require("../config/app.config");
 
+// Respuesta única para cualquier login fallido. No debe revelar si el que
+// falló fue el usuario o la contraseña.
+const CREDENCIALES_INVALIDAS = "Usuario o contraseña incorrectos";
+
+/**
+ * Traduce un error de clave duplicada de MongoDB (E11000) al mensaje que
+ * corresponde según el índice que se violó. Antes lo hacía
+ * mongoose-unique-validator, que se sacó del modelo por no entender índices
+ * parciales (ver user.model.js).
+ * Devuelve null si el error no es un E11000.
+ */
+const mensajeDuplicado = (error) => {
+  if (error?.code !== 11000) return null;
+  const campo = Object.keys(error.keyPattern || {})[0];
+  if (campo === "userName") return "Ya existe un usuario con ese nombre";
+  if (campo === "barbero") return "Ese barbero ya tiene un usuario asignado";
+  return "Ya existe un registro con esos datos";
+};
+
 module.exports = {
-  register: (req, res) => {
-    const user = new UserModel(req.body);
-    user
-      .save()
-      .then(() => {
-        res.json({ msg: "success!", user: user });
-      })
-      .catch((err) => res.json(err));
+  register: async (req, res) => {
+    try {
+      // Lista blanca: el body no puede setear cualquier campo del modelo.
+      const { userName, password, confirmPassword, rol, barbero } = req.body;
+      const user = new UserModel({
+        userName,
+        password,
+        confirmPassword,
+        ...(rol ? { rol } : {}),
+        ...(barbero ? { barbero } : {}),
+      });
+
+      await user.save();
+
+      const { password: _, ...sinPassword } = user.toObject();
+      res.status(201).json({ msg: "success!", user: sinPassword });
+    } catch (error) {
+      const duplicado = mensajeDuplicado(error);
+      if (duplicado) {
+        return res.status(400).json({ msg: duplicado });
+      }
+      if (error.name === "ValidationError") {
+        return res.status(400).json({
+          msg: "Error de validación",
+          errors: error.errors,
+        });
+      }
+      console.error("Error creando usuario:", error);
+      res.status(500).json({ msg: "Error al crear el usuario" });
+    }
   },
 
   login: (req, res) => {
@@ -31,8 +72,11 @@ module.exports = {
     UserModel.findOne({ userName: req.body.userName })
       .then((user) => {
         if (!user) {
-          console.log("Usuario no encontrado");
-          return res.status(400).json({ msg: "Usuario no encontrado" });
+          // Mismo mensaje y mismo status que cuando la contraseña es
+          // incorrecta: distinguir ambos casos permitía averiguar qué usuarios
+          // existen antes de atacarlos (enumeración de usuarios).
+          console.log(`Login fallido (usuario inexistente)`);
+          return res.status(400).json({ msg: CREDENCIALES_INVALIDAS });
         }
 
         // Compara la contraseña con bcrypt
@@ -40,27 +84,44 @@ module.exports = {
           .compare(req.body.password, user.password)
           .then((passwordIsValid) => {
             if (!passwordIsValid) {
-              console.log("Contraseña incorrecta");
-              return res.status(400).json({ msg: "Contraseña incorrecta" });
+              console.log(`Login fallido (contraseña incorrecta)`);
+              return res.status(400).json({ msg: CREDENCIALES_INVALIDAS });
             }
 
             // Si la contraseña es válida, genera el token JWT
+            // El payload del JWT se mantiene mínimo a propósito: el rol y el
+            // barbero los relee authenticate desde la base en cada request, así
+            // un cambio de permisos no espera a que venza la cookie.
             const userInfo = {
               _id: user._id,
               userName: user.userName,
             };
 
+            // Lo que se le devuelve al front sí los incluye: los necesita para
+            // saber qué secciones del panel mostrar.
+            const userParaCliente = {
+              ...userInfo,
+              rol: user.rol || "admin",
+              barbero: user.barbero || null,
+            };
+
             const secret = process.env.JWT_SECRET || "secretKey";
             try {
-              const newJWT = jwt.sign(userInfo, secret);
+              // El token lleva expiración propia: antes se firmaba sin
+              // `expiresIn`, así que era válido para siempre y un token robado
+              // servía indefinidamente aunque la cookie ya hubiese vencido en
+              // el navegador. Cookie y token vencen ahora a la vez.
+              const newJWT = jwt.sign(userInfo, secret, {
+                expiresIn: Math.floor(config.security.sessionExpiry / 1000),
+              });
               res
                 .cookie("usertoken", newJWT, {
                   httpOnly: true,
                   secure: config.isProduction,
                   sameSite: "lax",
-                  expires: new Date(Date.now() + 900000000),
+                  expires: new Date(Date.now() + config.security.sessionExpiry),
                 })
-                .json({ msg: "success!", user: userInfo });
+                .json({ msg: "success!", user: userParaCliente });
             } catch (error) {
               console.error("Error generando JWT:", error);
               return res.status(500).json({ msg: "Error generating token" });
@@ -117,13 +178,26 @@ module.exports = {
   // Actualizar usuario
   updateUser: async (req, res) => {
     try {
-      const { userName, password } = req.body;
-      const updateData = { userName };
+      const { userName, password, rol, barbero } = req.body;
+      const updateData = {};
+
+      if (userName !== undefined) updateData.userName = userName;
 
       // Si se proporciona una nueva contraseña, hashearla
       if (password && password.trim() !== "") {
         const hashedPassword = await bcrypt.hash(password, 10);
         updateData.password = hashedPassword;
+      }
+
+      // Rol y barbero solo los cambia un admin. La ruta deja pasar también al
+      // propio usuario (para que un barbero pueda cambiarse la contraseña), así
+      // que sin este chequeo un barbero podría ascenderse a admin sobre su
+      // propio registro.
+      if (req.user?.rol === "admin") {
+        if (rol !== undefined) updateData.rol = rol;
+        if (barbero !== undefined) {
+          updateData.barbero = barbero || null;
+        }
       }
 
       const user = await UserModel.findByIdAndUpdate(
@@ -138,6 +212,10 @@ module.exports = {
 
       res.json({ msg: "Usuario actualizado exitosamente", user });
     } catch (error) {
+      const duplicado = mensajeDuplicado(error);
+      if (duplicado) {
+        return res.status(400).json({ msg: duplicado });
+      }
       res
         .status(500)
         .json({ msg: "Error al actualizar usuario", error: error.message });

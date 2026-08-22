@@ -31,6 +31,16 @@ const BarberoSchema = new mongoose.Schema(
       default: true,
       required: false,
     },
+    // false = usa los horarios del local. true = usa exclusivamente los suyos
+    // (los que tienen `barbero: <este id>` en la colección Horario).
+    //
+    // Es un flag explícito y no "¿tiene filas propias?" a propósito: sin él,
+    // un barbero que borra su última hora personalizada volvería en silencio a
+    // los horarios del local, cuando lo que quiso decir es "ese día no trabajo".
+    usaHorariosPropios: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true }
 );

@@ -7,6 +7,7 @@ import {
   Label,
   TextInput,
   Alert,
+  Select,
 } from "flowbite-react";
 import axios from "axios";
 
@@ -15,10 +16,13 @@ const GestionUsuarios = () => {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [selectedUsuario, setSelectedUsuario] = useState(null);
+  const [barberos, setBarberos] = useState([]);
   const [usuarioForm, setUsuarioForm] = useState({
     userName: "",
     password: "",
     confirmPassword: "",
+    rol: "barbero",
+    barbero: "",
   });
   const [alert, setAlert] = useState({
     show: false,
@@ -89,6 +93,10 @@ const GestionUsuarios = () => {
     try {
       const userData = {
         userName: usuarioForm.userName,
+        rol: usuarioForm.rol,
+        // Solo los barberos tienen barbero vinculado; un admin va con null.
+        barbero:
+          usuarioForm.rol === "barbero" ? usuarioForm.barbero || null : null,
       };
 
       // Solo incluir password si se proporciona
@@ -174,6 +182,8 @@ const GestionUsuarios = () => {
       userName: usuario.userName,
       password: "",
       confirmPassword: "",
+      rol: usuario.rol || "admin",
+      barbero: usuario.barbero || "",
     });
     setShowModal(true);
   };
@@ -185,8 +195,17 @@ const GestionUsuarios = () => {
       userName: "",
       password: "",
       confirmPassword: "",
+      rol: "barbero",
+      barbero: "",
     });
   };
+
+  /** Barberos que ya tienen usuario: no se pueden asignar dos veces. */
+  const barberosOcupados = new Set(
+    usuarios
+      .filter((u) => u.barbero && u._id !== selectedUsuario?._id)
+      .map((u) => String(u.barbero))
+  );
 
   // Cerrar modal
   const closeModal = () => {
@@ -194,9 +213,21 @@ const GestionUsuarios = () => {
     resetForm();
   };
 
+  const fetchBarberos = useCallback(async () => {
+    try {
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_URL}/api/barberos/activos`
+      );
+      setBarberos(response.data || []);
+    } catch (error) {
+      console.error("Error al obtener barberos:", error);
+    }
+  }, []);
+
   useEffect(() => {
     fetchUsuarios();
-  }, [fetchUsuarios]);
+    fetchBarberos();
+  }, [fetchUsuarios, fetchBarberos]);
 
   if (loading) {
     return (
@@ -267,8 +298,9 @@ const GestionUsuarios = () => {
             <Table>
               <Table.Head>
                 <Table.HeadCell>Usuario</Table.HeadCell>
+                <Table.HeadCell>Rol</Table.HeadCell>
+                <Table.HeadCell>Barbero</Table.HeadCell>
                 <Table.HeadCell>Fecha de Creación</Table.HeadCell>
-                <Table.HeadCell>Última Actualización</Table.HeadCell>
                 <Table.HeadCell>Acciones</Table.HeadCell>
               </Table.Head>
               <Table.Body>
@@ -281,10 +313,23 @@ const GestionUsuarios = () => {
                       {usuario.userName}
                     </Table.Cell>
                     <Table.Cell>
-                      {new Date(usuario.createdAt).toLocaleDateString("es-PY")}
+                      <span
+                        className={`px-2 py-1 rounded-md text-xs font-medium ${
+                          (usuario.rol || "admin") === "admin"
+                            ? "bg-purple-100 text-purple-800"
+                            : "bg-blue-100 text-blue-800"
+                        }`}
+                      >
+                        {usuario.rol || "admin"}
+                      </span>
+                    </Table.Cell>
+                    <Table.Cell className="text-sm">
+                      {barberos.find((b) => b._id === usuario.barbero)?.nombre || (
+                        <span className="text-gray-400">—</span>
+                      )}
                     </Table.Cell>
                     <Table.Cell>
-                      {new Date(usuario.updatedAt).toLocaleDateString("es-PY")}
+                      {new Date(usuario.createdAt).toLocaleDateString("es-PY")}
                     </Table.Cell>
                     <Table.Cell>
                       <div className="flex gap-2">
@@ -334,6 +379,55 @@ const GestionUsuarios = () => {
                   required
                 />
               </div>
+
+              <div>
+                <Label htmlFor="rol" value="Rol" />
+                <Select
+                  id="rol"
+                  value={usuarioForm.rol}
+                  onChange={(e) =>
+                    setUsuarioForm({ ...usuarioForm, rol: e.target.value })
+                  }
+                >
+                  <option value="barbero">
+                    Barbero — solo sus precios, horarios y turnos
+                  </option>
+                  <option value="admin">Administrador — acceso total</option>
+                </Select>
+              </div>
+
+              {usuarioForm.rol === "barbero" && (
+                <div>
+                  <Label htmlFor="barbero" value="Barbero que representa" />
+                  <Select
+                    id="barbero"
+                    value={usuarioForm.barbero}
+                    onChange={(e) =>
+                      setUsuarioForm({ ...usuarioForm, barbero: e.target.value })
+                    }
+                  >
+                    <option value="">Sin asignar</option>
+                    {barberos.map((b) => (
+                      <option
+                        key={b._id}
+                        value={b._id}
+                        disabled={barberosOcupados.has(String(b._id))}
+                      >
+                        {b.nombre}
+                        {barberosOcupados.has(String(b._id))
+                          ? " (ya tiene usuario)"
+                          : ""}
+                      </option>
+                    ))}
+                  </Select>
+                  {!usuarioForm.barbero && (
+                    <p className="text-xs text-amber-600 mt-1">
+                      Sin barbero asignado no va a ver ningún turno ni podrá
+                      gestionar precios.
+                    </p>
+                  )}
+                </div>
+              )}
 
               <div>
                 <Label

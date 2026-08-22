@@ -1,6 +1,9 @@
 const express = require("express");
 const router = express.Router();
-const { authenticate } = require("../middleware/auth.middleware");
+const {
+  authenticate,
+  requireAdmin,
+} = require("../middleware/auth.middleware");
 const {
   getVapidPublicKey,
   suscribirse,
@@ -19,9 +22,14 @@ router.post("/subscribe", suscribirse);
 router.post("/unsubscribe", desuscribirse);
 
 // Enviar notificación de prueba (solo admin, se usa desde el panel)
-router.post("/test", authenticate, enviarNotificacionPrueba);
+router.post("/test", authenticate, requireAdmin, enviarNotificacionPrueba);
 
 // Obtener suscripciones activas (para admin)
-router.get("/subscriptions", authenticate, obtenerSuscripciones);
+router.get(
+  "/subscriptions",
+  authenticate,
+  requireAdmin,
+  obtenerSuscripciones
+);
 
 module.exports = router;

@@ -1,5 +1,8 @@
 const express = require("express");
-const { authenticate } = require("../middleware/auth.middleware");
+const {
+  authenticate,
+  requireAdmin,
+} = require("../middleware/auth.middleware");
 const {
   crearBanner,
   obtenerBanners,
@@ -17,13 +20,13 @@ const router = express.Router();
 // Rutas públicas
 router.get("/activos", obtenerBannersActivos);
 
-// Rutas administrativas
-router.get("/", authenticate, obtenerBanners);
-router.get("/estadisticas", authenticate, obtenerEstadisticas);
-router.get("/:id", authenticate, obtenerBannerPorId);
-router.post("/", authenticate, upload, crearBanner);
-router.put("/:id", authenticate, upload, actualizarBanner);
-router.patch("/:id/estado", authenticate, cambiarEstadoBanner);
-router.delete("/:id", authenticate, eliminarBanner);
+// Rutas administrativas (los banners son del negocio, no de un barbero)
+router.get("/", authenticate, requireAdmin, obtenerBanners);
+router.get("/estadisticas", authenticate, requireAdmin, obtenerEstadisticas);
+router.get("/:id", authenticate, requireAdmin, obtenerBannerPorId);
+router.post("/", authenticate, requireAdmin, upload, crearBanner);
+router.put("/:id", authenticate, requireAdmin, upload, actualizarBanner);
+router.patch("/:id/estado", authenticate, requireAdmin, cambiarEstadoBanner);
+router.delete("/:id", authenticate, requireAdmin, eliminarBanner);
 
 module.exports = router;

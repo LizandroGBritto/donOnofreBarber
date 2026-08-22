@@ -57,8 +57,16 @@ const BARBEROS = [
 // por variables de entorno al momento de correr el script en el servidor:
 //   SEED_PASS_LISANDROALONZO=... SEED_PASS_ELIASLUGO=... node scripts/seedProduccion.js
 const USUARIOS_PANEL = [
-  { userName: "LisandroAlonzo", envVar: "SEED_PASS_LISANDROALONZO" },
-  { userName: "EliasLugo", envVar: "SEED_PASS_ELIASLUGO" },
+  {
+    userName: "LisandroAlonzo",
+    envVar: "SEED_PASS_LISANDROALONZO",
+    barberoNombre: "Lisandro Alonzo",
+  },
+  {
+    userName: "EliasLugo",
+    envVar: "SEED_PASS_ELIASLUGO",
+    barberoNombre: "Elias Lugo",
+  },
 ];
 
 const SERVICIOS = [
@@ -110,6 +118,9 @@ async function seedHorarios() {
 
 async function seedBarberos() {
   const idsCreados = [];
+  // Se devuelve indexado por nombre para que seedUsuarios pueda vincular cada
+  // usuario del panel con su barbero sin volver a consultar.
+  const porNombre = new Map();
   for (const barbero of BARBEROS) {
     let doc = await BarberoModel.findOne({ nombre: barbero.nombre });
     if (!doc) {
@@ -123,11 +134,12 @@ async function seedBarberos() {
       console.log(`⏭️  Barbero ya existía: ${barbero.nombre}`);
     }
     idsCreados.push(doc._id);
+    porNombre.set(doc.nombre, doc);
   }
-  return idsCreados;
+  return { idsCreados, porNombre };
 }
 
-async function seedUsuarios() {
+async function seedUsuarios(barberosPorNombre = new Map()) {
   for (const usuario of USUARIOS_PANEL) {
     const existe = await UserModel.findOne({ userName: usuario.userName });
     if (existe) {
@@ -142,13 +154,22 @@ async function seedUsuarios() {
       );
     }
 
+    // Cada usuario del panel arranca vinculado a su barbero y con rol
+    // "barbero". El único admin es el que crea createAdminSeeder.
+    const barbero = barberosPorNombre.get(usuario.barberoNombre);
+
     const nuevoUsuario = new UserModel({
       userName: usuario.userName,
       password,
       confirmPassword: password,
+      rol: "barbero",
+      barbero: barbero ? barbero._id : null,
     });
     await nuevoUsuario.save();
-    console.log(`✅ Usuario creado: ${usuario.userName}`);
+    console.log(
+      `✅ Usuario creado: ${usuario.userName}` +
+        (barbero ? ` (vinculado a ${barbero.nombre})` : " (sin barbero)")
+    );
   }
 }
 
@@ -199,8 +220,8 @@ async function main() {
   console.log("🔌 Conectado a MongoDB\n");
 
   await seedHorarios();
-  await seedBarberos();
-  await seedUsuarios();
+  const { porNombre: barberosPorNombre } = await seedBarberos();
+  await seedUsuarios(barberosPorNombre);
   await seedServicios();
   await seedBanner();
   await seedUbicacion();

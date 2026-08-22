@@ -1,18 +1,32 @@
 const HorarioModel = require("../models/horario.model");
-const axios = require("axios");
+const AgendaGeneratorService = require("../services/agendaGenerator.service");
 
-// Función auxiliar para regenerar agenda
+/**
+ * Regenera la agenda tras un cambio en los horarios del local.
+ *
+ * Antes esto hacía `axios.post` al propio endpoint
+ * `/api/agenda/regenerar-por-horarios` SIN mandar la cookie de sesión. Cuando
+ * esa ruta pasó a exigir `authenticate` (commit daf5c87), empezó a devolver
+ * 401 y el error se tragaba en este mismo catch: durante un mes, crear o
+ * editar un horario no regeneró nada, aunque el panel dijera que sí.
+ *
+ * Ahora llama al servicio directamente: sin HTTP, sin autenticación de por
+ * medio, y los errores se propagan al que llama.
+ */
 const regenerarAgenda = async () => {
   try {
-    await axios.post(
-      `${
-        process.env.SERVER_URL || "http://localhost:8000"
-      }/api/agenda/regenerar-por-horarios`,
-      {}
+    const resultado = await AgendaGeneratorService.regenerarAgendaCompleta();
+    console.log(
+      `✅ Agenda regenerada tras cambio de horario: ` +
+        `${resultado.turnosCreados} creados, ${resultado.turnosEliminados} eliminados`
     );
-    console.log("Agenda regenerada exitosamente tras cambio de horario");
+    return resultado;
   } catch (error) {
-    console.error("Error al regenerar agenda:", error.message);
+    // No se re-lanza: el horario ya se guardó y el fallo de regeneración no
+    // debe hacer fallar la request. Pero sí se informa al que llama para que
+    // la respuesta no mienta.
+    console.error("❌ Error al regenerar agenda:", error.message);
+    return { error: error.message };
   }
 };
 
@@ -21,7 +35,11 @@ const horarioController = {
   getAllHorarios: async (req, res) => {
     try {
       const { estado } = req.query;
-      const filter = estado && typeof estado === "string" ? { estado } : {};
+      // Solo los horarios del LOCAL. Los propios de cada barbero se consultan
+      // por /api/barberos/:id/horarios; si se colaran acá, la landing y el
+      // panel global los mostrarían mezclados como si fueran del negocio.
+      const filter = { barbero: null };
+      if (estado && typeof estado === "string") filter.estado = estado;
       const horarios = await HorarioModel.find(filter).sort({ hora: 1 });
       res.status(200).json({ horarios });
     } catch (error) {
@@ -56,8 +74,13 @@ const horarioController = {
     try {
       const { hora, dias, estado } = req.body;
 
-      // Validar que no existe un horario con la misma hora
-      const horarioExistente = await HorarioModel.findOne({ hora });
+      // La unicidad de la hora es por barbero: este controller maneja los
+      // horarios del LOCAL (barbero: null), así que solo choca contra otros
+      // globales. Los propios de un barbero pueden repetir la misma hora.
+      const horarioExistente = await HorarioModel.findOne({
+        hora,
+        barbero: null,
+      });
       if (horarioExistente) {
         return res.status(400).json({
           message: "Ya existe un horario para esta hora",
@@ -73,11 +96,16 @@ const horarioController = {
       const horarioGuardado = await nuevoHorario.save();
 
       // Regenerar agenda basada en los nuevos horarios
-      await regenerarAgenda();
+      const regeneracion = await regenerarAgenda();
 
       res.status(201).json({
-        message: "Horario creado exitosamente y agenda regenerada",
+        // El mensaje refleja lo que pasó de verdad: antes decía siempre "y
+        // agenda regenerada" aunque la regeneración hubiese fallado.
+        message: regeneracion.error
+          ? "Horario creado, pero falló la regeneración de la agenda"
+          : "Horario creado exitosamente y agenda regenerada",
         horario: horarioGuardado,
+        regeneracion,
       });
     } catch (error) {
       console.error("Error al crear horario:", error);
@@ -99,10 +127,12 @@ const horarioController = {
         return res.status(404).json({ message: "Horario no encontrado" });
       }
 
-      // Si se está cambiando la hora, validar que no exista otra con la misma hora
+      // Si se está cambiando la hora, validar que no choque con otro horario
+      // DEL MISMO ámbito (los del local entre sí, los de un barbero entre sí).
       if (hora && hora !== horario.hora) {
         const horarioExistente = await HorarioModel.findOne({
           hora,
+          barbero: horario.barbero ?? null,
           _id: { $ne: id },
         });
         if (horarioExistente) {

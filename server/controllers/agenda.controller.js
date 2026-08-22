@@ -5,6 +5,8 @@ const HorarioModel = require("../models/horario.model");
 const ParaguayDateUtil = require("../utils/paraguayDate");
 const NotificationService = require("../services/notificationService");
 const ServicioModel = require("../models/servicio.model");
+const PreciosService = require("../services/precios.service");
+const HorariosService = require("../services/horarios.service");
 
 module.exports = {
   // Endpoint para eliminar todos los turnos de hoy (usando hora de Paraguay)
@@ -158,12 +160,21 @@ module.exports = {
   },
 
   getAllAgendas: (req, res) => {
-    AgendaModel.find({})
+    // Un usuario con rol "barbero" solo ve SUS turnos. El filtro va acá y no
+    // en el cliente: si lo hiciera el front, los datos de los otros barberos
+    // (incluida la PII de sus clientes) igual viajarían en la respuesta.
+    const filtro = {};
+    if (req.user?.rol === "barbero") {
+      if (!req.user.barbero) {
+        // Usuario barbero sin barbero asignado: no le corresponde ningún turno.
+        return res.status(200).json({ agendas: [] });
+      }
+      filtro.barbero = req.user.barbero;
+    }
+
+    AgendaModel.find(filtro)
       .populate("barbero", "nombre foto")
       .then((allAgendas) => {
-        const agendasConCosto = allAgendas.filter(
-          (a) => a.costoTotal > 0 || a.costoServicios > 0,
-        );
         res.status(200).json({ agendas: allAgendas });
       })
       .catch((err) =>
@@ -350,6 +361,8 @@ module.exports = {
   // Endpoint específico para la landing - Vista limpia con un turno por hora
   getTurnosLanding: async (req, res) => {
     try {
+      const barberoIdFiltro = req.query.barberoId || null;
+
       // Obtener barberos activos para calcular disponibilidad
       const BarberoModel = require("../models/barbero.model");
       const barberosActivos = await BarberoModel.find({ activo: true });
@@ -362,12 +375,36 @@ module.exports = {
         .endOf("day")
         .toDate();
 
-      // Obtener solo los turnos del rango de fechas
-      const allTurnos = await AgendaModel.find({
-        fecha: { $gte: hoy, $lte: treintaDiasDespues },
-      })
+      // Con ?barberoId= se devuelven SOLO los turnos de ese barbero, un turno
+      // real por hora. Sin el parámetro se mantiene la vista agregada de
+      // siempre (un turno representativo por hora entre todos los barberos,
+      // con los "turnos virtuales" que eso obliga a inventar) para no romper
+      // la landing actual mientras el Sprint 4 migra el front.
+      const filtroTurnos = { fecha: { $gte: hoy, $lte: treintaDiasDespues } };
+      if (barberoIdFiltro) {
+        filtroTurnos.barbero = barberoIdFiltro;
+      }
+
+      const allTurnos = await AgendaModel.find(filtroTurnos)
         .populate("barbero", "nombre foto")
         .sort({ fecha: 1, hora: 1 });
+
+      // Con un barbero fijado no hace falta agregar nada: cada hora tiene a lo
+      // sumo un turno suyo, así que se devuelven tal cual.
+      if (barberoIdFiltro) {
+        return res.status(200).json({
+          agendas: allTurnos.map((t) => {
+            const turno = t.toObject();
+            // El endpoint es público: nunca exponer PII ni el token de edición.
+            delete turno.editToken;
+            delete turno.emailCliente;
+            if (turno.estado !== "disponible") {
+              delete turno.numeroCliente;
+            }
+            return turno;
+          }),
+        });
+      }
 
       console.log(`✅ getTurnosLanding OPTIMIZADO:`);
       console.log(
@@ -589,15 +626,31 @@ module.exports = {
     }
   },
 
-  // Nuevo endpoint para obtener estadísticas del dashboard
-  getEstadisticas: async (req, res) => {
+  // Endpoint para las métricas de demanda del dashboard (días, horas,
+  // servicios, barberos y clientes más solicitados). ?dias=90 limita la
+  // ventana; sin el parámetro se calcula sobre todo el historial.
+  getMetricas: async (req, res) => {
     try {
-      const stats = await AgendaGeneratorService.obtenerEstadisticas();
-      res.status(200).json({ estadisticas: stats });
+      const { dias } = req.query;
+      const periodoDias = dias ? parseInt(dias, 10) : null;
+
+      // Un barbero ve solo sus propias métricas; el admin, las del negocio.
+      // El alcance se decide acá con req.user, nunca con un parámetro que
+      // pueda mandar el cliente.
+      const barberoId =
+        req.user?.rol === "barbero" ? req.user.barbero : null;
+
+      const metricas = await AgendaGeneratorService.obtenerMetricasDashboard(
+        periodoDias,
+        barberoId,
+      );
+      res.status(200).json({ metricas });
     } catch (err) {
-      res
-        .status(400)
-        .json({ message: "Error obteniendo estadísticas", error: err });
+      console.error("Error obteniendo métricas del dashboard:", err);
+      res.status(500).json({
+        message: "Error obteniendo métricas del dashboard",
+        error: err.message,
+      });
     }
   },
 
@@ -699,6 +752,37 @@ module.exports = {
 
       // Obtener el turno anterior para comparar cambios
       const turnoAnterior = await AgendaModel.findById(req.params.id);
+
+      if (!turnoAnterior) {
+        return res.status(404).json({ message: "Turno no encontrado" });
+      }
+
+      // Si el admin toca los servicios, los precios se recalculan en el
+      // servidor contra los del barbero de este turno. Aunque esta ruta sea
+      // solo-admin, el precio se decide en un único lugar (precios.service) y
+      // no se toma de lo que venga en el body.
+      const idsServicios = req.body.servicioIds || req.body.servicios;
+      if (idsServicios !== undefined) {
+        const barberoDelTurno = datosPermitidos.barbero || turnoAnterior.barbero;
+        try {
+          const resuelto = await PreciosService.resolverServiciosParaReserva(
+            barberoDelTurno,
+            idsServicios || [],
+          );
+          datosPermitidos.servicios = resuelto.servicios;
+          datosPermitidos.costoServicios = resuelto.costoTotal;
+          datosPermitidos.costoTotal =
+            resuelto.costoTotal - (datosPermitidos.descuento || 0);
+        } catch (error) {
+          if (error.name === "ErrorServicioInvalido") {
+            return res
+              .status(400)
+              .json({ message: error.message, ...error.detalles });
+          }
+          throw error;
+        }
+      }
+      delete datosPermitidos.servicioIds;
 
       const updatedAgenda = await AgendaModel.findOneAndUpdate(
         { _id: req.params.id },
@@ -950,6 +1034,7 @@ module.exports = {
         barberoId,
         nombreCliente,
         numeroCliente,
+        servicioIds,
         servicios = [],
       } = req.body;
 
@@ -961,6 +1046,12 @@ module.exports = {
           message: "Fecha, hora, barbero y nombre del cliente son requeridos",
         });
       }
+
+      // El formato nuevo manda solo ids. Se sigue aceptando el viejo
+      // (`servicios: [{servicioId, nombre, precio, ...}]`) por compatibilidad
+      // durante un despliegue desfasado de client y server, pero SOLO se toman
+      // los ids: nombre, precio y duración se resuelven contra la base.
+      const idsSolicitados = servicioIds || servicios;
 
       const fechaObj = ParaguayDateUtil.toParaguayTime(fecha).toDate();
 
@@ -980,21 +1071,33 @@ module.exports = {
         $lte: ParaguayDateUtil.endOfDay(fechaObj).toDate(),
       };
 
-      // Calcular costo total de los servicios seleccionados por adelantado
-      // (se necesita antes del update atómico).
-      let costoServicios = 0;
-      if (servicios.length > 0) {
-        costoServicios = servicios.reduce(
-          (total, s) => total + (s.precio || 0),
-          0,
+      // Los precios se resuelven SIEMPRE en el servidor, contra el catálogo y
+      // los overrides de ESTE barbero. Nunca se usa el precio que mande el
+      // cliente: antes se sumaba `s.precio` del body y se podía reservar un
+      // servicio de ₲80.000 por ₲0.
+      let serviciosResueltos;
+      let costoServicios;
+      try {
+        const resuelto = await PreciosService.resolverServiciosParaReserva(
+          barberoId,
+          idsSolicitados,
         );
+        serviciosResueltos = resuelto.servicios;
+        costoServicios = resuelto.costoTotal;
+      } catch (error) {
+        if (error.name === "ErrorServicioInvalido") {
+          return res
+            .status(400)
+            .json({ message: error.message, ...error.detalles });
+        }
+        throw error;
       }
 
       const datosReserva = {
         estado: "reservado",
         nombreCliente,
         numeroCliente,
-        servicios,
+        servicios: serviciosResueltos,
         fechaReserva: new Date(),
         // Token secreto para poder editar/cancelar este turno desde el link
         // público sin login (ver /editar-mi-turno/:id y /liberar-mi-turno/:id).
@@ -1071,9 +1174,10 @@ module.exports = {
         if (numeroCliente) {
           const WhatsappService = require("../services/whatsapp.service");
           // Obtener nombres de servicios
+          // Los nombres salen del snapshot resuelto, no del body del cliente.
           const serviciosNombres =
-            servicios.length > 0
-              ? servicios.map((s) => s.nombre).join(", ")
+            serviciosResueltos.length > 0
+              ? serviciosResueltos.map((s) => s.nombre).join(", ")
               : "Corte de cabello";
 
           const diaNombre = ParaguayDateUtil.getDayOfWeek(fechaObj);
@@ -1146,24 +1250,27 @@ module.exports = {
         });
       }
 
-      // Resolver los servicios reales desde la base de datos: nunca se
-      // confía en nombre/precio/duración que pueda mandar el cliente.
-      const servicioIds = servicios
-        .map((s) => (typeof s === "string" ? s : s.servicioId || s._id))
-        .filter(Boolean);
-
-      const serviciosReales = servicioIds.length
-        ? await ServicioModel.find({ _id: { $in: servicioIds } })
-        : [];
+      // Los servicios se resuelven contra la base, nunca desde el cliente. Y
+      // contra los precios DEL BARBERO DE ESTE TURNO: antes se usaba el precio
+      // global, así que editar un turno le borraba el precio propio del barbero.
+      let resuelto;
+      try {
+        resuelto = await PreciosService.resolverServiciosParaReserva(
+          turno.barbero,
+          servicios,
+        );
+      } catch (error) {
+        if (error.name === "ErrorServicioInvalido") {
+          return res
+            .status(400)
+            .json({ message: error.message, ...error.detalles });
+        }
+        throw error;
+      }
 
       turno.nombreCliente = nombreCliente;
       turno.numeroCliente = numeroCliente;
-      turno.servicios = serviciosReales.map((s) => ({
-        servicioId: s._id,
-        nombre: s.nombre,
-        precio: s.precio,
-        duracion: s.duracion,
-      }));
+      turno.servicios = resuelto.servicios;
       turno.calcularCostoTotal();
 
       await turno.save();
@@ -1247,14 +1354,20 @@ module.exports = {
     }
   },
 
-  // Endpoint para obtener información de horarios y semanas para el frontend
-  // Endpoint para obtener información de horarios y semanas para el frontend
+  // Días y semanas para armar la grilla de la landing.
+  //
+  // Con ?barberoId= devuelve los horarios de ESE barbero (los suyos si
+  // personalizó, los del local si no). Sin el parámetro, la unión de todos los
+  // barberos activos — así la grilla no deja afuera una hora que solo tiene
+  // uno. Antes leía todos los Horario sin distinguir ámbito, lo que ahora
+  // mezclaría los propios de cada barbero.
   getHorariosYSemanas: async (req, res) => {
     try {
-      // Obtener horarios activos
-      const horariosActivos = await HorarioModel.find({
-        estado: "activo",
-      }).lean();
+      const { barberoId } = req.query;
+
+      const horariosActivos = barberoId
+        ? await HorariosService.resolverHorariosDeBarbero(barberoId)
+        : await HorariosService.resolverHorariosDeTodos();
 
       // Mapear días de horarios activos
       const diasActivosSet = new Set();
