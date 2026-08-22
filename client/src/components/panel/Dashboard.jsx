@@ -40,23 +40,55 @@ const PERIODOS = [
   { value: "", label: "Todo el historial" },
 ];
 
-const tooltipProps = {
-  contentStyle: {
-    background: "#ffffff",
-    border: "1px solid #e5e7eb",
-    borderRadius: 8,
-    fontSize: 12,
-  },
-  labelStyle: { color: "#374151", fontWeight: 600 },
-  cursor: { fill: "rgba(145, 66, 225, 0.06)" },
+/**
+ * Tooltip de una sola línea.
+ *
+ * El de recharts arma la etiqueta y el valor en filas separadas, y como acá el
+ * `name` de la serie va vacío quedaba un renglón suelto tipo ": 48 turnos"
+ * debajo del día. Con un content propio se controla el texto entero.
+ *
+ * `texto(payload)` devuelve la línea completa a mostrar.
+ */
+export const TooltipUnaLinea = ({ active, payload, texto }) => {
+  if (!active || !payload?.length) return null;
+
+  return (
+    <div className="bg-white border border-gray-200 rounded-lg shadow-sm px-3 py-1.5">
+      <span className="text-xs font-semibold text-gray-700 whitespace-nowrap">
+        {texto(payload[0].payload)}
+      </span>
+    </div>
+  );
 };
+
+const cursorTooltip = { fill: "rgba(145, 66, 225, 0.06)" };
 
 const labelStyle = { fill: "#374151", fontSize: 12 };
 
+/** true cuando el viewport es de celular. Los gráficos necesitan otra
+ *  configuración ahí: menos ancho para las etiquetas y scroll horizontal. */
+const useEsMobile = () => {
+  const [esMobile, setEsMobile] = useState(
+    () => typeof window !== "undefined" && window.innerWidth < 768
+  );
+
+  useEffect(() => {
+    const consulta = window.matchMedia("(max-width: 767px)");
+    const alCambiar = (e) => setEsMobile(e.matches);
+    consulta.addEventListener("change", alCambiar);
+    return () => consulta.removeEventListener("change", alCambiar);
+  }, []);
+
+  return esMobile;
+};
+
 const ChartCard = ({ icon: Icon, title, subtitle, isEmpty, children }) => (
-  <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 md:p-5">
+  // `overflow-hidden` importa: sin él, un gráfico que se pasa del ancho de la
+  // tarjeta deja ver el fondo de la página (que es negro, ver index.css) y
+  // parece un borde negro alrededor.
+  <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 md:p-5 overflow-hidden">
     <div className="flex items-center gap-2 mb-1">
-      <Icon className="w-5 h-5 text-[var(--primary-color)]" />
+      <Icon className="w-5 h-5 text-[var(--primary-color)] flex-shrink-0" />
       <h4 className="text-sm font-semibold text-gray-800">{title}</h4>
     </div>
     {subtitle && <p className="text-xs text-gray-400 mb-3">{subtitle}</p>}
@@ -70,8 +102,20 @@ const ChartCard = ({ icon: Icon, title, subtitle, isEmpty, children }) => (
   </div>
 );
 
+/**
+ * Envoltorio para gráficos que no entran en una pantalla angosta: en vez de
+ * apretar las barras hasta que las etiquetas se pisen, se deja desplazar en
+ * horizontal con un ancho mínimo.
+ */
+const ScrollHorizontal = ({ anchoMinimo, children }) => (
+  <div className="overflow-x-auto -mx-1 px-1">
+    <div style={{ minWidth: anchoMinimo }}>{children}</div>
+  </div>
+);
+
 const Dashboard = () => {
   const api = useApi();
+  const esMobile = useEsMobile();
   const [periodo, setPeriodo] = useState("90");
   const [metricas, setMetricas] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -151,24 +195,32 @@ const Dashboard = () => {
           title="Días más pedidos"
           isEmpty={!metricas?.porDia?.some((d) => d.total > 0)}
         >
+          {/* 7 días: en mobile se muestran todos con `interval={0}`, que evita
+              que recharts saltee etiquetas cuando no le entran. */}
           <ResponsiveContainer width="100%" height={240}>
             <BarChart
               data={metricas.porDia}
-              margin={{ top: 20, right: 8, left: -20, bottom: 0 }}
+              margin={{ top: 20, right: 4, left: -20, bottom: 0 }}
             >
               <CartesianGrid vertical={false} stroke="#eef0f2" />
               <XAxis
                 dataKey="dia"
                 tickFormatter={(d) => DIAS_CORTOS[d] || d}
-                tick={{ fontSize: 12, fill: "#6b7280" }}
+                tick={{ fontSize: esMobile ? 10 : 12, fill: "#6b7280" }}
                 axisLine={{ stroke: "#e5e7eb" }}
                 tickLine={false}
+                interval={0}
               />
               <YAxis hide />
               <Tooltip
-                {...tooltipProps}
-                formatter={(value) => [`${value} turnos`, ""]}
-                labelFormatter={(d) => DIAS_LARGOS[d] || d}
+                cursor={cursorTooltip}
+                content={
+                  <TooltipUnaLinea
+                    texto={(d) =>
+                      `${DIAS_LARGOS[d.dia] || d.dia}: ${d.total} turnos`
+                    }
+                  />
+                }
               />
               <Bar dataKey="total" fill="#2a78d6" radius={[4, 4, 0, 0]} maxBarSize={40}>
                 <LabelList dataKey="total" position="top" style={labelStyle} />
@@ -182,29 +234,41 @@ const Dashboard = () => {
           title="Horas más pedidas"
           isEmpty={!metricas?.porHora?.length}
         >
-          <ResponsiveContainer width="100%" height={240}>
-            <BarChart
-              data={metricas.porHora}
-              margin={{ top: 20, right: 8, left: -20, bottom: 0 }}
-            >
-              <CartesianGrid vertical={false} stroke="#eef0f2" />
-              <XAxis
-                dataKey="hora"
-                tick={{ fontSize: 11, fill: "#6b7280" }}
-                axisLine={{ stroke: "#e5e7eb" }}
-                tickLine={false}
-                interval={0}
-                angle={-35}
-                textAnchor="end"
-                height={45}
-              />
-              <YAxis hide />
-              <Tooltip {...tooltipProps} formatter={(value) => [`${value} turnos`, ""]} />
-              <Bar dataKey="total" fill="#4a3aa7" radius={[4, 4, 0, 0]} maxBarSize={30}>
-                <LabelList dataKey="total" position="top" style={labelStyle} />
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+          {/* Puede haber muchas horas (hoy 11). Apretarlas en una pantalla
+              angosta pisa las etiquetas, así que se le da un ancho mínimo por
+              barra y se desplaza en horizontal. */}
+          <ScrollHorizontal anchoMinimo={(metricas.porHora?.length || 0) * 46}>
+            <ResponsiveContainer width="100%" height={240}>
+              <BarChart
+                data={metricas.porHora}
+                margin={{ top: 20, right: 8, left: -20, bottom: 0 }}
+              >
+                <CartesianGrid vertical={false} stroke="#eef0f2" />
+                <XAxis
+                  dataKey="hora"
+                  tick={{ fontSize: 11, fill: "#6b7280" }}
+                  axisLine={{ stroke: "#e5e7eb" }}
+                  tickLine={false}
+                  interval={0}
+                  angle={-35}
+                  textAnchor="end"
+                  height={50}
+                />
+                <YAxis hide />
+                <Tooltip
+                  cursor={cursorTooltip}
+                  content={
+                    <TooltipUnaLinea
+                      texto={(d) => `${d.hora}: ${d.total} turnos`}
+                    />
+                  }
+                />
+                <Bar dataKey="total" fill="#4a3aa7" radius={[4, 4, 0, 0]} maxBarSize={30}>
+                  <LabelList dataKey="total" position="top" style={labelStyle} />
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </ScrollHorizontal>
         </ChartCard>
 
         <ChartCard
@@ -219,19 +283,26 @@ const Dashboard = () => {
             <BarChart
               data={metricas.porServicio}
               layout="vertical"
-              margin={{ top: 4, right: 30, left: 8, bottom: 4 }}
+              margin={{ top: 4, right: 34, left: 8, bottom: 4 }}
             >
               <CartesianGrid horizontal={false} stroke="#eef0f2" />
               <XAxis type="number" hide />
               <YAxis
                 type="category"
                 dataKey="servicio"
-                width={120}
-                tick={{ fontSize: 12, fill: "#374151" }}
+                width={esMobile ? 88 : 120}
+                tick={{ fontSize: esMobile ? 11 : 12, fill: "#374151" }}
                 axisLine={false}
                 tickLine={false}
               />
-              <Tooltip {...tooltipProps} formatter={(value) => [`${value} turnos`, ""]} />
+              <Tooltip
+                cursor={cursorTooltip}
+                content={
+                  <TooltipUnaLinea
+                    texto={(d) => `${d.servicio}: ${d.total} turnos`}
+                  />
+                }
+              />
               <Bar dataKey="total" fill="#1baf7a" radius={[0, 4, 4, 0]} maxBarSize={22}>
                 <LabelList dataKey="total" position="right" style={labelStyle} />
               </Bar>
@@ -251,19 +322,26 @@ const Dashboard = () => {
             <BarChart
               data={metricas.porBarbero}
               layout="vertical"
-              margin={{ top: 4, right: 30, left: 8, bottom: 4 }}
+              margin={{ top: 4, right: 34, left: 8, bottom: 4 }}
             >
               <CartesianGrid horizontal={false} stroke="#eef0f2" />
               <XAxis type="number" hide />
               <YAxis
                 type="category"
                 dataKey="barbero"
-                width={120}
-                tick={{ fontSize: 12, fill: "#374151" }}
+                width={esMobile ? 88 : 120}
+                tick={{ fontSize: esMobile ? 11 : 12, fill: "#374151" }}
                 axisLine={false}
                 tickLine={false}
               />
-              <Tooltip {...tooltipProps} formatter={(value) => [`${value} turnos`, ""]} />
+              <Tooltip
+                cursor={cursorTooltip}
+                content={
+                  <TooltipUnaLinea
+                    texto={(d) => `${d.barbero}: ${d.total} turnos`}
+                  />
+                }
+              />
               <Bar dataKey="total" fill="#eb6834" radius={[0, 4, 4, 0]} maxBarSize={22}>
                 <LabelList dataKey="total" position="right" style={labelStyle} />
               </Bar>
@@ -292,17 +370,23 @@ const Dashboard = () => {
             <YAxis
               type="category"
               dataKey="nombre"
-              width={160}
-              tick={{ fontSize: 12, fill: "#374151" }}
+              // Los nombres de cliente son lo más largo del dashboard: en
+              // mobile se recortan para no dejar al gráfico sin ancho.
+              width={esMobile ? 96 : 160}
+              tick={{ fontSize: esMobile ? 11 : 12, fill: "#374151" }}
+              tickFormatter={(n) =>
+                esMobile && n?.length > 13 ? n.slice(0, 12) + "…" : n
+              }
               axisLine={false}
               tickLine={false}
             />
             <Tooltip
-              {...tooltipProps}
-              formatter={(value, _name, item) => [
-                `${value} turnos · ${item.payload.numero}`,
-                "",
-              ]}
+              cursor={cursorTooltip}
+              content={
+                <TooltipUnaLinea
+                  texto={(d) => `${d.nombre}: ${d.total} turnos · ${d.numero}`}
+                />
+              }
             />
             <Bar dataKey="total" fill="#e87ba4" radius={[0, 4, 4, 0]} maxBarSize={20}>
               <LabelList dataKey="total" position="right" style={labelStyle} />
