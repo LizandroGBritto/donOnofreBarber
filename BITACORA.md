@@ -4,6 +4,69 @@ Registro histórico de auditorías, decisiones técnicas e incidentes del proyec
 
 ---
 
+## 2026-08-22 — Despliegue: precios y horarios por barbero, con roles
+
+**Commit desplegado:** `31270ae` (desde `5e54b1b`). Plan completo en
+`docs/plan-barberos-precios-horarios.md`.
+
+**Alcance:** cada barbero puede fijar sus propios precios y horarios sobre los
+del local; la landing pasa a girar alrededor del barbero elegido; los usuarios
+del panel tienen rol y ven solo lo suyo. Incluye el dashboard de métricas con
+recharts. 121 tests de server + 54 de client, todos en verde antes de subir.
+
+**Orden de despliegue (importa):**
+1. `mongodump` → `/root/predeploy-2026-08-22T18-50-23.archive.gz` y copia del
+   `dist` actual → `/root/dist-predeploy-2026-08-22T18-50-23`.
+2. `git pull` — trae el código pero NO lo activa: el servicio sigue con el
+   viejo en memoria.
+3. `npm ci --omit=dev` en `server/`. **Sin devDependencies a propósito**:
+   `mongodb-memory-server` descarga un binario de MongoDB en su postinstall,
+   inútil en producción y caro en una VPS de 15GB.
+4. **Migración de roles ANTES de reiniciar** (`migrarRolesUsuarios.js
+   --ejecutar --degradar-vinculados`). Este orden es obligatorio: Mongoose
+   aplica los defaults del schema al hidratar, así que con el código nuevo
+   corriendo y sin migrar, los 3 usuarios se leerían como `barbero` y perderían
+   el panel. Resultado: `admin`→admin, `LisandroAlonzo`→barbero+Lisandro Alonzo,
+   `EliasLugo`→barbero+Elias Lugo.
+5. `dist` compilado **en local, no en el server**: la VPS tiene 957MB de RAM
+   (169 libres) y el build de Vite la mata por OOM. Se sube a `/tmp`, se
+   verifica que apunte a `https://alonzostyle.com` y no a localhost, y recién
+   ahí se hace el swap.
+6. `systemctl restart dononofre.service`.
+
+**Verificación post-despliegue (contra el dominio real, no contra la base):**
+- Catálogo resuelto por barbero, agenda filtrada por barbero (266 turnos cada
+  uno, **0 turnos virtuales** y **0 `editToken` filtrados**).
+- Reserva de punta a punta mandando `precio: 0` para un Corte de ₲50.000 → se
+  guardó **₲50.000**. El agujero de manipulación de precios quedó cerrado en
+  producción.
+- Liberación del turno de prueba por el link público: token inválido → 403,
+  token real → OK, y el token deja de servir tras liberar.
+- `POST /api/contacto` y `POST /api/ubicacion` → **401**. Hasta hoy eran
+  anónimas: cualquiera podía cambiar el WhatsApp y la dirección del negocio.
+
+**Integridad: 0 documentos perdidos o alterados.** 1696 agendas, 132 con
+cliente, 3 users, 2 barberos, 11 horarios, 3 servicios — idénticos antes y
+después. Sin residuos de las pruebas.
+
+**Rollback disponible:** `git checkout 5e54b1b && npm ci --omit=dev`, restaurar
+`/root/dist-predeploy-2026-08-22T18-50-23` sobre `client/dist`, `mongorestore`
+del archive si hiciera falta, y reiniciar. El `dist` anterior también quedó en
+`client/dist.viejo`.
+
+**Pendiente:**
+- **Rotar la contraseña root de SSH.** Durante la sesión se tipeó por error en
+  el campo *usuario* de un formulario de login y viajó en un POST a la API.
+- Quitar de `auth.middleware.js` el fallback que trata un `rol` ausente como
+  admin. Existía para cubrir el despliegue; ya no hace falta y, si se deja, un
+  usuario mal creado en el futuro sería admin en silencio.
+- Los tokens JWT emitidos antes de hoy no tienen `exp` y siguen siendo válidos
+  para siempre. Para cortarlos hay que rotar `JWT_SECRET` (desloguea a los 3).
+- `PermitRootLogin` y `PasswordAuthentication` siguen habilitados en sshd; ya
+  hay clave autorizada, se pueden cerrar.
+
+---
+
 ## 2026-08-22 — Regeneración de agenda rota + limpieza en producción
 
 **Contexto:** al preparar la funcionalidad de precios/horarios por barbero (ver `docs/plan-barberos-precios-horarios.md`) se detectó que los horarios editados el 2026-08-17 desde el panel no tenían ningún efecto sobre la agenda visible. El usuario lo notó primero: "esos horarios no los veo en la home como seleccionables".
