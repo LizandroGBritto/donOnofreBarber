@@ -123,23 +123,39 @@ const Servicios = ({ barbero }) => {
 
     if (fotos.length === 0) {
       return (
-        <div className="w-full h-48 bg-gradient-to-br from-purple-400 to-blue-500 rounded-lg flex items-center justify-center">
+        <div className="w-full h-64 bg-gradient-to-br from-purple-400 to-blue-500 rounded-lg flex items-center justify-center">
           <span className="text-white text-lg font-semibold">{nombre}</span>
         </div>
       );
     }
 
+    const urlFoto = `${import.meta.env.VITE_API_URL}/uploads/${
+      fotos[currentImageIndex]
+    }`;
+
     return (
       <div
-        className="relative w-full h-48 rounded-lg overflow-hidden group"
+        className="relative w-full h-64 rounded-lg overflow-hidden group bg-gray-950"
         id="servicios"
       >
+        {/* La misma foto ampliada y desenfocada como fondo. Sirve para que la
+            imagen de adelante pueda ir completa (`object-contain`) sin dejar
+            franjas negras vacías a los costados. Antes iba `object-cover`, que
+            llena el marco pero RECORTA: en una foto vertical de un corte se
+            perdía la parte de arriba y la de abajo. */}
         <img
-          src={`${import.meta.env.VITE_API_URL}/uploads/${
-            fotos[currentImageIndex]
-          }`}
+          src={urlFoto}
+          alt=""
+          aria-hidden="true"
+          className="absolute inset-0 w-full h-full object-cover scale-110 blur-xl opacity-40"
+          loading="lazy"
+          decoding="async"
+        />
+
+        <img
+          src={urlFoto}
           alt={`${nombre} - ${currentImageIndex + 1}`}
-          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+          className="relative w-full h-full object-contain transition-transform duration-300 group-hover:scale-105"
           loading="lazy"
           decoding="async"
         />
@@ -226,7 +242,7 @@ const Servicios = ({ barbero }) => {
                 key={item}
                 className="bg-white rounded-lg shadow-lg overflow-hidden animate-pulse"
               >
-                <div className="w-full h-48 bg-gray-300"></div>
+                <div className="w-full h-64 bg-gray-300"></div>
                 <div className="p-6">
                   <div className="h-4 bg-gray-300 rounded mb-2"></div>
                   <div className="h-3 bg-gray-300 rounded mb-4"></div>
@@ -294,7 +310,10 @@ const Servicios = ({ barbero }) => {
 
               {/* Contenido de la tarjeta */}
               <div className="p-6">
-                <h3 className="text-xl font-bold text-white mb-2 group-hover:text-purple-400 transition-colors duration-200">
+                {/* min-h para que las tarjetas queden alineadas aunque un
+                    nombre ocupe una línea y otro dos ("Corte más asesoramiento"
+                    vs "Combo corte más barba y asesoramiento"). */}
+                <h3 className="text-xl font-bold text-white mb-2 min-h-[3.5rem] flex items-center group-hover:text-purple-400 transition-colors duration-200">
                   {servicio.nombre}
                 </h3>
 
