@@ -37,6 +37,13 @@ const PrecioBarberoSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    // Fotos propias de este barbero para este servicio: sus cortes, no los de
+    // la foto genérica del catálogo. Vacío = se muestran las del local.
+    //
+    // Es reemplazo, no mezcla: si el barbero sube una sola foto, se ve esa y
+    // no las del catálogo. Mezclarlas haría imposible saber cuál es un corte
+    // suyo y cuál una foto de referencia del negocio.
+    imagenes: [{ type: String }],
   },
   { timestamps: true }
 );

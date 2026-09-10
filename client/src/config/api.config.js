@@ -24,6 +24,9 @@ const config = {
       base: "/api/user",
       list: "/api/user/",
       byId: (id) => `/api/user/${id}`,
+      // Quién es el usuario de la sesión, según el servidor. El panel se
+      // hidrata de acá en vez de confiar en lo guardado en el navegador.
+      me: "/api/user/me",
     },
 
     agenda: {
@@ -46,6 +49,13 @@ const config = {
     barberos: {
       base: "/api/barberos",
       agenda: "/api/barberos/agenda",
+      // Fotos propias de un barbero para un servicio del catálogo.
+      imagenesServicio: (id, servicioId) =>
+        `/api/barberos/${id}/servicios/${servicioId}/imagenes`,
+      imagenServicio: (id, servicioId, imagen) =>
+        `/api/barberos/${id}/servicios/${servicioId}/imagenes/${encodeURIComponent(
+          imagen
+        )}`,
     },
 
     servicios: {

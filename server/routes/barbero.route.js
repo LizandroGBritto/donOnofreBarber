@@ -42,6 +42,21 @@ BarberoRouter.put(
   PrecioBarberoController.guardarPreciosDeBarbero
 );
 
+// Fotos propias del barbero para un servicio del catálogo.
+BarberoRouter.post(
+  "/:id/servicios/:servicioId/imagenes",
+  authenticate,
+  requireBarberoPropio(),
+  PrecioBarberoController.subirImagenes,
+  PrecioBarberoController.agregarImagenes
+);
+BarberoRouter.delete(
+  "/:id/servicios/:servicioId/imagenes/:imagen",
+  authenticate,
+  requireBarberoPropio(),
+  PrecioBarberoController.quitarImagen
+);
+
 // ── Horarios propios del barbero ──────────────────────────────────────────
 
 // Pública: la landing arma la grilla del barbero elegido con esto.

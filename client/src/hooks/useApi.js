@@ -45,6 +45,8 @@ export const useApi = () => {
 
     // Users
     users: {
+      /** Usuario de la sesión según el servidor (rol y barbero incluidos). */
+      me: () => api.get(config.api.user.me).then((res) => res.data.user),
       getAll: () => api.get(config.api.user.list).then((res) => res.data),
       getById: (id) =>
         api.get(config.api.user.byId(id)).then((res) => res.data),
@@ -99,6 +101,16 @@ export const useApi = () => {
       getAll: () => api.get(config.api.barberos.base).then((res) => res.data),
       getAgenda: () =>
         api.get(config.api.barberos.agenda).then((res) => res.data),
+
+      // Fotos propias de un barbero para un servicio del catálogo.
+      subirImagenesServicio: (id, servicioId, formData) =>
+        api
+          .post(config.api.barberos.imagenesServicio(id, servicioId), formData)
+          .then((res) => res.data),
+      quitarImagenServicio: (id, servicioId, imagen) =>
+        api
+          .delete(config.api.barberos.imagenServicio(id, servicioId, imagen))
+          .then((res) => res.data),
       create: (formData) =>
         api.post(config.api.barberos.base, formData).then((res) => res.data),
       update: (id, formData) =>

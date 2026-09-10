@@ -18,6 +18,7 @@ import GestionUsuarios from "./panel/GestionUsuarios";
 import WhatsappConnection from "./panel/WhatsappConnection";
 import MisPrecios from "./panel/MisPrecios";
 import MisHorarios from "./panel/MisHorarios";
+import VistaPreviaArchivo from "./panel/VistaPreviaArchivo";
 import { itemsParaRol, vistaInicialParaRol } from "./panel/navItems";
 import NotificationManager from "./NotificationManager";
 import UserContext from "../context/UserContext";
@@ -29,11 +30,53 @@ const AdminDashboard = () => {
   const navigate = useNavigate();
   const api = useApi();
 
-  // Un usuario sin `rol` (anterior a la migración) se trata como admin, igual
+  // La identidad se relee del servidor al montar. Antes se tomaba de
+  // localStorage, que es el snapshot del último login: a un barbero cuyo rol
+  // se hubiera asignado después le seguía apareciendo el menú de admin, y
+  // clickeaba secciones que el servidor rechazaba con 403. Además ese dato lo
+  // puede editar cualquiera desde el navegador.
+  const [identidad, setIdentidad] = useState(null);
+
+  useEffect(() => {
+    let cancelado = false;
+
+    api.users
+      .me()
+      .then((actual) => {
+        if (cancelado) return;
+        setIdentidad(actual);
+        // Se sincroniza el contexto y el localStorage para que el resto de la
+        // app (y el próximo montaje) vean lo mismo que el servidor.
+        setUser((previo) => ({ ...previo, ...actual }));
+        try {
+          localStorage.setItem(
+            "user",
+            JSON.stringify({ ...(user || {}), ...actual })
+          );
+        } catch (error) {
+          console.error("No se pudo guardar el usuario:", error);
+        }
+      })
+      .catch((error) => {
+        // Un 401 ya dispara el redirect global al login (sessionInterceptor).
+        if (error.response?.status !== 401) {
+          console.error("No se pudo verificar la sesión:", error);
+        }
+      });
+
+    return () => {
+      cancelado = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Hasta que responda el servidor se usa lo guardado, para no parpadear. Un
+  // usuario sin `rol` (anterior a la migración) se trata como admin, igual
   // criterio que usa el backend en authenticate.
-  const rol = user?.rol === "barbero" ? "barbero" : "admin";
+  const usuarioEfectivo = identidad || user;
+  const rol = usuarioEfectivo?.rol === "barbero" ? "barbero" : "admin";
   const esBarbero = rol === "barbero";
-  const miBarberoId = user?.barbero || null;
+  const miBarberoId = usuarioEfectivo?.barbero || null;
   const itemsVisibles = itemsParaRol(rol);
 
   // Función para cerrar sesión
@@ -131,6 +174,16 @@ const AdminDashboard = () => {
   };
 
   const [activeView, setActiveView] = useState(() => vistaInicialParaRol(rol));
+
+  // Si el rol que devuelve el servidor resulta distinto al que había guardado,
+  // la vista abierta puede ser una que este rol no tiene permitida. Se cae a
+  // la primera válida en vez de quedar en una sección prohibida.
+  useEffect(() => {
+    if (!itemsVisibles.some((item) => item.id === activeView)) {
+      setActiveView(vistaInicialParaRol(rol));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rol]);
   const [turnos, setTurnos] = useState([]);
   const [filteredTurnos, setFilteredTurnos] = useState([]);
   const [fechaDesde, setFechaDesde] = useState("");
@@ -2948,13 +3001,22 @@ const AdminDashboard = () => {
                   type="file"
                   accept="image/*"
                   required={!selectedBarbero}
-                  onChange={(e) => setBarberoFoto(e.target.files[0])}
+                  onChange={(e) => setBarberoFoto(e.target.files[0] || null)}
                   className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100"
                 />
                 <p className="text-xs text-gray-500 mt-1">
                   Formatos: JPG, PNG, WEBP. Tamaño máximo: 5MB
                 </p>
-                {selectedBarbero && selectedBarbero.foto && (
+                {/* Al elegir un archivo se muestra ESE, no el guardado: antes
+                    solo se veía la foto actual y era imposible saber si se
+                    había seleccionado la correcta hasta guardar. */}
+                <VistaPreviaArchivo
+                  archivo={barberoFoto}
+                  alt="Nueva foto"
+                  etiqueta="Nueva foto (aún sin guardar)"
+                  className="w-20 h-20 object-cover rounded-lg"
+                />
+                {!barberoFoto && selectedBarbero?.foto && (
                   <div className="mt-2">
                     <img
                       src={`${import.meta.env.VITE_API_URL}/uploads/${
@@ -2974,13 +3036,19 @@ const AdminDashboard = () => {
                   id="logoBarbero"
                   type="file"
                   accept="image/*"
-                  onChange={(e) => setBarberoLogo(e.target.files[0])}
+                  onChange={(e) => setBarberoLogo(e.target.files[0] || null)}
                   className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100"
                 />
                 <p className="text-xs text-gray-500 mt-1">
                   Logo personal o marca del barbero (opcional)
                 </p>
-                {selectedBarbero && selectedBarbero.logo && (
+                <VistaPreviaArchivo
+                  archivo={barberoLogo}
+                  alt="Nuevo logo"
+                  etiqueta="Nuevo logo (aún sin guardar)"
+                  className="w-16 h-16 object-contain"
+                />
+                {!barberoLogo && selectedBarbero?.logo && (
                   <div className="mt-2">
                     <img
                       src={`${import.meta.env.VITE_API_URL}/uploads/${
@@ -3155,9 +3223,15 @@ const AdminDashboard = () => {
                   <Label>Vista Previa de Nuevas Imágenes</Label>
                   <div className="grid grid-cols-3 gap-4 mt-2">
                     {nuevasImagenes.map((imagen, index) => (
-                      <div key={index} className="relative">
-                        <img
-                          src={URL.createObjectURL(imagen)}
+                      // La key incluye nombre y tamaño para que React no
+                      // reutilice el preview de otra imagen al borrar una del
+                      // medio (con el índice solo, se corrían todos).
+                      <div
+                        key={`${imagen.name}-${imagen.size}-${index}`}
+                        className="relative"
+                      >
+                        <VistaPreviaArchivo
+                          archivo={imagen}
                           alt={`Nueva imagen ${index + 1}`}
                           className="w-full h-20 object-cover rounded border"
                         />

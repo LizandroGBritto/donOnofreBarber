@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Card, Button, Table, Alert, TextInput, ToggleSwitch } from "flowbite-react";
 import axios from "axios";
+import FotosServicioBarbero from "./FotosServicioBarbero";
 
 /**
  * Precios de un barbero sobre el catálogo del local.
@@ -21,6 +22,8 @@ const MisPrecios = ({ barberoId, nombreBarbero = null }) => {
   const [loading, setLoading] = useState(true);
   const [guardando, setGuardando] = useState(false);
   const [alerta, setAlerta] = useState(null);
+  // Servicio cuyas fotos se están gestionando (null = ninguno).
+  const [servicioFotos, setServicioFotos] = useState(null);
 
   const avisar = (message, type = "success") => {
     setAlerta({ message, type });
@@ -35,12 +38,17 @@ const MisPrecios = ({ barberoId, nombreBarbero = null }) => {
         `${import.meta.env.VITE_API_URL}/api/barberos/${barberoId}/precios`,
         { withCredentials: true }
       );
-      setPrecios(data.precios || []);
+      const filas = data.precios || [];
+      setPrecios(filas);
+      // Se devuelven además de setearlos: el modal de fotos los necesita para
+      // refrescar el servicio que tiene abierto.
+      return filas;
     } catch (error) {
       console.error("Error al cargar precios:", error);
       if (error.response?.status !== 401) {
         avisar("No se pudieron cargar tus precios", "failure");
       }
+      return null;
     } finally {
       setLoading(false);
     }
@@ -156,6 +164,7 @@ const MisPrecios = ({ barberoId, nombreBarbero = null }) => {
                 <Table.HeadCell>Precio del local</Table.HeadCell>
                 <Table.HeadCell>{esVistaAdmin ? "Su precio" : "Mi precio"}</Table.HeadCell>
                 <Table.HeadCell>{esVistaAdmin ? "Lo ofrece" : "Lo ofrezco"}</Table.HeadCell>
+                <Table.HeadCell>Fotos</Table.HeadCell>
               </Table.Head>
               <Table.Body className="divide-y">
                 {precios.map((p) => (
@@ -190,6 +199,19 @@ const MisPrecios = ({ barberoId, nombreBarbero = null }) => {
                         onChange={(valor) => cambiarActivo(p.servicioId, valor)}
                       />
                     </Table.Cell>
+                    <Table.Cell>
+                      <Button
+                        size="xs"
+                        color="light"
+                        onClick={() => setServicioFotos(p)}
+                      >
+                        {p.imagenes?.length
+                          ? `${p.imagenes.length} propia${
+                              p.imagenes.length > 1 ? "s" : ""
+                            }`
+                          : "Usar las del local"}
+                      </Button>
+                    </Table.Cell>
                   </Table.Row>
                 ))}
               </Table.Body>
@@ -197,6 +219,25 @@ const MisPrecios = ({ barberoId, nombreBarbero = null }) => {
           </div>
         )}
       </Card>
+
+      {servicioFotos && (
+        <FotosServicioBarbero
+          barberoId={barberoId}
+          servicio={servicioFotos}
+          onCerrar={() => setServicioFotos(null)}
+          onCambio={async () => {
+            const actualizados = await cargar();
+            // Se refresca el servicio abierto para que el modal muestre las
+            // fotos recién subidas o borradas sin tener que cerrarlo.
+            setServicioFotos((previo) =>
+              previo
+                ? actualizados?.find((p) => p.servicioId === previo.servicioId) ||
+                  previo
+                : previo
+            );
+          }}
+        />
+      )}
     </div>
   );
 };

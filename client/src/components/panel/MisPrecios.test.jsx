@@ -6,6 +6,14 @@ import MisPrecios from "./MisPrecios";
 
 vi.mock("axios");
 
+// MisPrecios usa axios directo, pero importa el modal de fotos, que usa
+// useApi. Con `axios` automockeado, `axios.create()` devuelve undefined y el
+// módulo real de useApi explota al engancharle el interceptor. Se lo mockea
+// para cortar esa cadena: acá solo se prueba que el modal abra.
+vi.mock("../../hooks/useApi", () => ({
+  useApi: () => ({ barberos: {} }),
+}));
+
 const PRECIOS = [
   {
     servicioId: "s1",
@@ -77,6 +85,62 @@ describe("MisPrecios", () => {
     expect(
       screen.queryByRole("button", { name: /volver al del local/i })
     ).not.toBeInTheDocument();
+  });
+
+  describe("fotos propias por servicio", () => {
+    it("indica cuándo se usan las del local y cuándo las propias", async () => {
+      axios.get.mockResolvedValue({
+        data: {
+          precios: [
+            { ...PRECIOS[0], imagenes: ["mia.webp"], imagenesLocal: [] },
+            { ...PRECIOS[1], imagenes: [], imagenesLocal: ["local.webp"] },
+          ],
+        },
+      });
+
+      render(<MisPrecios barberoId="b1" />);
+
+      await screen.findByText("Corte");
+      expect(
+        screen.getByRole("button", { name: "1 propia" })
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: /usar las del local/i })
+      ).toBeInTheDocument();
+    });
+
+    it("pluraliza bien la cantidad de fotos propias", async () => {
+      axios.get.mockResolvedValue({
+        data: {
+          precios: [
+            { ...PRECIOS[0], imagenes: ["a.webp", "b.webp"], imagenesLocal: [] },
+          ],
+        },
+      });
+
+      render(<MisPrecios barberoId="b1" />);
+
+      expect(
+        await screen.findByRole("button", { name: "2 propias" })
+      ).toBeInTheDocument();
+    });
+
+    it("abre el modal de fotos del servicio elegido", async () => {
+      axios.get.mockResolvedValue({
+        data: {
+          precios: [{ ...PRECIOS[0], imagenes: [], imagenesLocal: [] }],
+        },
+      });
+
+      render(<MisPrecios barberoId="b1" />);
+
+      await screen.findByText("Corte");
+      await userEvent.click(
+        screen.getByRole("button", { name: /usar las del local/i })
+      );
+
+      expect(await screen.findByText("Fotos de Corte")).toBeInTheDocument();
+    });
   });
 
   describe("vista del admin sobre otro barbero", () => {

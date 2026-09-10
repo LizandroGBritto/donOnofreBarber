@@ -1,5 +1,6 @@
 const BarberoModel = require("../models/barbero.model");
 const AgendaGeneratorService = require("../services/agendaGenerator.service");
+const PreciosService = require("../services/precios.service");
 const {
   processMultipleImages,
   deleteImage,
@@ -265,6 +266,24 @@ module.exports = {
       }
       if (barbero.logo) {
         await deleteImage(barbero.logo);
+      }
+
+      // Sus precios y fotos propias por servicio se van con él: si no, quedan
+      // filas apuntando a un barbero inexistente y sus .webp huérfanos en
+      // uploads/ sin nadie que los referencie.
+      try {
+        const limpieza = await PreciosService.limpiarOverridesDeBarbero(id);
+        if (limpieza.overrides > 0) {
+          console.log(
+            `🧹 Eliminados ${limpieza.overrides} precios propios y ${limpieza.archivos} fotos de ${barbero.nombre}`
+          );
+        }
+      } catch (limpiezaError) {
+        // No se aborta el borrado del barbero por esto, pero queda registrado.
+        console.error(
+          "❌ Error limpiando precios/fotos del barbero:",
+          limpiezaError
+        );
       }
 
       await BarberoModel.findByIdAndDelete(id);

@@ -1,5 +1,9 @@
+const path = require("path");
 const ServicioModel = require("../models/servicio.model");
 const PrecioBarberoModel = require("../models/precioBarbero.model");
+const { deleteImage } = require("../utils/imageProcessor");
+
+const uploadsDir = path.join(__dirname, "..", "uploads");
 
 /**
  * Único lugar del sistema que decide cuánto cuesta un servicio con un barbero.
@@ -48,6 +52,10 @@ async function listarServiciosDeBarbero(barberoId) {
       const override = overrides.get(String(servicio._id));
       if (override && !override.activo) return null;
 
+      // Fotos propias del barbero si subió alguna; si no, las del catálogo.
+      // Es reemplazo, no mezcla (ver comentario en precioBarbero.model.js).
+      const propias = override?.imagenes || [];
+
       return {
         _id: servicio._id,
         nombre: servicio.nombre,
@@ -55,7 +63,8 @@ async function listarServiciosDeBarbero(barberoId) {
         // `|| []` no es defensivo de más: estas consultas usan .lean(), que NO
         // aplica los defaults del schema. Un servicio guardado sin el campo
         // `imagenes` vuelve como undefined y rompe el carrusel del cliente.
-        imagenes: servicio.imagenes || [],
+        imagenes: propias.length > 0 ? propias : servicio.imagenes || [],
+        imagenesPropias: propias.length > 0,
         precio: override ? override.precio : servicio.precio,
         precioGlobal: servicio.precio,
         personalizado: Boolean(override),
@@ -79,6 +88,8 @@ async function listarPreciosDeBarbero(barberoId) {
 
   return servicios.map((servicio) => {
     const override = overrides.get(String(servicio._id));
+    const propias = override?.imagenes || [];
+
     return {
       servicioId: servicio._id,
       nombre: servicio.nombre,
@@ -86,6 +97,10 @@ async function listarPreciosDeBarbero(barberoId) {
       precio: override ? override.precio : servicio.precio,
       personalizado: Boolean(override),
       activo: override ? override.activo : true,
+      // El panel necesita distinguir las propias de las del local para poder
+      // mostrar cuáles se están usando y ofrecer borrarlas.
+      imagenes: propias,
+      imagenesLocal: servicio.imagenes || [],
     };
   });
 }
@@ -224,8 +239,104 @@ async function resolverServiciosParaReserva(barberoId, servicioIds = []) {
   return { servicios: snapshot, costoTotal };
 }
 
+/**
+ * Reemplaza las fotos propias de un barbero para un servicio.
+ *
+ * Crea el override si no existía (con el precio del local, para no cambiarle
+ * el precio a alguien que solo quiso subir una foto).
+ *
+ * `nombresArchivo` son los archivos YA procesados por imageProcessor; acá solo
+ * se guardan las referencias.
+ */
+async function guardarImagenesDeBarbero(barberoId, servicioId, nombresArchivo) {
+  const servicio = await ServicioModel.findById(servicioId).lean();
+  if (!servicio) {
+    throw new ErrorServicioInvalido("El servicio no existe", {
+      servicios: [String(servicioId)],
+    });
+  }
+
+  const existente = await PrecioBarberoModel.findOne({
+    barbero: barberoId,
+    servicio: servicioId,
+  });
+
+  if (existente) {
+    existente.imagenes = [...(existente.imagenes || []), ...nombresArchivo];
+    await existente.save();
+    return existente.imagenes;
+  }
+
+  const creado = await PrecioBarberoModel.create({
+    barbero: barberoId,
+    servicio: servicioId,
+    // Subir una foto no debe cambiar el precio: hereda el del local.
+    precio: servicio.precio,
+    imagenes: nombresArchivo,
+  });
+
+  return creado.imagenes;
+}
+
+/**
+ * Quita una foto propia. Devuelve el nombre de archivo si estaba, o null.
+ *
+ * Solo borra si la foto pertenece de verdad a ese barbero y servicio: sin ese
+ * chequeo, el nombre que llega por la URL podría apuntar a la foto de otro.
+ */
+async function quitarImagenDeBarbero(barberoId, servicioId, nombreArchivo) {
+  const override = await PrecioBarberoModel.findOne({
+    barbero: barberoId,
+    servicio: servicioId,
+  });
+
+  if (!override || !(override.imagenes || []).includes(nombreArchivo)) {
+    return null;
+  }
+
+  override.imagenes = override.imagenes.filter((i) => i !== nombreArchivo);
+  await override.save();
+  return nombreArchivo;
+}
+
+/**
+ * Borra del disco las fotos propias que cuelgan de un conjunto de overrides.
+ *
+ * Sin esto, cada override eliminado dejaba sus .webp huérfanos en uploads/
+ * para siempre: nadie más los referencia y nada los limpia.
+ */
+async function borrarArchivosDeOverrides(overrides) {
+  const nombres = overrides.flatMap((o) => o.imagenes || []);
+
+  for (const nombre of nombres) {
+    await deleteImage(nombre, uploadsDir);
+  }
+
+  return nombres.length;
+}
+
+/**
+ * Limpia los overrides de un barbero que dejó de existir, con sus archivos.
+ * Lo llama barbero.controller al eliminar un barbero.
+ */
+async function limpiarOverridesDeBarbero(barberoId) {
+  const overrides = await PrecioBarberoModel.find({ barbero: barberoId }).lean();
+  const archivos = await borrarArchivosDeOverrides(overrides);
+
+  const resultado = await PrecioBarberoModel.deleteMany({ barbero: barberoId });
+
+  return { overrides: resultado.deletedCount, archivos };
+}
+
 /** Borra los overrides de un servicio que dejó de existir o se desactivó. */
 async function limpiarOverridesDeServicio(servicioId) {
+  // Primero se leen para poder borrar sus archivos: después del deleteMany ya
+  // no habría forma de saber qué .webp quedaron sin dueño.
+  const overrides = await PrecioBarberoModel.find({
+    servicio: servicioId,
+  }).lean();
+  await borrarArchivosDeOverrides(overrides);
+
   const resultado = await PrecioBarberoModel.deleteMany({
     servicio: servicioId,
   });
@@ -238,6 +349,9 @@ module.exports = {
   listarServiciosDeBarbero,
   listarPreciosDeBarbero,
   guardarPreciosDeBarbero,
+  guardarImagenesDeBarbero,
+  quitarImagenDeBarbero,
+  limpiarOverridesDeBarbero,
   resolverServiciosParaReserva,
   limpiarOverridesDeServicio,
 };

@@ -138,6 +138,30 @@ module.exports = {
       });
   },
 
+  /**
+   * Quién es el usuario de la sesión actual, según la BASE — no según lo que
+   * el cliente tenga guardado.
+   *
+   * El panel decidía qué secciones mostrar leyendo `localStorage["user"]`, que
+   * es el snapshot del último login: si a alguien le cambiaban el rol después,
+   * seguía viendo el menú viejo hasta re-loguearse, y encima ese dato lo puede
+   * editar cualquiera desde el navegador. Con esto el panel se hidrata de acá
+   * al montar.
+   *
+   * `authenticate` ya releyó el usuario de la base, así que basta con
+   * devolver lo que dejó en req.user.
+   */
+  me: (req, res) => {
+    res.json({
+      user: {
+        _id: req.user._id,
+        userName: req.user.userName,
+        rol: req.user.rol,
+        barbero: req.user.barbero,
+      },
+    });
+  },
+
   logout: (req, res) => {
     res
       .clearCookie("usertoken", {

@@ -31,6 +31,11 @@ const adminOPropio = (req, res, next) => {
 UserRouter.post("/login", loginLimiter, UserController.login);
 UserRouter.post("/logout", UserController.logout);
 
+// Quién es el usuario de la sesión. Cualquier usuario logueado puede pedir lo
+// suyo; el panel lo usa para saber qué secciones mostrar sin depender de lo
+// que tenga guardado el navegador.
+UserRouter.get("/me", authenticate, UserController.me);
+
 // Alta y baja de usuarios: solo admin.
 UserRouter.post("/register", authenticate, requireAdmin, UserController.register);
 UserRouter.get("/", authenticate, requireAdmin, UserController.getAllUsers);
