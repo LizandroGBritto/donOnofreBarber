@@ -1,6 +1,6 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import axios from "axios";
 import Servicios from "./Servicios";
 
@@ -146,6 +146,137 @@ describe("Servicios", () => {
       expect(
         await screen.findByRole("heading", { name: "Con Null" })
       ).toBeInTheDocument();
+    });
+  });
+
+  describe("tocar la tarjeta para ver la foto completa", () => {
+    const DOS_SERVICIOS = [
+      { _id: "s1", nombre: "Corte más asesoramiento", precio: 70000, imagenes: ["a.webp"] },
+      { _id: "s2", nombre: "Combo corte más barba", precio: 100000, imagenes: ["b.webp"] },
+    ];
+
+    /** El panel de info de una tarjeta, por el título que contiene. */
+    const panelDe = (nombre) =>
+      screen.getByText(nombre).closest("[aria-hidden]");
+
+    beforeEach(() => {
+      axios.get.mockResolvedValue({ data: DOS_SERVICIOS });
+    });
+
+    it("arranca con la información visible", async () => {
+      render(<Servicios barbero={LISANDRO} />);
+
+      await screen.findByText("Corte más asesoramiento");
+      expect(panelDe("Corte más asesoramiento")).toHaveAttribute(
+        "aria-hidden",
+        "false"
+      );
+    });
+
+    it("al tocar la tarjeta se oculta el texto y su fondo", async () => {
+      render(<Servicios barbero={LISANDRO} />);
+
+      const titulo = await screen.findByText("Corte más asesoramiento");
+      await userEvent.click(titulo.closest(".aspect-\\[9\\/16\\]"));
+
+      const panel = panelDe("Corte más asesoramiento");
+      expect(panel).toHaveAttribute("aria-hidden", "true");
+      expect(panel.className).toContain("opacity-0");
+      // Y deja de recibir toques, para no tapar la foto.
+      expect(panel.className).toContain("pointer-events-none");
+    });
+
+    it("al tocarla de nuevo vuelve a la normalidad", async () => {
+      render(<Servicios barbero={LISANDRO} />);
+
+      const titulo = await screen.findByText("Corte más asesoramiento");
+      const tarjeta = titulo.closest(".aspect-\\[9\\/16\\]");
+
+      await userEvent.click(tarjeta);
+      await userEvent.click(tarjeta);
+
+      expect(panelDe("Corte más asesoramiento")).toHaveAttribute(
+        "aria-hidden",
+        "false"
+      );
+    });
+
+    it("al tocar otra tarjeta, la primera vuelve a la normalidad", async () => {
+      render(<Servicios barbero={LISANDRO} />);
+
+      const primera = (
+        await screen.findByText("Corte más asesoramiento")
+      ).closest(".aspect-\\[9\\/16\\]");
+      const segunda = screen
+        .getByText("Combo corte más barba")
+        .closest(".aspect-\\[9\\/16\\]");
+
+      await userEvent.click(primera);
+      await userEvent.click(segunda);
+
+      // Solo una destapada a la vez.
+      expect(panelDe("Corte más asesoramiento")).toHaveAttribute(
+        "aria-hidden",
+        "false"
+      );
+      expect(panelDe("Combo corte más barba")).toHaveAttribute(
+        "aria-hidden",
+        "true"
+      );
+    });
+
+    it("al tocar fuera vuelve a la normalidad", async () => {
+      render(<Servicios barbero={LISANDRO} />);
+
+      const tarjeta = (
+        await screen.findByText("Corte más asesoramiento")
+      ).closest(".aspect-\\[9\\/16\\]");
+
+      await userEvent.click(tarjeta);
+      expect(panelDe("Corte más asesoramiento")).toHaveAttribute(
+        "aria-hidden",
+        "true"
+      );
+
+      await userEvent.click(document.body);
+
+      expect(panelDe("Corte más asesoramiento")).toHaveAttribute(
+        "aria-hidden",
+        "false"
+      );
+    });
+
+    it("reservar no destapa la tarjeta", async () => {
+      render(<Servicios barbero={LISANDRO} />);
+
+      await screen.findByText("Corte más asesoramiento");
+      await userEvent.click(
+        screen.getAllByRole("button", { name: /reservar turno/i })[0]
+      );
+
+      // El click en el botón no debe propagarse a la tarjeta.
+      expect(panelDe("Corte más asesoramiento")).toHaveAttribute(
+        "aria-hidden",
+        "false"
+      );
+    });
+
+    it("cambiar de barbero resetea el destapado", async () => {
+      const { rerender } = render(<Servicios barbero={LISANDRO} />);
+
+      const tarjeta = (
+        await screen.findByText("Corte más asesoramiento")
+      ).closest(".aspect-\\[9\\/16\\]");
+      await userEvent.click(tarjeta);
+
+      rerender(<Servicios barbero={ELIAS} />);
+
+      await waitFor(() =>
+        expect(panelDe("Corte más asesoramiento")).toHaveAttribute(
+          "aria-hidden",
+          "false"
+        )
+      );
     });
   });
 

@@ -13,8 +13,27 @@ const Servicios = ({ barbero }) => {
   const [servicios, setServicios] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  // Tarjeta con el panel de info oculto para dejar ver la foto entera. Es una
+  // sola: tocar otra tarjeta mueve el foco a esa, no destapa las dos.
+  const [servicioDestapado, setServicioDestapado] = useState(null);
 
   const hayBarbero = Boolean(barbero?._id);
+
+  // Tocar fuera de cualquier tarjeta devuelve todo a la normalidad. El handler
+  // de la tarjeta corta la propagación, así que este solo corre cuando el
+  // toque fue en otro lado.
+  useEffect(() => {
+    if (!servicioDestapado) return;
+
+    const alTocarFuera = () => setServicioDestapado(null);
+    document.addEventListener("click", alTocarFuera);
+    return () => document.removeEventListener("click", alTocarFuera);
+  }, [servicioDestapado]);
+
+  // Cambiar de barbero trae otro catálogo: el id destapado ya no aplica.
+  useEffect(() => {
+    setServicioDestapado(null);
+  }, [barbero?._id]);
 
   useEffect(() => {
     fetchServicios(barbero?._id);
@@ -123,8 +142,10 @@ const Servicios = ({ barbero }) => {
 
     if (fotos.length === 0) {
       return (
-        <div className="w-full h-64 bg-gradient-to-br from-purple-400 to-blue-500 rounded-lg flex items-center justify-center">
-          <span className="text-white text-lg font-semibold">{nombre}</span>
+        <div className="absolute inset-0 bg-gradient-to-br from-purple-400 to-blue-500 flex items-center justify-center">
+          <span className="text-white text-lg font-semibold px-4 text-center">
+            {nombre}
+          </span>
         </div>
       );
     }
@@ -134,28 +155,13 @@ const Servicios = ({ barbero }) => {
     }`;
 
     return (
-      <div
-        className="relative w-full h-64 rounded-lg overflow-hidden group bg-gray-950"
-        id="servicios"
-      >
-        {/* La misma foto ampliada y desenfocada como fondo. Sirve para que la
-            imagen de adelante pueda ir completa (`object-contain`) sin dejar
-            franjas negras vacías a los costados. Antes iba `object-cover`, que
-            llena el marco pero RECORTA: en una foto vertical de un corte se
-            perdía la parte de arriba y la de abajo. */}
-        <img
-          src={urlFoto}
-          alt=""
-          aria-hidden="true"
-          className="absolute inset-0 w-full h-full object-cover scale-110 blur-xl opacity-40"
-          loading="lazy"
-          decoding="async"
-        />
-
+      // Llena la tarjeta entera. La tarjeta ya tiene la proporción 9:16 de las
+      // fotos, así que `object-cover` la ajusta sin recortar nada apreciable.
+      <div className="absolute inset-0 overflow-hidden bg-gray-950" id="servicios">
         <img
           src={urlFoto}
           alt={`${nombre} - ${currentImageIndex + 1}`}
-          className="relative w-full h-full object-contain transition-transform duration-300 group-hover:scale-105"
+          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
           loading="lazy"
           decoding="async"
         />
@@ -202,12 +208,14 @@ const Servicios = ({ barbero }) => {
               </svg>
             </button>
 
-            {/* Indicadores */}
-            <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex space-x-1">
+            {/* Indicadores. Van arriba y no abajo: el borde inferior lo ocupa
+                ahora el panel de información. */}
+            <div className="absolute top-3 left-1/2 transform -translate-x-1/2 flex space-x-1 z-10">
               {fotos.map((_, index) => (
                 <button
                   key={index}
                   onClick={(e) => goToImage(e, index)}
+                  aria-label={`Ver foto ${index + 1}`}
                   className={`w-2 h-2 rounded-full transition-all duration-200 ${
                     index === currentImageIndex
                       ? "bg-white"
@@ -238,15 +246,16 @@ const Servicios = ({ barbero }) => {
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {[1, 2, 3].map((item) => (
+              // Mismo 9:16 que las tarjetas reales, para que al cargar no
+              // salte el layout.
               <div
                 key={item}
-                className="bg-white rounded-lg shadow-lg overflow-hidden animate-pulse"
+                className="relative aspect-[9/16] bg-gray-800 rounded-lg shadow-lg overflow-hidden animate-pulse border border-gray-700"
               >
-                <div className="w-full h-64 bg-gray-300"></div>
-                <div className="p-6">
-                  <div className="h-4 bg-gray-300 rounded mb-2"></div>
-                  <div className="h-3 bg-gray-300 rounded mb-4"></div>
-                  <div className="h-6 bg-gray-300 rounded"></div>
+                <div className="absolute inset-x-0 bottom-0 p-4 space-y-2">
+                  <div className="h-4 bg-gray-600 rounded"></div>
+                  <div className="h-3 bg-gray-600 rounded w-2/3"></div>
+                  <div className="h-8 bg-gray-600 rounded"></div>
                 </div>
               </div>
             ))}
@@ -297,52 +306,69 @@ const Servicios = ({ barbero }) => {
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {servicios.map((servicio) => (
-            <div
-              key={servicio._id}
-              className="bg-gray-900 rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300 group border border-gray-800"
-            >
-              {/* Carrusel de imágenes */}
-              <CarruselImagenes
-                imagenes={servicio.imagenes}
-                nombre={servicio.nombre}
-              />
+          {servicios.map((servicio) => {
+            const destapado = servicioDestapado === servicio._id;
 
-              {/* Contenido de la tarjeta */}
-              <div className="p-6">
-                {/* min-h para que las tarjetas queden alineadas aunque un
-                    nombre ocupe una línea y otro dos ("Corte más asesoramiento"
-                    vs "Combo corte más barba y asesoramiento"). */}
-                <h3 className="text-xl font-bold text-white mb-2 min-h-[3.5rem] flex items-center group-hover:text-purple-400 transition-colors duration-200">
-                  {servicio.nombre}
-                </h3>
+            return (
+              <div
+                key={servicio._id}
+                // 9:16, el mismo formato en que vienen las fotos: así la
+                // imagen llena la tarjeta sin recortarse ni dejar franjas.
+                className="relative aspect-[9/16] bg-gray-900 rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300 group border border-gray-800"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setServicioDestapado(destapado ? null : servicio._id);
+                }}
+              >
+                {/* La foto ocupa toda la tarjeta */}
+                <CarruselImagenes
+                  imagenes={servicio.imagenes}
+                  nombre={servicio.nombre}
+                />
 
-                {servicio.descripcion && (
-                  <p className="text-gray-300 mb-4 line-clamp-3">
-                    {servicio.descripcion}
-                  </p>
-                )}
+                {/* Panel de información sobre la foto, apoyado en el borde
+                    inferior. Al tocar la tarjeta se desvanece para dejar ver
+                    la foto completa; se vuelve a tocar (o se toca otra, o
+                    fuera) y regresa. */}
+                <div
+                  aria-hidden={destapado}
+                  className={`absolute inset-x-0 bottom-0 p-4 bg-black/40 backdrop-blur-md border-t border-white/10 transition-opacity duration-300 ${
+                    destapado ? "opacity-0 pointer-events-none" : "opacity-100"
+                  }`}
+                >
+                  <h3 className="text-base font-bold text-white leading-snug">
+                    {servicio.nombre}
+                  </h3>
 
-                {/* Sin barbero no se muestra precio: cada uno cobra distinto
-                    y poner el del catálogo sería prometer un número que puede
-                    no ser el que termine pagando. */}
-                {hayBarbero && (
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="text-2xl font-bold text-purple-600">
+                  {servicio.descripcion && (
+                    <p className="text-xs text-gray-200 mt-1 line-clamp-2">
+                      {servicio.descripcion}
+                    </p>
+                  )}
+
+                  {/* Sin barbero no se muestra precio: cada uno cobra distinto
+                      y poner el del catálogo sería prometer un número que puede
+                      no ser el que termine pagando. */}
+                  {hayBarbero && (
+                    <span className="block text-lg font-bold text-purple-300 mt-2">
                       Gs. {servicio.precio.toLocaleString()}
                     </span>
-                  </div>
-                )}
+                  )}
 
-                <button
-                  onClick={scrollToAgenda}
-                  className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white py-3 px-6 rounded-lg font-medium hover:from-purple-700 hover:to-blue-700 transform transition-all duration-200 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
-                >
-                  Reservar Turno
-                </button>
+                  <button
+                    onClick={(e) => {
+                      // Sin esto, reservar también destaparía la tarjeta.
+                      e.stopPropagation();
+                      scrollToAgenda();
+                    }}
+                    className="mt-3 w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white py-2 px-4 text-sm rounded-lg font-medium hover:from-purple-700 hover:to-blue-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                  >
+                    Reservar Turno
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* Call to action adicional */}
