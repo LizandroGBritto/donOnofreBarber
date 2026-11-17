@@ -4,6 +4,62 @@ Registro histórico de auditorías, decisiones técnicas e incidentes del proyec
 
 ---
 
+## 2026-11-17 — Despliegue: landing nueva, avisos push y copia diaria de Instagram
+
+**Commit desplegado:** `4bfe32b` (desde `a865826`). Casos de uso en
+`docs/casos-de-uso/`. 260 tests de server + 228 de client en verde antes de subir.
+
+**Alcance:** landing rediseñada (`client/src/landing/`); la reserva solo toma
+turnos generados (409 si no) con el índice único `turno_unico_por_barbero`;
+regla de 12 horas, celular y nombre validados en el servidor; recordatorio de
+WhatsApp sobre fecha + hora (`recordatorioEnviado` agregado al esquema); avisos
+push del cliente para su turno; copia diaria del feed de Instagram en
+`/api/instagram` con las fotos en `uploads/instagram/`.
+
+**Orden de despliegue:**
+1. `mongodump` → `/root/predeploy-2026-11-17T18-59-17.archive.gz` y copia del
+   `dist` → `/root/dist-predeploy-2026-11-17T18-59-17`.
+2. `git pull` **como root**. Hecho como `dononofre` falla a mitad de camino:
+   parte del árbol (`docs/`, `server/*`) es de root por los despliegues
+   anteriores, y dejó el working tree a medias con el HEAD viejo. Se alineó con
+   `git reset --hard origin/main` (el árbol estaba limpio antes, salvo los
+   `dist.viejo*` sin versionar, que no se tocan).
+3. `npm ci --omit=dev` en `server/`.
+4. `node scripts/indiceTurnoUnico.js` → sin duplicados; con `--ejecutar` se
+   creó el índice **antes** de reiniciar.
+5. `dist` compilado en local (`.env.production` → `https://alonzostyle.com`, 0
+   referencias a localhost), subido a `/tmp`, swap: el anterior quedó en
+   `client/dist.viejo6`.
+6. `systemctl restart dononofre.service`.
+
+**Verificación post-despliegue (contra el dominio real):**
+- Landing, `/api/barberos/activos` e `/api/instagram` → 200.
+- El contorno de neón acompaña a la mascota al deslizar (mismo recuadro).
+- Primera visita: el widget de Elfsight dibujó 8 publicaciones y la copia
+  quedó guardada (8 fotos webp). Segunda visita: **0 pedidos a Elfsight**, las
+  8 fotos servidas desde `/uploads/instagram/`.
+- Reserva a las 03:00 (fuera de la agenda) → 409 «Ese horario no está en la
+  agenda del barbero», y **0 turnos creados**.
+- 2413 agendas, 391 con cliente, sin residuos de las pruebas.
+
+**Rollback disponible:** `git reset --hard a865826 && npm ci --omit=dev` en
+`/opt/dononofre`, restaurar `/root/dist-predeploy-2026-11-17T18-59-17` (o
+`client/dist.viejo6`) sobre `client/dist`, `mongorestore` del archive si hiciera
+falta, y reiniciar. El índice `turno_unico_por_barbero` puede quedar: el código
+anterior no lo contradice.
+
+**Pendiente:**
+- `app.set("trust proxy", 1)` en `app.js`. Detrás de Nginx, `express-rate-limit`
+  ve a todos con la IP del proxy y lo avisa en el log (`ERR_ERL_UNEXPECTED_X_FORWARDED_FOR`):
+  los límites del login y de `POST /api/instagram` son globales, no por IP.
+- `POST /api/notifications/subscribe` sigue pública (fuga de datos de clientes
+  y SSRF; ver `docs/casos-de-uso/11-aviso-push.md`, P-30).
+- Probar en un celular real: el aviso push después de reservar (en iPhone,
+  con la app instalada) y que el contenedor oculto del widget no genere scroll
+  horizontal.
+
+---
+
 ## 2026-08-22 — Despliegue: precios y horarios por barbero, con roles
 
 **Commit desplegado:** `31270ae` (desde `5e54b1b`). Plan completo en
