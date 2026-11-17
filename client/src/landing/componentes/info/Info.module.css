@@ -82,6 +82,14 @@
   z-index: 0;
 }
 
+/* Teselas claras de OSM pasadas a oscuro: invertir y devolver el tono (el
+   agua sigue azulada) y bajar la saturación para que no compita con el
+   marcador. Solo la capa de teselas: el marcador y los controles quedan con
+   sus colores. */
+.mapa .teselas {
+  filter: invert(1) hue-rotate(180deg) brightness(0.8) contrast(0.95) saturate(0.35);
+}
+
 .mapa :global(.leaflet-control-attribution) {
   background: rgba(0, 0, 0, 0.6);
   color: var(--mute);

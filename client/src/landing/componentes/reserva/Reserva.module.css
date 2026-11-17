@@ -149,7 +149,16 @@
   box-shadow: 6px 6px 0 var(--shadow-off);
 }
 
+/*
+ * La tarjeta es un <button>, y un botón centra su contenido en vertical si es
+ * más alto que él. En la grilla las dos tarjetas se estiran a la altura de la
+ * más alta: si la descripción de un barbero ocupa dos renglones, la foto del
+ * otro bajaba y dejaba un hueco arriba. En columna flex el contenido arranca
+ * arriba y el sobrante queda en el cuerpo.
+ */
 .barbero {
+  display: flex;
+  flex-direction: column;
   --rot: -1.2deg;
   --rx: 0deg;
   --ry: 0deg;
@@ -249,7 +258,9 @@
 }
 
 .barberoCuerpo {
+  flex: 1;
   display: grid;
+  align-content: start;
   gap: 3px;
   min-width: 0;
   padding: 12px 12px 14px;

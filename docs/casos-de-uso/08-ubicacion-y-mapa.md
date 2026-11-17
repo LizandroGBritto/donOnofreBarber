@@ -1,7 +1,7 @@
 # 08 · Ubicación y mapa oscuro
 
-El bloque "Ubicación" muestra un mapa oscuro (Leaflet con teselas de CARTO sobre
-OpenStreetMap) con un marcador en el local, la dirección y "Ver en Google Maps", que sigue
+El bloque "Ubicación" muestra un mapa oscuro (Leaflet con las teselas de
+OpenStreetMap oscurecidas por CSS; las de CARTO pasaron a pedir API key en noviembre de 2026) con un marcador en el local, la dirección y "Ver en Google Maps", que sigue
 yendo a `enlaceMaps`. Ya no está el "Esquema ilustrativo, sin escala.".
 
 El mapa necesita coordenadas, y `enlaceMaps` en producción es un enlace corto sin ellas. Por
@@ -27,7 +27,7 @@ un mapa aproximado**: se muestran la dirección y el botón.
 |---|---|---|---|
 | U-10 | No hay ubicación cargada (404) | El bloque no aparece | `test: SeccionInfo.test.jsx` |
 | U-11 | Mientras carga | Esqueleto del bloque; el mapa tiene su propio esqueleto | `test: SeccionInfo.test.jsx` |
-| U-12 | Las teselas no cargan (sin red, CARTO caído) | Se ve el fondo oscuro con el marcador; la dirección y el botón siguen | `manual` |
+| U-12 | Las teselas no cargan (sin red, OpenStreetMap caído) | Se ve el fondo oscuro con el marcador; la dirección y el botón siguen | `manual` |
 | U-13 | Panel: "-25.28" sin longitud, o texto | El panel no guarda y avisa; el servidor responde 400 | `test: coordenadas.test.js`, `server/tests/ubicacion.test.js` |
 | U-14 | Panel: latitud 95 | 400, fuera de rango | `test: server/tests/ubicacion.test.js` |
 
@@ -39,4 +39,4 @@ un mapa aproximado**: se muestran la dirección y el botón.
 | U-21 | Se crea una ubicación inválida desde el panel | Antes dejaba el sitio sin ninguna ubicación activa; ahora se valida antes de desactivar las demás (corregido) | `test: server/tests/ubicacion.test.js` |
 | U-22 | `enlaceMaps` con `javascript:` | El botón no se publica | `test: SeccionInfo.test.jsx` |
 | U-23 | Coordenadas cargadas en el orden equivocado (lng, lat) | El mapa cae en otro lugar del mundo. Para Paraguay, la latitud es negativa entre -19 y -28; el panel podría advertirlo | `manual` (mejora posible) |
-| U-24 | Atribución de OSM y CARTO | Visible en el mapa, como exigen sus licencias | `manual` |
+| U-24 | Atribución de OpenStreetMap | Visible en el mapa, como exigen sus licencias | `manual` |

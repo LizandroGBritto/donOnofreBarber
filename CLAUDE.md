@@ -143,7 +143,8 @@ Ocultar un ítem es comodidad: la autorización la hace el servidor.
 - "Turno propio" = este dispositivo guardó `editToken:<id>` en localStorage al reservar. No se
   consulta por número de celular, a propósito.
 - three.js (poste del encabezado) y Leaflet (mapa) se cargan con import dinámico. El mapa usa
-  teselas oscuras de CARTO sobre OpenStreetMap y solo se dibuja si `Ubicacion.coordenadas`
+  las teselas de openstreetmap.org oscurecidas con un filtro CSS (las de CARTO pasaron a pedir
+  API key en noviembre de 2026) y solo se dibuja si `Ubicacion.coordenadas`
   está cargado (campo opcional, se edita en el panel como "lat, lng"); el botón sigue yendo a
   `enlaceMaps`. Los enlaces que vienen del panel pasan por `urlExterna` (solo http/https).
 - Instagram: **copia diaria en el servidor** (`InstagramFeed`, `services/instagramFeed.service.js`,

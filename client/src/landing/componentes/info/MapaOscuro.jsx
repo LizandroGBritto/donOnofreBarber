@@ -5,7 +5,14 @@ import estilos from "./Info.module.css";
 import PropTypes from "prop-types";
 
 /**
- * Mapa de OpenStreetMap en modo oscuro (teselas "Dark Matter" de CARTO).
+ * Mapa de OpenStreetMap en modo oscuro.
+ *
+ * Las teselas son las de openstreetmap.org, oscurecidas con un filtro CSS
+ * (`.mapa .teselas` en Info.module.css). Hasta noviembre de 2026 eran las
+ * "Dark Matter" de CARTO, que pasaron a pedir API key: todas las teselas
+ * llegaban como una imagen gris con "API KEY REQUIRED". Las de OSM no piden
+ * clave; su política de uso exige atribución y que el navegador mande el
+ * Referer, que es lo normal.
  *
  * Va en su propio chunk (React.lazy desde Ubicacion.jsx): Leaflet solo se baja
  * cuando la sección está por verse. El marcador es un divIcon con los colores
@@ -15,9 +22,8 @@ import PropTypes from "prop-types";
  * En celulares el mapa no se arrastra con un dedo: si no, deslizar la página
  * por encima del mapa lo movería en vez de bajar.
  */
-const TESELAS = "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
-const ATRIBUCION =
-  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>';
+const TESELAS = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
+const ATRIBUCION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
 
 const MapaOscuro = ({ lat, lng, nombre = "Alonzo Style", zoom = 16 }) => {
   const contenedorRef = useRef(null);
@@ -38,8 +44,8 @@ const MapaOscuro = ({ lat, lng, nombre = "Alonzo Style", zoom = 16 }) => {
 
     L.tileLayer(TESELAS, {
       attribution: ATRIBUCION,
-      subdomains: "abcd",
-      maxZoom: 20,
+      maxZoom: 19,
+      className: estilos.teselas,
     }).addTo(mapa);
 
     const icono = L.divIcon({
