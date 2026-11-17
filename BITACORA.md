@@ -4,6 +4,21 @@ Registro histórico de auditorías, decisiones técnicas e incidentes del proyec
 
 ---
 
+## 2026-11-17 (noche) — Landing: tarjetas de servicio, sin «próximo libre», barra oculta arriba
+
+**Commits desplegados:** `92028b3` y `537702c` (solo cliente; `dist` anterior en
+`client/dist.viejo9`, sin reiniciar el servicio). 223 tests de client en verde.
+
+- Tarjetas de servicio 30% más chicas (182 px) y sin hueco arriba de la foto.
+- Se quitó «Próximo horario libre… Tomarlo» del banner.
+- La barra del encabezado flota y solo aparece cuando la cortina llega arriba;
+  en la primera carga y arriba de todo no tapa el banner.
+
+**Verificado contra el dominio:** arriba de todo la barra está oculta y no está
+el atajo; en la reserva la barra aparece y las 3 tarjetas miden 182 px sin hueco.
+
+---
+
 ## 2026-11-17 (tarde) — Correcciones: notificaciones del panel, mapa y tarjetas
 
 **Commits desplegados:** `b763bc7`, `7d76b11` y `5ee1b97` (desde `6356952`). Sin
