@@ -115,15 +115,6 @@ export const armarDias = (turnos = [], ahora, idsPropios = new Set()) => {
     });
 };
 
-/** Primer `{ dia, turno }` libre, o null. */
-export const proximoLibre = (dias = []) => {
-  for (const dia of dias) {
-    const turno = dia.turnos.find((t) => t.estadoVista === ESTADO.LIBRE);
-    if (turno) return { dia, turno };
-  }
-  return null;
-};
-
 /** Clave del primer día con algo libre; si no hay, la del primer día. */
 export const primerDiaConLibres = (dias = []) =>
   (dias.find((d) => d.libres > 0) || dias[0])?.clave ?? null;
@@ -158,19 +149,3 @@ export const fechaLarga = (fecha) => {
   return `${DIAS_LARGOS[dia.day()]} ${dia.date()} de ${MESES[dia.month()]}`;
 };
 
-/**
- * El turno libre más cercano entre varios barberos.
- * `agendas`: `[{ barbero, dias }]`. Devuelve `{ barbero, dia, turno }` o null.
- */
-export const proximoLibreEntre = (agendas = []) => {
-  let mejor = null;
-  for (const { barbero, dias } of agendas) {
-    const libre = proximoLibre(dias);
-    if (!libre) continue;
-    const momento = momentoDelTurno(libre.turno);
-    if (!mejor || momento.isBefore(mejor.momento)) {
-      mejor = { barbero, ...libre, momento };
-    }
-  }
-  return mejor;
-};

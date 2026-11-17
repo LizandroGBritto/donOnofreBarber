@@ -49,7 +49,7 @@ const ofrecerAviso = (turno) => {
 /**
  * Asistente de reserva: barbero → servicios → horario → datos → ticket.
  *
- * El estado vive en Landing (el escenario también lo usa para "Tomarlo"); acá
+ * El estado vive en Landing (el reducer de dominio/reserva.js); acá
  * se cargan los datos del barbero elegido, se coordinan los pasos y se
  * confirma contra el servidor.
  */

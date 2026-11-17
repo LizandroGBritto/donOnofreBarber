@@ -27,7 +27,7 @@ las marcadas como corregidas.
 | 03 | [03-elegir-horario.md](03-elegir-horario.md) | Paso 3: días y turnos |
 | 04 | [04-datos-y-confirmacion.md](04-datos-y-confirmacion.md) | Paso 4: datos y reserva |
 | 05 | [05-ticket-y-edicion.md](05-ticket-y-edicion.md) | Ticket, turno propio y edición |
-| 06 | [06-escenario-y-banner.md](06-escenario-y-banner.md) | Banner fijo, "Tomarlo" y panel sin Banners |
+| 06 | [06-escenario-y-banner.md](06-escenario-y-banner.md) | Banner fijo y panel sin Banners |
 | 07 | [07-instagram.md](07-instagram.md) | Feed de Instagram forzado al estilo de la demo |
 | 08 | [08-ubicacion-y-mapa.md](08-ubicacion-y-mapa.md) | Mapa oscuro y coordenadas en el panel |
 | 09 | [09-horarios-y-apertura.md](09-horarios-y-apertura.md) | Horarios del local y "abierto ahora" |

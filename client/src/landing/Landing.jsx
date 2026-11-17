@@ -6,68 +6,28 @@ import SeccionInstagram from "./componentes/instagram/SeccionInstagram";
 import { ProveedorNotificaciones } from "./componentes/Notificaciones";
 import Pie from "./componentes/Pie";
 import Reserva from "./componentes/reserva/Reserva";
-import {
-  listarBarberos,
-  listarHorariosDelLocal,
-  listarTurnosDeBarbero,
-  obtenerContacto,
-  obtenerUbicacion,
-} from "./datos/clienteLanding";
+import { listarBarberos, listarHorariosDelLocal, obtenerContacto, obtenerUbicacion } from "./datos/clienteLanding";
 import { usePeticion } from "./datos/usePeticion";
-import { armarDias, proximoLibreEntre } from "./dominio/agenda";
 import { estadoApertura, resumirHorarios } from "./dominio/horariosLocal";
 import { estadoInicial, reservaReducer } from "./dominio/reserva";
-import { idsDeTurnosPropios } from "./dominio/turnosPropios";
 import { useAhora } from "./hooks/useAhora";
+import { useBarraVisible } from "./hooks/useBarraVisible";
 import { useMovimientoReducido } from "./hooks/useMovimientoReducido";
 import comunes from "./estilos/comunes.module.css";
 import "./estilos/tokens.css";
 import estilos from "./Landing.module.css";
-
-/**
- * El turno libre más cercano entre todos los barberos, para el atajo
- * "Tomarlo" del escenario. Reusa la caché de turnos que después usa el paso 3.
- */
-const useProximoLibre = (peticionBarberos, ahora) => {
-  const barberos = peticionBarberos.datos;
-  const ids = (barberos || []).map((b) => b._id).join(",");
-  const agendas = usePeticion(
-    () =>
-      Promise.all(
-        barberos.map((b) => listarTurnosDeBarbero(b._id).then((turnos) => ({ barbero: b, turnos })))
-      ),
-    [ids],
-    { habilitado: Boolean(ids) }
-  );
-
-  const libre = useMemo(() => {
-    if (!agendas.datos) return null;
-    const propios = idsDeTurnosPropios();
-    return proximoLibreEntre(
-      agendas.datos.map(({ barbero, turnos }) => ({ barbero, dias: armarDias(turnos, ahora, propios) }))
-    );
-  }, [agendas.datos, ahora]);
-
-  return {
-    // Sin barberos (cargados y ninguno activo) no hay nada que buscar: se
-    // informa "no hay libres". Mientras cargan, se sigue esperando.
-    cargando: peticionBarberos.cargando || agendas.cargando,
-    error: peticionBarberos.error || agendas.error,
-    libre,
-  };
-};
 
 const Landing = () => {
   const ahora = useAhora();
   const reducido = useMovimientoReducido();
   const cortinaRef = useRef(null);
   const [reserva, despachar] = useReducer(reservaReducer, estadoInicial);
+  const barraVisible = useBarraVisible(cortinaRef);
 
   const barberos = usePeticion(listarBarberos, []);
   const horarios = usePeticion(listarHorariosDelLocal, []);
   const contacto = usePeticion(obtenerContacto, []);
   const ubicacion = usePeticion(obtenerUbicacion, []);
-  const proximo = useProximoLibre(barberos, ahora);
 
   const filasHorario = useMemo(() => resumirHorarios(horarios.datos || []), [horarios.datos]);
   const apertura = useMemo(
@@ -81,21 +41,9 @@ const Landing = () => {
     return () => document.documentElement.classList.remove("landing-activa");
   }, []);
 
-  const irAReservar = useCallback(() => {
-    document.getElementById("reservar")?.scrollIntoView({ behavior: reducido ? "auto" : "smooth", block: "start" });
-  }, [reducido]);
-
   const volverArriba = useCallback(() => {
     document.getElementById("inicio")?.scrollIntoView({ behavior: reducido ? "auto" : "smooth", block: "start" });
   }, [reducido]);
-
-  const tomarProximo = useCallback(
-    ({ barbero, dia, turno }) => {
-      despachar({ type: "tomarProximo", barberoId: barbero._id, diaClave: dia.clave, turnoId: turno._id });
-      irAReservar();
-    },
-    [irAReservar]
-  );
 
   return (
     <ProveedorNotificaciones>
@@ -103,9 +51,9 @@ const Landing = () => {
         <a className={estilos.saltar} href="#reservar">
           Ir a reservar
         </a>
-        <Encabezado abierto={Boolean(apertura?.abierto)} />
+        <Encabezado abierto={Boolean(apertura?.abierto)} visible={barraVisible} />
 
-        <Escenario cortinaRef={cortinaRef} proximo={{ ...proximo, ahora }} onTomarProximo={tomarProximo} />
+        <Escenario cortinaRef={cortinaRef} />
 
         <div ref={cortinaRef} className={estilos.cortina}>
           <main className={comunes.contenedor}>

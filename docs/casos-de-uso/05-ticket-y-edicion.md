@@ -30,4 +30,3 @@ y total). Tocarlo lo da vuelta y muestra cómo llegar. "Modificar o cancelar" ll
 | T-21 | Se edita a mano localStorage y se agrega `editToken:<id ajeno>` con cualquier valor | En la landing se vería "Tu turno" en ese horario, pero el servidor rechaza cualquier edición sin el token real. Es cosmético | `manual` |
 | T-22 | Un barbero opera sobre el turno de otro con `POST /:id/generar-token` o `/delete-and-create/:id` | Debería rechazarse. **BRECHA**: esas rutas solo llevan `authenticate` | **BRECHA** |
 | T-24 | El admin libera un turno con `delete-and-create` | El horario debería volver a la agenda de ese barbero. **BRECHA**: el turno nuevo se crea sin `barbero`, así que no aparece en la reserva pública hasta que corre el generador (que crea otro) | **BRECHA** |
-| T-23 | Ticket de una reserva y "Tomarlo" desde el escenario | "Tomarlo" descarta el ticket anterior y arma una reserva nueva | `test: reserva.test.js` |

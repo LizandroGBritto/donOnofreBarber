@@ -5,7 +5,9 @@
  */
 
 .anclaje {
-  --alto: max(520px, calc(100svh - 124px - env(safe-area-inset-top, 0px)));
+  /* 56px: lo que asoma la cortina abajo. La barra del encabezado ya no resta:
+     flota y está oculta mientras se ve el escenario. */
+  --alto: max(520px, calc(100svh - 56px - env(safe-area-inset-top, 0px)));
   position: relative;
   height: calc(var(--alto) + var(--sobre));
 }
@@ -14,7 +16,7 @@
   --p: 0;
   --fg: #f5f3ff;
   position: sticky;
-  top: calc(var(--barra) + env(safe-area-inset-top, 0px));
+  top: env(safe-area-inset-top, 0px);
   height: var(--alto);
   background: #000000;
   color: var(--fg);
@@ -183,17 +185,3 @@
   outline-color: #f5f3ff;
 }
 
-.proximo {
-  color: #b9b0d6;
-  text-align: center;
-  font-size: 0.9375rem;
-}
-
-.proximo strong {
-  color: #f5f3ff;
-}
-
-.proximoEsqueleto {
-  display: inline-block;
-  vertical-align: middle;
-}

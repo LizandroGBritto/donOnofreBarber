@@ -4,11 +4,9 @@ import neonSilueta from "../../assets/escenario/neon-silueta.webp";
 import neonContorno from "../../assets/escenario/neon-contorno.webp";
 import { useMovimientoReducido } from "../../hooks/useMovimientoReducido";
 import Brasas from "./Brasas";
-import ProximoLibre from "./ProximoLibre";
 import { useProgresoCortina } from "./useProgresoCortina";
 import comunes from "../../estilos/comunes.module.css";
 import estilos from "./Escenario.module.css";
-import PropTypes from "prop-types";
 import * as T from "../../tiposProps";
 
 /**
@@ -18,7 +16,7 @@ import * as T from "../../tiposProps";
  * cambiar la imagen rompería las capas del neón, que están recortadas a la
  * silueta de esta mascota.
  */
-const Escenario = ({ cortinaRef, proximo, onTomarProximo }) => {
+const Escenario = ({ cortinaRef }) => {
   const escenarioRef = useRef(null);
   const movimientoReducido = useMovimientoReducido();
   const progresoRef = useProgresoCortina(escenarioRef, cortinaRef, !movimientoReducido);
@@ -53,7 +51,6 @@ const Escenario = ({ cortinaRef, proximo, onTomarProximo }) => {
           <a className={`${comunes.btn} ${comunes.primario}`} href="#reservar">
             Reservar turno
           </a>
-          <ProximoLibre {...proximo} onTomar={onTomarProximo} />
         </div>
       </div>
     </section>
@@ -62,13 +59,6 @@ const Escenario = ({ cortinaRef, proximo, onTomarProximo }) => {
 
 Escenario.propTypes = {
   cortinaRef: T.ref.isRequired,
-  proximo: PropTypes.shape({
-    cargando: PropTypes.bool.isRequired,
-    error: PropTypes.any,
-    libre: T.proximoLibre,
-    ahora: T.momento.isRequired,
-  }).isRequired,
-  onTomarProximo: PropTypes.func.isRequired,
 };
 
 export default Escenario;

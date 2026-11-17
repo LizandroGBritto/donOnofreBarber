@@ -113,11 +113,4 @@ export const estadoReserva = PropTypes.shape({
   confirmado: turnoConfirmado,
 });
 
-/** Lo que devuelve `proximoLibreEntre`: { barbero, dia, turno, momento }. */
-export const proximoLibre = PropTypes.shape({
-  barbero: barbero.isRequired,
-  dia: dia.isRequired,
-  turno: turnoVista.isRequired,
-});
-
 export const ref = PropTypes.oneOfType([PropTypes.func, PropTypes.shape({ current: PropTypes.any })]);

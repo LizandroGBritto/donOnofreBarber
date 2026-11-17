@@ -42,17 +42,6 @@ export function reservaReducer(estado, accion) {
       };
     }
 
-    case "tomarProximo":
-      return {
-        ...estado,
-        barberoId: accion.barberoId,
-        diaClave: accion.diaClave,
-        turnoId: accion.turnoId,
-        paso: 2,
-        aviso: null,
-        confirmado: null,
-      };
-
     case "alternarServicio": {
       const ya = estado.servicioIds.includes(accion.servicioId);
       return {

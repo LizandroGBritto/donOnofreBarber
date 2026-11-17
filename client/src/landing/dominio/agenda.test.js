@@ -9,8 +9,6 @@ import {
   etiquetaEnOracion,
   fechaLarga,
   primerDiaConLibres,
-  proximoLibre,
-  proximoLibreEntre,
   siguienteDiaConLibres,
 } from "./agenda";
 
@@ -92,11 +90,6 @@ describe("búsqueda de libres", () => {
     ahora
   );
 
-  it("proximoLibre salta los días llenos", () => {
-    expect(proximoLibre(dias).turno._id).toBe("2");
-    expect(proximoLibre([])).toBeNull();
-  });
-
   it("primerDiaConLibres cae al primer día si ninguno tiene libres", () => {
     expect(primerDiaConLibres(dias)).toBe("2026-11-19");
     const llenos = armarDias([turno("1", 18, "10:00", "reservado")], ahora);
@@ -109,19 +102,6 @@ describe("búsqueda de libres", () => {
     expect(siguienteDiaConLibres(dias, "2026-11-20")).toBeNull();
   });
 
-  it("proximoLibreEntre elige el turno más cercano entre barberos", () => {
-    const deAna = armarDias([turno("a", 19, "09:00")], ahora);
-    const deBeto = armarDias([turno("b", 18, "16:00")], ahora);
-    const sinLibres = armarDias([turno("c", 18, "11:00", "reservado")], ahora);
-    const libre = proximoLibreEntre([
-      { barbero: { nombre: "Ana" }, dias: deAna },
-      { barbero: { nombre: "Beto" }, dias: deBeto },
-      { barbero: { nombre: "Ciro" }, dias: sinLibres },
-    ]);
-    expect(libre.barbero.nombre).toBe("Beto");
-    expect(libre.turno._id).toBe("b");
-    expect(proximoLibreEntre([])).toBeNull();
-  });
 });
 
 describe("etiquetas", () => {

@@ -79,13 +79,6 @@ describe("reservaReducer: cambios que invalidan lo elegido", () => {
     expect(reservaReducer(sinTurno, { type: "perderTurno" })).toBe(sinTurno);
   });
 
-  it("tomarProximo arma la reserva desde el escenario y descarta un ticket anterior", () => {
-    const estado = reservaReducer(
-      { ...estadoInicial, confirmado: { _id: "viejo" } },
-      { type: "tomarProximo", barberoId: "b9", diaClave: "2026-11-20", turnoId: "t9" }
-    );
-    expect(estado).toMatchObject({ paso: 2, barberoId: "b9", diaClave: "2026-11-20", turnoId: "t9", confirmado: null });
-  });
 });
 
 describe("reservaReducer: navegación y casos raros", () => {
