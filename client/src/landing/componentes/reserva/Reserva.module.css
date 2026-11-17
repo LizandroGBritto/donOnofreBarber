@@ -313,9 +313,10 @@
   }
 }
 
+/* 30% más chicas que las originales (min(72vw, 260px)), a pedido del cliente. */
 .servicio,
 .servicioEsqueleto {
-  flex: 0 0 min(72vw, 260px);
+  flex: 0 0 min(50vw, 182px);
   scroll-snap-align: start;
   position: relative;
   display: block;
@@ -329,7 +330,12 @@
   color: var(--text);
 }
 
+/* Columna flex por lo mismo que .barbero: el carril estira las tarjetas a la
+   altura de la más alta y el botón centraba su contenido, dejando un hueco
+   arriba de la foto en las de descripción más corta. */
 .servicio {
+  display: flex;
+  flex-direction: column;
   cursor: pointer;
 }
 
@@ -344,11 +350,11 @@
 
 .casilla {
   position: absolute;
-  top: 12px;
-  right: 12px;
+  top: 10px;
+  right: 10px;
   z-index: 1;
-  width: 34px;
-  height: 34px;
+  width: 28px;
+  height: 28px;
   border-radius: 10px;
   border: 3px solid var(--card-line);
   background: var(--surface);
@@ -372,8 +378,8 @@
 /* Precio con forma de navaja */
 .navaja {
   position: absolute;
-  left: 12px;
-  bottom: 16px;
+  left: 8px;
+  bottom: 12px;
   z-index: 1;
   display: flex;
   align-items: center;
@@ -386,8 +392,8 @@
 
 .hoja {
   display: block;
-  width: 40px;
-  height: 24px;
+  width: 28px;
+  height: 19px;
   margin-right: -3px;
   background: linear-gradient(180deg, #3e3b50 0 20%, #f0eef6 20% 36%, #8a869b 36% 66%, #3a374c 66% 100%);
   clip-path: polygon(0 100%, 5% 14%, 100% 14%, 100% 100%);
@@ -397,12 +403,12 @@
   position: relative;
   display: flex;
   align-items: center;
-  height: 32px;
-  padding: 0 13px 0 15px;
-  border-radius: 3px 16px 16px 3px;
+  height: 26px;
+  padding: 0 10px 0 13px;
+  border-radius: 3px 13px 13px 3px;
   background: linear-gradient(180deg, #ffa23a, #d96a00 55%, #9a4300);
   color: var(--on-accent);
-  font: 400 0.95rem/1 var(--f-display);
+  font: 400 0.8rem/1 var(--f-display);
 }
 
 .mango::before {
@@ -419,20 +425,22 @@
 }
 
 .servicioTexto {
+  flex: 1;
   display: grid;
+  align-content: start;
   gap: 3px;
-  padding: 14px 16px 16px;
+  padding: 10px 12px 12px;
 }
 
 .servicioTexto strong {
-  font-size: 1.0625rem;
+  font-size: 0.9375rem;
   font-weight: 700;
   line-height: 1.25;
 }
 
 .servicioTexto small {
   color: var(--mute);
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
 }
 
 /* ---------- Horario ---------- */
