@@ -8,7 +8,7 @@ y total). Tocarlo lo da vuelta y muestra cómo llegar. "Modificar o cancelar" ll
 
 | ID | Escenario | Resultado esperado | Cobertura |
 |---|---|---|---|
-| T-01 | Reserva confirmada | Ticket con hora, fecha larga, cliente, barbero, servicios, total y código `AS-DDMM-HHXX` | `test: Reserva.test.jsx`, `formato.test.js` |
+| T-01 | Reserva confirmada | Ticket con hora, fecha larga, cliente, barbero, servicios y total. Sin código de turno: se quitó el 2026-11-17 porque no servía para nada | `test: Reserva.test.jsx` |
 | T-02 | Se toca el ticket o el botón "Dar vuelta" | Muestra dirección, horarios e Instagram; la cara oculta queda `inert` | `manual` |
 | T-03 | "Nueva reserva" | Vuelve al paso 1 vacío y la agenda se pide de nuevo | `test: reserva.test.js` (reiniciar) |
 | T-04 | Volver a la landing después de reservar | En el paso 3 ese turno aparece como "Tu turno" | `test: agenda.test.js` |

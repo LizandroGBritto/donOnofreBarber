@@ -128,7 +128,8 @@ describe("Reserva: recorrido completo", () => {
     });
     expect(localStorage.getItem("editToken:t-libre")).toBe("token-secreto");
     expect(cliente.invalidarTurnos).toHaveBeenCalledWith("b1");
-    expect(screen.getByText("AS-1811-11LA")).toBeInTheDocument();
+    // El ticket no muestra un código de turno: no servía para nada.
+    expect(screen.queryByText(/^AS-\d{4}-/)).not.toBeInTheDocument();
   });
 
   it("no muestra turnos pasados y deshabilita los ocupados", async () => {

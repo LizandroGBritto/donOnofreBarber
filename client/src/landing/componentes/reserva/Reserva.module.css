@@ -563,7 +563,14 @@
   color: var(--mute);
 }
 
-.entrada {
+/*
+ * `.campo .entrada` y no `.entrada` sola: el CSS global del panel (Tailwind
+ * forms) trae `[type="text"], [type="tel"] { background: #fff; border-radius: 0 }`
+ * con la misma especificidad, y en el build de producción se carga después.
+ * Ganaba él: campo blanco con el texto claro, que no se veía al escribir.
+ * También su `:focus` pone borde azul y un anillo de box-shadow.
+ */
+.campo .entrada {
   width: 100%;
   min-height: 54px;
   border-radius: 14px;
@@ -572,15 +579,27 @@
   color: var(--text);
   padding: 0 16px;
   font: 500 1.0625rem var(--f-body);
+  box-shadow: none;
 }
 
-.entrada:focus-visible {
+.campo .entrada:focus {
   border-color: var(--text);
   outline: none;
+  box-shadow: none;
 }
 
-.entrada[aria-invalid="true"] {
+.campo .entrada[aria-invalid="true"] {
   border-color: var(--warn);
+}
+
+/* Autocompletado del navegador: sin esto lo pinta de claro y el texto se pierde. */
+.campo .entrada:-webkit-autofill,
+.campo .entrada:-webkit-autofill:hover,
+.campo .entrada:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--text);
+  caret-color: var(--text);
+  box-shadow: 0 0 0 1000px var(--surface) inset;
+  transition: background-color 600000s 0s;
 }
 
 .ayuda {

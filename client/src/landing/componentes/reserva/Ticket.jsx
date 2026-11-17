@@ -2,7 +2,6 @@ import { forwardRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { fechaLarga } from "../../dominio/agenda";
 import { guaranies } from "../../dominio/formato";
-import { codigoDeTurno } from "../../dominio/ticket";
 import comunes from "../../estilos/comunes.module.css";
 import estilos from "./Reserva.module.css";
 import PropTypes from "prop-types";
@@ -54,7 +53,6 @@ const Ticket = forwardRef(function Ticket({ turno, barbero, ubicacion, filasHora
                 <dd>{guaranies(total)}</dd>
               </div>
             </dl>
-            <p className={estilos.codigo}>{codigoDeTurno(turno, barbero)}</p>
           </div>
 
           <div className={`${estilos.cara} ${estilos.dorso}`} inert={dado ? undefined : ""}>

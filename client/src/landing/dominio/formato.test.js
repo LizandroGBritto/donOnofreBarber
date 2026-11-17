@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { nombreValido } from "./celular";
 import { contar, guaranies, iniciales, primerNombre, soloDigitos, urlExterna, usuarioInstagram } from "./formato";
-import { codigoDeTurno } from "./ticket";
 
 describe("guaranies", () => {
   it("formatea enteros con punto de miles", () => {
@@ -48,17 +47,6 @@ describe("nombre", () => {
     expect(nombreValido("Juan 2")).toBe(false);
     expect(nombreValido("<script>")).toBe(false);
     expect(nombreValido("a".repeat(61))).toBe(false);
-  });
-});
-
-describe("codigoDeTurno", () => {
-  it("combina día, mes, hora e iniciales del barbero", () => {
-    const turno = { fecha: "2026-11-18T03:00:00.000Z", hora: "10:00" };
-    expect(codigoDeTurno(turno, { nombre: "Lisandro Alonzo" })).toBe("AS-1811-10LA");
-  });
-
-  it("sin barbero no falla", () => {
-    expect(codigoDeTurno({ fecha: "2026-11-18T03:00:00.000Z", hora: "09:30" }, null)).toBe("AS-1811-09");
   });
 });
 
