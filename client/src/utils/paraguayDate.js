@@ -1,4 +1,9 @@
-import moment from "moment-timezone";
+// Build con datos de 1970 a 2030 (~130 KB) en lugar de todas las zonas de
+// todos los años (~730 KB), que iba entero en el chunk de la landing.
+// Para America/Asuncion alcanza: desde octubre de 2024 rige -03 fijo, así
+// que las fechas posteriores a 2030 se calculan igual. Si se suma otra zona,
+// revisar que el rango le sirva.
+import moment from "moment-timezone/builds/moment-timezone-with-data-1970-2030";
 
 // Zona horaria de Paraguay
 const PARAGUAY_TIMEZONE = "America/Asuncion";

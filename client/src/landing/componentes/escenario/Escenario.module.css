@@ -1,0 +1,199 @@
+/*
+ * El escenario queda anclado (sticky) mientras la cortina sube. `--p` va de 0
+ * a 1 con el desplazamiento (ver useProgresoCortina) y mueve cada capa.
+ * El fondo es negro siempre porque la mascota tiene fondo negro.
+ */
+
+.anclaje {
+  --alto: max(520px, calc(100svh - 124px - env(safe-area-inset-top, 0px)));
+  position: relative;
+  height: calc(var(--alto) + var(--sobre));
+}
+
+.escenario {
+  --p: 0;
+  --fg: #f5f3ff;
+  position: sticky;
+  top: calc(var(--barra) + env(safe-area-inset-top, 0px));
+  height: var(--alto);
+  background: #000000;
+  color: var(--fg);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 10px var(--gutter-der) 26px var(--gutter-izq);
+}
+
+.arte {
+  position: relative;
+  isolation: isolate;
+  flex: none;
+  align-self: center;
+  width: min(calc(100% + 2 * var(--gutter-izq)), 60svh);
+  aspect-ratio: 1 / 1;
+  /* Retroceso al deslizar: lo comparten la mascota y su neón, que está
+     recortado a la silueta y tiene que acompañarla exacto. */
+  --retroceso: translateY(calc(var(--p) * -7%)) scale(calc(1 - var(--p) * 0.2));
+}
+
+.mascota {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 9%, #000 91%, transparent);
+  mask-image: linear-gradient(to bottom, transparent, #000 9%, #000 91%, transparent);
+  transform-origin: 50% 40%;
+  transform: var(--retroceso);
+  opacity: calc(1 - var(--p) * 0.5);
+}
+
+/* Contorno de neón violeta que sigue la silueta de la mascota */
+@property --angulo {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+.neon {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  opacity: calc(1 - var(--p) * 0.8);
+  /* Mismo origen y transformación que .mascota: si no, el contorno se queda
+     quieto mientras la mascota retrocede. */
+  transform-origin: 50% 40%;
+  transform: var(--retroceso);
+}
+
+.neon img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.neonBrillo {
+  filter: blur(7px) saturate(1.6) drop-shadow(0 0 10px #8b5cf6);
+  opacity: 0.95;
+  animation: pulso 3.4s ease-in-out infinite;
+}
+
+.neonLinea {
+  filter: drop-shadow(0 0 3px #a97cff) drop-shadow(0 0 9px #7c3aed);
+}
+
+.neonContorno {
+  filter: blur(0.4px) drop-shadow(0 0 6px #d946ef);
+  opacity: 0.75;
+  animation: parpadeo 4.2s steps(1, end) infinite;
+}
+
+.neonRecorrido {
+  filter: brightness(1.7) drop-shadow(0 0 6px #fff);
+  -webkit-mask-image: conic-gradient(from var(--angulo) at 48% 52%, transparent 0 72%, #000 90%, transparent);
+  mask-image: conic-gradient(from var(--angulo) at 48% 52%, transparent 0 72%, #000 90%, transparent);
+  animation: recorrido 5.5s linear infinite;
+}
+
+@keyframes recorrido {
+  to {
+    --angulo: 360deg;
+  }
+}
+
+@keyframes pulso {
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@keyframes parpadeo {
+  0%,
+  100% {
+    opacity: 0.75;
+  }
+  46% {
+    opacity: 0.75;
+  }
+  48% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.8;
+  }
+  52% {
+    opacity: 0.4;
+  }
+  54% {
+    opacity: 0.75;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .neon img {
+    animation: none !important;
+  }
+  .neonRecorrido {
+    display: none;
+  }
+}
+
+.brasas {
+  position: absolute;
+  inset: -14%;
+  width: 128%;
+  height: 128%;
+  pointer-events: none;
+  mix-blend-mode: screen;
+}
+
+.titulo {
+  text-align: center;
+  max-width: 12ch;
+  color: var(--fg);
+  font: 400 clamp(2.1rem, 10.5vw, 3rem) / 1.02 var(--f-display);
+  text-wrap: balance;
+  text-shadow: 3px 3px 0 var(--head-shadow);
+  transform: translateY(calc(var(--p) * 24px));
+  opacity: calc(1 - var(--p) * 1.3);
+}
+
+.llamado {
+  width: min(100%, 340px);
+  display: grid;
+  gap: 10px;
+  justify-items: center;
+  opacity: calc(1 - var(--p) * 1.1);
+}
+
+.llamado > a {
+  width: 100%;
+  border-color: #f5f3ff;
+  transform: rotate(-1deg);
+}
+
+.llamado :focus-visible {
+  outline-color: #f5f3ff;
+}
+
+.proximo {
+  color: #b9b0d6;
+  text-align: center;
+  font-size: 0.9375rem;
+}
+
+.proximo strong {
+  color: #f5f3ff;
+}
+
+.proximoEsqueleto {
+  display: inline-block;
+  vertical-align: middle;
+}

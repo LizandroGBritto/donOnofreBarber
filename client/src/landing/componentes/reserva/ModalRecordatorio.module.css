@@ -1,0 +1,84 @@
+.fondo {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: end center;
+  padding: 16px;
+  background: var(--glass);
+  animation: aparecer 0.18s ease-out;
+}
+
+.caja {
+  display: grid;
+  gap: 12px;
+  width: 100%;
+  max-width: 420px;
+  padding: 24px 20px 20px;
+  border-radius: 24px;
+  border: 3px solid var(--violet);
+  background: var(--surface);
+  box-shadow: 6px 6px 0 var(--violet);
+  color: var(--text);
+  text-align: center;
+  animation: subir 0.22s ease-out;
+}
+
+.icono {
+  justify-self: center;
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--raise);
+  color: var(--accent);
+}
+
+.titulo {
+  font: 400 1.35rem/1.2 var(--f-display);
+}
+
+.texto {
+  color: var(--mute);
+  line-height: 1.45;
+  margin-bottom: 4px;
+}
+
+.aviso {
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 2px solid var(--warn);
+  color: var(--text);
+  text-align: left;
+}
+
+.aviso strong {
+  color: var(--warn);
+}
+
+@media (min-width: 640px) {
+  .fondo {
+    place-items: center;
+  }
+}
+
+@keyframes aparecer {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes subir {
+  from {
+    transform: translateY(16px);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fondo,
+  .caja {
+    animation: none;
+  }
+}

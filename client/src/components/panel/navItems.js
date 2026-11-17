@@ -1,7 +1,6 @@
 import {
   HiChartBar,
   HiCalendar,
-  HiPhotograph,
   HiPhone,
   HiLocationMarker,
   HiClock,
@@ -29,7 +28,11 @@ export const NAV_ITEMS = [
   { id: "turnos", label: "Turnos", icon: HiCalendar, roles: ["admin", "barbero"] },
   { id: "mis-precios", label: "Mis Precios", icon: HiCurrencyDollar, roles: ["barbero"] },
   { id: "mis-horarios", label: "Mis Horarios", icon: HiClock, roles: ["barbero"] },
-  { id: "banners", label: "Banners", icon: HiPhotograph, roles: ["admin"] },
+  // Banners NO está en el menú a propósito: la landing usa un banner fijo (la
+  // mascota con el neón y la cortina al deslizar, en src/landing/) y un banner
+  // cargado desde el panel rompería ese efecto. El módulo sigue existiendo en
+  // el servidor; para volver a publicarlo hay que devolver este ítem y hacer
+  // que la landing lo lea.
   { id: "contacto", label: "Contacto", icon: HiPhone, roles: ["admin"] },
   { id: "ubicacion", label: "Ubicación", icon: HiLocationMarker, roles: ["admin"] },
   { id: "horarios", label: "Horarios", icon: HiClock, roles: ["admin"] },

@@ -68,8 +68,12 @@ self.addEventListener("notificationclick", (event) => {
 
   event.notification.close();
 
-  const { action, data } = event;
-  const url = data?.url || "/admin";
+  // Los datos van en la notificación: `event.data` no existe en este evento
+  // (antes todas las notificaciones abrían /admin por leer de ahí).
+  const { action } = event;
+  const data = event.notification.data || {};
+  // Solo rutas del mismo sitio.
+  const url = typeof data.url === "string" && data.url.startsWith("/") ? data.url : "/admin";
 
   if (action === "close") {
     return;
@@ -79,12 +83,22 @@ self.addEventListener("notificationclick", (event) => {
   event.waitUntil(
     self.clients
       .matchAll({ type: "window", includeUncontrolled: true })
-      .then((clients) => {
+      .then(async (clients) => {
+        const destino = self.location.origin + url;
         // Buscar si ya hay una ventana abierta
         for (const client of clients) {
-          if (client.url.includes(self.location.origin)) {
-            // Si hay una ventana abierta, enfocarla y navegar a la URL
-            client.focus();
+          if (client.url.startsWith(self.location.origin)) {
+            await client.focus();
+            // navigate() funciona en cualquier pantalla (la landing no
+            // escucha mensajes); el mensaje queda para el panel.
+            if ("navigate" in client) {
+              try {
+                await client.navigate(destino);
+                return;
+              } catch {
+                /* ventana no controlada: se sigue con el mensaje */
+              }
+            }
             client.postMessage({
               type: "NAVIGATE",
               url: url,
@@ -95,7 +109,7 @@ self.addEventListener("notificationclick", (event) => {
         }
 
         // Si no hay ventana abierta, abrir una nueva
-        return self.clients.openWindow(self.location.origin + url);
+        return self.clients.openWindow(destino);
       })
   );
 });

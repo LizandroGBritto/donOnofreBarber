@@ -30,6 +30,10 @@ describe("menú del panel por rol", () => {
     }
   });
 
+  it("Banners no se publica en el menú: la landing usa un banner fijo", () => {
+    expect(NAV_ITEMS.map((i) => i.id)).not.toContain("banners");
+  });
+
   it("el admin ve todo menos los paneles personales del barbero", () => {
     const ids = idsDe("admin");
     expect(ids).toContain("usuarios");

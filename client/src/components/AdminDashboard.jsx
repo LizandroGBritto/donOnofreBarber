@@ -22,6 +22,10 @@ import VistaPreviaArchivo from "./panel/VistaPreviaArchivo";
 import { itemsParaRol, vistaInicialParaRol } from "./panel/navItems";
 import NotificationManager from "./NotificationManager";
 import UserContext from "../context/UserContext";
+import {
+  parsearCoordenadas,
+  formatearCoordenadas,
+} from "../utils/coordenadas";
 // Los iconos del menú ahora viven en panel/navItems.js, junto con su ítem.
 import { HiLogout, HiHome, HiMenu, HiX } from "react-icons/hi";
 
@@ -235,7 +239,11 @@ const AdminDashboard = () => {
   const [ubicacionForm, setUbicacionForm] = useState({
     direccion: "",
     enlaceMaps: "",
+    // Texto tal como lo copia Google Maps ("-27.33, -55.86"). Es lo que
+    // ubica el mapa de la landing; vacío = sin mapa.
+    coordenadas: "",
   });
+  const [errorCoordenadas, setErrorCoordenadas] = useState("");
   const [showUbicacionModal, setShowUbicacionModal] = useState(false);
 
   // Estados para gestión de horarios
@@ -639,13 +647,23 @@ const AdminDashboard = () => {
   };
 
   const saveUbicacion = async () => {
+    const coordenadas = parsearCoordenadas(ubicacionForm.coordenadas);
+    if (!coordenadas) {
+      setErrorCoordenadas(
+        "Pegá latitud y longitud separadas por coma, con punto decimal. Ej: -27.3301, -55.8662"
+      );
+      return;
+    }
+    setErrorCoordenadas("");
+    const datos = { ...ubicacionForm, coordenadas };
+
     try {
       if (ubicacion) {
         // Actualizar ubicación existente
-        await api.ubicacion.update(ubicacion._id, ubicacionForm);
+        await api.ubicacion.update(ubicacion._id, datos);
       } else {
         // Crear nueva ubicación
-        await api.ubicacion.create(ubicacionForm);
+        await api.ubicacion.create(datos);
       }
       fetchUbicacion();
       setShowUbicacionModal(false);
@@ -658,7 +676,9 @@ const AdminDashboard = () => {
     setUbicacionForm({
       direccion: "",
       enlaceMaps: "",
+      coordenadas: "",
     });
+    setErrorCoordenadas("");
   };
 
   const editUbicacion = () => {
@@ -666,8 +686,10 @@ const AdminDashboard = () => {
       setUbicacionForm({
         direccion: ubicacion.direccion || "",
         enlaceMaps: ubicacion.enlaceMaps || "",
+        coordenadas: formatearCoordenadas(ubicacion.coordenadas),
       });
     }
+    setErrorCoordenadas("");
     setShowUbicacionModal(true);
   };
 
@@ -2088,6 +2110,13 @@ const AdminDashboard = () => {
                           {ubicacion.enlaceMaps || "No configurado"}
                         </p>
                       </div>
+                      <div>
+                        <span className="font-medium">Punto en el mapa:</span>
+                        <p>
+                          {formatearCoordenadas(ubicacion.coordenadas) ||
+                            "Sin coordenadas: la web muestra la dirección sin mapa"}
+                        </p>
+                      </div>
                     </div>
                     <div className="mt-4">
                       <Button color="purple" size="sm" onClick={editUbicacion}>
@@ -2230,6 +2259,33 @@ const AdminDashboard = () => {
                     })
                   }
                 />
+              </div>
+              <div>
+                <Label htmlFor="coordenadas">Punto en el mapa</Label>
+                <TextInput
+                  id="coordenadas"
+                  type="text"
+                  inputMode="decimal"
+                  placeholder="Ej: -27.3301, -55.8662"
+                  value={ubicacionForm.coordenadas}
+                  color={errorCoordenadas ? "failure" : undefined}
+                  aria-describedby="coordenadas-ayuda"
+                  onChange={(e) =>
+                    setUbicacionForm({
+                      ...ubicacionForm,
+                      coordenadas: e.target.value,
+                    })
+                  }
+                />
+                <p
+                  id="coordenadas-ayuda"
+                  className={`text-sm mt-1 ${
+                    errorCoordenadas ? "text-red-500" : "text-gray-500"
+                  }`}
+                >
+                  {errorCoordenadas ||
+                    "En Google Maps, clic derecho sobre el local y tocá los números para copiarlos. Vacío: la web no muestra mapa."}
+                </p>
               </div>
             </div>
           </Modal.Body>

@@ -1,0 +1,120 @@
+/* Piezas que se repiten en varias secciones: botones, títulos, textos. */
+
+.contenedor {
+  max-width: var(--ancho);
+  margin: 0 auto;
+  padding-left: var(--gutter-izq);
+  padding-right: var(--gutter-der);
+}
+
+.titulo {
+  font: 400 1.625rem/1.12 var(--f-display);
+  text-wrap: balance;
+}
+
+.subtitulo {
+  font: 400 1.125rem var(--f-display);
+}
+
+.bajada {
+  color: var(--mute);
+  margin-top: 6px;
+  max-width: 60ch;
+}
+
+.letraChica {
+  margin-top: 14px;
+  font-size: 0.8125rem;
+  color: var(--mute);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 56px;
+  padding: 0 22px;
+  border-radius: 16px;
+  border: 3px solid var(--cta-line);
+  font: 400 1.1rem var(--f-display);
+  cursor: pointer;
+  text-decoration: none;
+  text-align: center;
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.primario {
+  background: var(--accent);
+  color: var(--on-accent);
+  box-shadow: 5px 5px 0 var(--cta-shadow);
+  transition: transform 0.08s, box-shadow 0.08s;
+}
+
+.primario:active:not(:disabled) {
+  transform: translate(3px, 3px);
+  box-shadow: 2px 2px 0 var(--cta-shadow);
+}
+
+.fantasma {
+  background: transparent;
+  border-color: var(--line);
+  color: var(--text);
+  font-family: var(--f-body);
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.bloque {
+  display: flex;
+  width: 100%;
+}
+
+.enlace {
+  background: none;
+  border: 0;
+  padding: 0 2px;
+  min-height: 44px;
+  color: var(--accent-texto);
+  font: 700 1rem var(--f-body);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.botonIcono {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border-radius: 12px;
+  border: 2px solid var(--line);
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.botonIcono:hover,
+.botonIcono:active {
+  border-color: var(--accent-texto);
+  color: var(--accent-texto);
+}
+
+/* Texto solo para lectores de pantalla. */
+.oculto {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

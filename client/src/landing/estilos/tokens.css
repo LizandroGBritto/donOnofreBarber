@@ -1,0 +1,163 @@
+/*
+ * Base de la landing: fuentes, tokens de color y reglas globales mínimas.
+ *
+ * Todo cuelga de `.landing` para no tocar el panel, que usa Tailwind y
+ * Flowbite con otra tipografía. Los componentes leen estos tokens desde sus
+ * CSS Modules; ningún componente define colores sueltos.
+ *
+ * Las fuentes van locales (extraídas de la demo): sin Google Fonts no hay una
+ * conexión más antes de pintar el título.
+ */
+
+@font-face {
+  font-family: "Dela Gothic One";
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  src: url("../assets/fuentes/dela-gothic-one-400.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Hanken Grotesk";
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  src: url("../assets/fuentes/hanken-grotesk-400.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Hanken Grotesk";
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+  src: url("../assets/fuentes/hanken-grotesk-500.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Hanken Grotesk";
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+  src: url("../assets/fuentes/hanken-grotesk-600.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Hanken Grotesk";
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+  src: url("../assets/fuentes/hanken-grotesk-700.woff2") format("woff2");
+}
+
+/* Tema "noche": negro de la marca, violeta y naranja con sombras planas. */
+.landing {
+  --bg: #000000;
+  --surface: #17112e;
+  --raise: #1f1740;
+  --line: #3a2d63;
+  --text: #f5f3ff;
+  --mute: #a89fc6;
+  --accent: #ff7d00;
+  --accent-texto: #ff8a1f;
+  --on-accent: #000000;
+  --violet: #9061f9;
+  --card-line: #3a2d63;
+  --card-line-on: #ff7d00;
+  --shadow-on: #9061f9;
+  --shadow-off: #1f1740;
+  --cta-line: #000000;
+  --cta-shadow: #9061f9;
+  --head-shadow: #ff7d00;
+  --sum-bg: #f5f3ff;
+  --sum-fg: #000000;
+  --sum-sub: #3a3550;
+  --sum-shadow: #9061f9;
+  --mono-bg: #9061f9;
+  --mono-fg: #000000;
+  --slot-line: #9061f9;
+  --busy: #8a809f;
+  --band-line: #9061f9;
+  --ok: #5ee08a;
+  --warn: #ff9a5c;
+  --glass: rgba(0, 0, 0, 0.9);
+  --dock-glass: rgba(23, 17, 46, 0.96);
+  --check: #000000;
+  --chip-bg: #17112e;
+  --chip-line: #3a2d63;
+  --pole-a: #6a3de0;
+  --pole-b: #cfcbda;
+  --pole-c: #e06a00;
+  --cap: #8d8aa0;
+
+  --f-display: "Dela Gothic One", system-ui, sans-serif;
+  --f-body: "Hanken Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  /* Medidas compartidas */
+  --ancho: 560px;
+  --barra: 68px;
+  /* Cuánto se solapa la cortina con el escenario (Escenario y Landing). */
+  --sobre: 55svh;
+  --gutter-izq: max(16px, env(safe-area-inset-left, 0px));
+  --gutter-der: max(16px, env(safe-area-inset-right, 0px));
+
+  color-scheme: dark;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  font: 400 1rem/1.5 var(--f-body);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: clip;
+}
+
+/* El navegador pinta el notch del color de la página, no del contenido. */
+.landing::before {
+  content: "";
+  position: fixed;
+  inset: 0 0 auto;
+  height: env(safe-area-inset-top, 0px);
+  background: var(--bg);
+  z-index: 10;
+}
+
+.landing :focus-visible {
+  outline: 3px solid var(--text);
+  outline-offset: 3px;
+}
+
+.landing h1,
+.landing h2,
+.landing h3,
+.landing p,
+.landing ul,
+.landing ol,
+.landing dl,
+.landing dd {
+  margin: 0;
+}
+
+.landing ol,
+.landing ul {
+  padding: 0;
+  list-style: none;
+}
+
+.landing button {
+  font: inherit;
+  color: inherit;
+  touch-action: manipulation;
+}
+
+/* Desplazamiento suave solo mientras la landing está montada. */
+html.landing-activa {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.landing-activa {
+    scroll-behavior: auto;
+  }
+  .landing *,
+  .landing *::before,
+  .landing *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}

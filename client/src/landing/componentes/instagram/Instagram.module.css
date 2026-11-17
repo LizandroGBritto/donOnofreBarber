@@ -1,0 +1,136 @@
+.seccion {
+  position: relative;
+  padding-top: 40px;
+  padding-bottom: 6px;
+}
+
+.carril {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  margin: 18px calc(-1 * var(--gutter-der)) 18px calc(-1 * var(--gutter-izq));
+  padding: 4px var(--gutter-der) 12px var(--gutter-izq);
+  scrollbar-width: none;
+}
+
+.carril::-webkit-scrollbar {
+  display: none;
+}
+
+.reel,
+.reelEsqueleto {
+  flex: 0 0 150px;
+  scroll-snap-align: start;
+  aspect-ratio: 9 / 16;
+  border-radius: 18px;
+}
+
+.reel {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  border: 3px solid var(--card-line);
+  background: var(--raise);
+  color: var(--text);
+  text-decoration: none;
+  box-shadow: 5px 5px 0 var(--shadow-off);
+}
+
+.foto {
+  position: absolute;
+  inset: 0;
+}
+
+.foto img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.icono {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  color: #ffffff;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.7));
+}
+
+/* Pie de la foto: corazón con los "me gusta" y globo con los comentarios. */
+.pie {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  gap: 12px;
+  padding: 28px 10px 10px;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.75));
+  color: #ffffff;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.contador {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Con mouse el carril se arrastra (useArrastreHorizontal). */
+@media (hover: hover) and (pointer: fine) {
+  .carril {
+    cursor: grab;
+  }
+
+  .carril[data-arrastrando] {
+    cursor: grabbing;
+  }
+
+  .carril[data-arrastrando] .reel {
+    pointer-events: none;
+  }
+}
+
+.mas {
+  display: grid;
+  place-items: center;
+  padding: 14px;
+  text-align: center;
+  background: var(--accent);
+  color: var(--on-accent);
+  font: 400 1.05rem/1.2 var(--f-display);
+}
+
+/*
+ * El widget se monta acá para leerle las publicaciones. Tiene que estar
+ * "en pantalla" para que Elfsight cargue las imágenes (las pide al verse),
+ * así que no va con display:none: va transparente, detrás y sin eventos.
+ *
+ * 1280 px de ancho: la grilla del widget es responsiva y en el ancho de la
+ * sección dibuja 2x2 (4 publicaciones); así dibuja 4x2, las últimas 8. Es
+ * fixed para que ese ancho no agrande la página en el celular.
+ */
+.widgetOculto {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 1280px;
+  height: 100vh;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* Plan B: el widget tal cual, con lo mínimo para que no rompa el tema. */
+.widgetVisible {
+  margin: 18px 0;
+  border-radius: 18px;
+  overflow: hidden;
+  border: 3px solid var(--card-line);
+  background: var(--surface);
+  color-scheme: light;
+}

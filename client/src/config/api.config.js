@@ -44,11 +44,15 @@ const config = {
       editarMiTurno: (id) => `/api/agenda/editar-mi-turno/${id}`,
       liberarMiTurno: (id) => `/api/agenda/liberar-mi-turno/${id}`,
       generarToken: (id) => `/api/agenda/${id}/generar-token`,
+      recordatorioPush: (id) => `/api/agenda/${id}/recordatorio-push`,
     },
 
     barberos: {
       base: "/api/barberos",
       agenda: "/api/barberos/agenda",
+      // Públicas, las consume la landing.
+      activos: "/api/barberos/activos",
+      servicios: (id) => `/api/barberos/${id}/servicios`,
       // Fotos propias de un barbero para un servicio del catálogo.
       imagenesServicio: (id, servicioId) =>
         `/api/barberos/${id}/servicios/${servicioId}/imagenes`,
@@ -67,7 +71,9 @@ const config = {
     banners: "/api/banners",
     contacto: "/api/contacto",
     ubicacion: "/api/ubicacion",
+    instagram: "/api/instagram",
     notifications: "/api/notifications",
+    vapidPublicKey: "/api/notifications/vapid-public-key",
   },
 
   // Helper function para crear URL completa

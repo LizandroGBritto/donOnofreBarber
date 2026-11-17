@@ -1,0 +1,15 @@
+.pie {
+  max-width: var(--ancho);
+  margin: 0 auto;
+  padding: 8px var(--gutter-der) 120px var(--gutter-izq);
+  color: var(--mute);
+  font-size: 0.8125rem;
+  display: grid;
+  gap: 6px;
+}
+
+.equipo {
+  color: var(--mute);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}

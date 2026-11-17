@@ -3,13 +3,15 @@ import Landing from "./views/Landing";
 import { Route, Routes, Navigate } from "react-router-dom";
 import UserContext from "./context/UserContext";
 import { useState, lazy, Suspense } from "react";
-import EditarTurno from "./components/EditarTurno";
 import ErrorBoundary from "./components/ErrorBoundary";
 
 // El público general nunca visita /admin: separarlo en su propio chunk
 // evita que ese código (y sus dependencias) se descargue en la landing.
 const Admin = lazy(() => import("./views/Admin"));
 const Login = lazy(() => import("./views/Login"));
+// Se llega desde el ticket o el WhatsApp de recordatorio; trae MUI, que la
+// landing no usa.
+const EditarTurno = lazy(() => import("./components/EditarTurno"));
 
 const getStoredUser = () => {
   try {
