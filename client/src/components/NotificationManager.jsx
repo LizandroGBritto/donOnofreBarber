@@ -193,8 +193,10 @@ const NotificationManager = () => {
             <li>Nuevas reservas de citas</li>
             <li>Modificaciones de turnos</li>
             <li>Cancelaciones de citas</li>
-            <li>Recordatorios de próximas citas</li>
           </ul>
+          <p className="mt-2">
+            Si sos barbero, te llegan solo los turnos de tu agenda.
+          </p>
         </div>
 
         {message && <Alert color={messageType}>{message}</Alert>}

@@ -10,6 +10,7 @@ describe("menú del panel por rol", () => {
       "turnos",
       "mis-precios",
       "mis-horarios",
+      "notificaciones",
     ]);
   });
 
@@ -24,7 +25,6 @@ describe("menú del panel por rol", () => {
       "contacto",
       "ubicacion",
       "whatsapp",
-      "notificaciones",
     ]) {
       expect(ids).not.toContain(prohibido);
     }

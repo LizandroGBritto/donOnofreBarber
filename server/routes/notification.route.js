@@ -23,8 +23,9 @@ router.post("/subscribe", authenticate, suscribirse);
 
 router.post("/unsubscribe", authenticate, desuscribirse);
 
-// Enviar notificación de prueba (solo admin, se usa desde el panel)
-router.post("/test", authenticate, requireAdmin, enviarNotificacionPrueba);
+// Notificación de prueba: cualquier usuario del panel. Le llega solo a quien la
+// pide (a sus dispositivos), así que un barbero no molesta a nadie más.
+router.post("/test", authenticate, enviarNotificacionPrueba);
 
 // Obtener suscripciones activas (para admin)
 router.get(

@@ -138,6 +138,18 @@ describe("a quién le llega el aviso de un turno", () => {
     expect(respuesta.status).toBe(200);
     expect(endpointsAvisados()).toEqual([ENDPOINT(5)]);
   });
+
+  it("un barbero también se suscribe y prueba: la de prueba le llega solo a él", async () => {
+    const admin = await usuarioConSesion({ userName: "dueno", rol: "admin" });
+    await suscribir(admin.cookie, 1);
+    const barbero = await usuarioConSesion({ userName: "pablo", rol: "barbero", barbero: (await crearBarbero("Pablo"))._id });
+
+    expect((await suscribir(barbero.cookie, 7)).status).toBe(201);
+    const respuesta = await request(app).post("/api/notifications/test").set("Cookie", barbero.cookie);
+
+    expect(respuesta.status).toBe(200);
+    expect(endpointsAvisados()).toEqual([ENDPOINT(7)]);
+  });
 });
 
 describe("detrás de Nginx", () => {

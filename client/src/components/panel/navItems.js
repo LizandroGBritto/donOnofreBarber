@@ -38,7 +38,9 @@ export const NAV_ITEMS = [
   { id: "horarios", label: "Horarios", icon: HiClock, roles: ["admin"] },
   { id: "servicios", label: "Servicios", icon: HiTag, roles: ["admin"] },
   { id: "barberos", label: "Barberos", icon: HiUserGroup, roles: ["admin"] },
-  { id: "notificaciones", label: "Notificaciones", icon: HiBell, roles: ["admin"] },
+  // El barbero también: activa los avisos en su teléfono y recibe solo los de
+  // sus turnos (NotificationService.destinatarios en el servidor).
+  { id: "notificaciones", label: "Notificaciones", icon: HiBell, roles: ["admin", "barbero"] },
   { id: "usuarios", label: "Usuarios", icon: HiUsers, roles: ["admin"] },
   { id: "whatsapp", label: "Conexión WhatsApp", icon: HiPhone, roles: ["admin"] },
 ];
