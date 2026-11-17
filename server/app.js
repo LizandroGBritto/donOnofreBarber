@@ -46,6 +46,7 @@ app.use("/api/user", UserRouter); // Para CRUD de usuarios
 app.use("/api/banners", require("./routes/banner.route"));
 app.use("/api/contacto", require("./routes/contacto.route"));
 app.use("/api/ubicacion", require("./routes/ubicacion.route"));
+app.use("/api/instagram", require("./routes/instagram.route"));
 app.use("/api/servicios", require("./routes/servicio.route"));
 app.use("/api/horarios", require("./routes/horario.route"));
 app.use("/api/barberos", require("./routes/barbero.route"));

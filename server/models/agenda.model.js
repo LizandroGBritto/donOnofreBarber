@@ -119,6 +119,14 @@ const AgendaSchema = new mongoose.Schema(
       default: null,
     },
 
+    // Recordatorio de WhatsApp de una hora antes ya mandado. Antes no estaba
+    // en el esquema: Mongoose descartaba la marca y el cron lo podía repetir.
+    // Se vuelve a false al liberar el turno.
+    recordatorioEnviado: {
+      type: Boolean,
+      default: false,
+    },
+
     // Fechas importantes
     fechaReserva: Date,
     fechaConfirmacion: Date,
@@ -135,6 +143,24 @@ AgendaSchema.index({ diaSemana: 1, estado: 1 }); // Para consultas por día de s
 AgendaSchema.index({ nombreCliente: 1, fecha: 1 }); // Para buscar por cliente
 AgendaSchema.index({ fecha: 1, hora: 1, barbero: 1 }); // Para turnos por barbero y horario
 AgendaSchema.index({ barbero: 1, fecha: 1, estado: 1 }); // Para consultas por barbero
+
+// Un barbero no puede tener dos turnos el mismo día a la misma hora. Es lo que
+// impide la doble reserva aunque dos pedidos lleguen a la vez: el segundo
+// choca contra el índice en vez de crear otro turno.
+// - Parcial: los turnos viejos sin barbero (datos anteriores a los barberos, o
+//   los que dejaba "delete-and-create") quedan afuera.
+// - Con nombre y orden de claves propios para no chocar con el índice no único
+//   `fecha_1_hora_1_barbero_1`, que ya existe en las bases desplegadas.
+// - Si la base ya tiene duplicados, MongoDB no lo puede crear: correr
+//   `node scripts/indiceTurnoUnico.js` para verlos (no borra nada).
+AgendaSchema.index(
+  { barbero: 1, fecha: 1, hora: 1 },
+  {
+    unique: true,
+    name: "turno_unico_por_barbero",
+    partialFilterExpression: { barbero: { $type: "objectId" } },
+  }
+);
 
 // Métodos estáticos para consultas comunes
 AgendaSchema.statics.getTurnosDisponibles = function (fecha) {

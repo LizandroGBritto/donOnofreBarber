@@ -1,4 +1,5 @@
 const crypto = require("crypto");
+const mongoose = require("mongoose");
 const AgendaModel = require("../models/agenda.model");
 const AgendaGeneratorService = require("../services/agendaGenerator.service");
 const HorarioModel = require("../models/horario.model");
@@ -7,6 +8,23 @@ const NotificationService = require("../services/notificationService");
 const ServicioModel = require("../models/servicio.model");
 const PreciosService = require("../services/precios.service");
 const HorariosService = require("../services/horarios.service");
+const Recordatorios = require("../services/recordatorios.service");
+const { turnoAbiertoDelCelular } = Recordatorios;
+const RecordatorioPush = require("../models/recordatorioPush.model");
+const {
+  celularValido,
+  limpiarCelular,
+  nombreValido,
+} = require("../utils/celular");
+
+// "HH:MM" de 00:00 a 23:59, el formato de los Horario.
+const HORA_VALIDA = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+// Choque contra el índice `turno_unico_por_barbero` (ese barbero ya tiene un
+// turno ese día a esa hora).
+const esTurnoDuplicado = (error) => error?.code === 11000;
+const MENSAJE_TURNO_DUPLICADO =
+  "Ese barbero ya tiene un turno ese día a esa hora";
 
 module.exports = {
   // Endpoint para eliminar todos los turnos de hoy (usando hora de Paraguay)
@@ -392,17 +410,22 @@ module.exports = {
       // Con un barbero fijado no hace falta agregar nada: cada hora tiene a lo
       // sumo un turno suyo, así que se devuelven tal cual.
       if (barberoIdFiltro) {
+        // El endpoint es público: se devuelve una lista CERRADA de campos.
+        // Antes se borraban unos pocos (editToken, email, número) y todo lo
+        // demás salía tal cual, incluido el `nombreCliente`, los servicios y
+        // el costo de los turnos reservados por otras personas. Con una lista
+        // cerrada, un campo nuevo en el modelo no se filtra por omisión.
         return res.status(200).json({
-          agendas: allTurnos.map((t) => {
-            const turno = t.toObject();
-            // El endpoint es público: nunca exponer PII ni el token de edición.
-            delete turno.editToken;
-            delete turno.emailCliente;
-            if (turno.estado !== "disponible") {
-              delete turno.numeroCliente;
-            }
-            return turno;
-          }),
+          agendas: allTurnos.map((t) => ({
+            _id: t._id,
+            fecha: t.fecha,
+            hora: t.hora,
+            diaSemana: t.diaSemana,
+            estado: t.estado,
+            barbero: t.barbero
+              ? { _id: t.barbero._id, nombre: t.barbero.nombre }
+              : null,
+          })),
         });
       }
 
@@ -741,7 +764,9 @@ module.exports = {
         res.status(201).json({ agenda: newlyCreatedAgenda }),
       )
       .catch((err) =>
-        res.status(400).json({ message: "Algo salió mal", error: err }),
+        esTurnoDuplicado(err)
+          ? res.status(409).json({ message: MENSAJE_TURNO_DUPLICADO })
+          : res.status(400).json({ message: "Algo salió mal", error: err }),
       );
   },
   updateOneAgendaById: async (req, res) => {
@@ -824,6 +849,9 @@ module.exports = {
 
       res.status(200).json({ agenda: updatedAgenda });
     } catch (err) {
+      if (esTurnoDuplicado(err)) {
+        return res.status(409).json({ message: MENSAJE_TURNO_DUPLICADO });
+      }
       res.status(400).json({ message: "Algo salió mal", error: err });
     }
   },
@@ -1053,7 +1081,55 @@ module.exports = {
       // los ids: nombre, precio y duración se resuelven contra la base.
       const idsSolicitados = servicioIds || servicios;
 
-      const fechaObj = ParaguayDateUtil.toParaguayTime(fecha).toDate();
+      // Entradas mal formadas: 400 claro en vez de un 500 por un CastError.
+      if (!HORA_VALIDA.test(String(hora))) {
+        return res.status(400).json({ message: "La hora no es válida" });
+      }
+      if (!mongoose.isValidObjectId(barberoId)) {
+        return res.status(400).json({ message: "El barbero no es válido" });
+      }
+      const fechaParaguay = ParaguayDateUtil.toParaguayTime(fecha);
+      if (!fechaParaguay.isValid()) {
+        return res.status(400).json({ message: "La fecha no es válida" });
+      }
+      const fechaObj = fechaParaguay.toDate();
+
+      // Solo turnos por delante: la fecha (día en Asunción) más su hora.
+      const [horas, minutos] = String(hora).split(":").map(Number);
+      const momentoTurno = ParaguayDateUtil.startOfDay(fechaObj)
+        .hour(horas)
+        .minute(minutos);
+      if (!momentoTurno.isAfter(ParaguayDateUtil.now())) {
+        return res.status(409).json({
+          message: "Ese horario ya pasó. Elegí otro, por favor.",
+        });
+      }
+
+      // Mismas reglas que el formulario (utils/celular.js): la API no acepta
+      // lo que la pantalla no dejaría mandar.
+      if (!celularValido(numeroCliente)) {
+        return res.status(400).json({ message: "El número de celular no es válido" });
+      }
+      if (!nombreValido(nombreCliente)) {
+        return res.status(400).json({
+          message: "El nombre tiene que tener solo letras, entre 3 y 60",
+        });
+      }
+      const celular = limpiarCelular(numeroCliente);
+
+      // Un turno abierto por celular en las próximas 12 horas.
+      const abierto = await turnoAbiertoDelCelular(celular);
+      if (abierto) {
+        return res.status(409).json({
+          motivo: "turno_abierto",
+          message: "Ya tenés un turno en las próximas 12 horas",
+          turno: {
+            fecha: ParaguayDateUtil.toParaguayTime(abierto.fecha).format("DD/MM/YYYY"),
+            hora: abierto.hora,
+            barbero: abierto.barbero?.nombre || abierto.nombreBarbero || "",
+          },
+        });
+      }
 
       // Verificar que el barbero existe y está activo
       const barbero = await BarberoModel.findOne({
@@ -1095,10 +1171,11 @@ module.exports = {
 
       const datosReserva = {
         estado: "reservado",
-        nombreCliente,
-        numeroCliente,
+        nombreCliente: String(nombreCliente).trim(),
+        numeroCliente: celular,
         servicios: serviciosResueltos,
         fechaReserva: new Date(),
+        recordatorioEnviado: false,
         // Token secreto para poder editar/cancelar este turno desde el link
         // público sin login (ver /editar-mi-turno/:id y /liberar-mi-turno/:id).
         editToken: crypto.randomBytes(24).toString("hex"),
@@ -1124,43 +1201,21 @@ module.exports = {
       );
 
       if (!turnoAEditar) {
-        // No había turno disponible: verificar si ya está ocupado.
-        const turnoOcupado = await AgendaModel.findOne({
+        // Solo se reserva lo que la agenda ofrece. Antes, si el turno no
+        // existía se creaba ya reservado, y con la API se podía reservar
+        // cualquier hora: de madrugada, un día cerrado o un barbero sin ese
+        // horario. Ahora el horario tiene que haber sido generado a partir de
+        // los Horario vigentes.
+        const existe = await AgendaModel.exists({
           fecha: rangoFecha,
           hora: hora,
           barbero: barberoId,
-          estado: { $in: ["reservado", "pagado", "en_proceso"] },
         });
-
-        if (turnoOcupado) {
-          return res.status(409).json({
-            message: "El barbero ya tiene un turno reservado en este horario",
-          });
-        }
-
-        // No existe ningún turno para esta combinación: crearlo ya
-        // reservado directamente (evita la ventana entre "crear disponible"
-        // y "guardar como reservado" que existía antes).
-        try {
-          turnoAEditar = await AgendaModel.create({
-            fecha: ParaguayDateUtil.startOfDay(fechaObj).toDate(),
-            hora: hora,
-            diaSemana: ParaguayDateUtil.getDayOfWeek(fechaObj),
-            barbero: barberoId,
-            nombreBarbero: barbero.nombre,
-            creadoAutomaticamente: false,
-            ...datosReserva,
-          });
-        } catch (createError) {
-          console.error(
-            "Error creando turno en reserva (posible carrera):",
-            createError,
-          );
-          return res.status(409).json({
-            message:
-              "No se pudo reservar el turno, es posible que otra persona lo haya tomado justo antes. Probá de nuevo.",
-          });
-        }
+        return res.status(409).json({
+          message: existe
+            ? "El barbero ya tiene un turno reservado en este horario"
+            : "Ese horario no está en la agenda del barbero",
+        });
       }
 
       // Populate el barbero para la respuesta
@@ -1171,7 +1226,7 @@ module.exports = {
         await NotificationService.notificarNuevaReserva(turnoAEditar);
 
         // 🆕 WhatsApp: Enviar confirmación al cliente
-        if (numeroCliente) {
+        if (celular) {
           const WhatsappService = require("../services/whatsapp.service");
           // Obtener nombres de servicios
           // Los nombres salen del snapshot resuelto, no del body del cliente.
@@ -1195,7 +1250,7 @@ module.exports = {
             `✏️ Si necesitas modificar tu cita, puedes hacerlo desde este enlace:\n${enlaceEdicion}\n\n` +
             `¡Te esperamos! 💈`;
 
-          await WhatsappService.sendMessage(numeroCliente, mensaje);
+          await WhatsappService.sendMessage(celular, mensaje);
         }
       } catch (notifError) {
         console.error(
@@ -1292,6 +1347,86 @@ module.exports = {
   // turno usando el link que recibió por WhatsApp. Mismo chequeo de token
   // que editarMiTurno. El editToken se limpia al liberar: el link deja de
   // servir para evitar que alguien lo reutilice sobre un turno ya vacío.
+  // Público con el editToken del turno (como editar-mi-turno): el cliente
+  // pide que le avisemos por push antes de su turno. La anticipación la
+  // decide el servidor según cuánto falta (60, 40, 20 o 5 minutos).
+  registrarRecordatorioPush: async (req, res) => {
+    try {
+      const token = req.query.t || req.body.t;
+      const { suscripcion } = req.body;
+
+      if (!token) {
+        return res.status(403).json({ message: "Token de edición requerido" });
+      }
+      if (!mongoose.isValidObjectId(req.params.id)) {
+        return res.status(404).json({ message: "Turno no encontrado" });
+      }
+      const turno = await AgendaModel.findById(req.params.id);
+      if (!turno) {
+        return res.status(404).json({ message: "Turno no encontrado" });
+      }
+      if (!turno.editToken || turno.editToken !== token) {
+        return res.status(403).json({ message: "Token de edición inválido" });
+      }
+      if (!Recordatorios.ESTADOS_ABIERTOS.includes(turno.estado)) {
+        return res.status(409).json({ message: "El turno ya no está reservado" });
+      }
+
+      const keys = suscripcion?.keys || {};
+      const claveValida = (v) => typeof v === "string" && v.length > 0 && v.length <= 200;
+      if (
+        !Recordatorios.endpointPushValido(suscripcion?.endpoint) ||
+        !claveValida(keys.p256dh) ||
+        !claveValida(keys.auth)
+      ) {
+        return res.status(400).json({ message: "La suscripción no es válida" });
+      }
+
+      const restantes = Recordatorios.minutosHasta(
+        Recordatorios.momentoDelTurno(turno),
+        ParaguayDateUtil.now(),
+      );
+      const minutosAntes = Recordatorios.minutosDeAviso(restantes);
+      if (!minutosAntes) {
+        return res.status(409).json({
+          message: "Tu turno es en menos de 5 minutos: ya no hace falta avisarte",
+        });
+      }
+
+      const yaPedidos = await RecordatorioPush.countDocuments({
+        turno: turno._id,
+        endpoint: { $ne: suscripcion.endpoint },
+      });
+      if (yaPedidos >= Recordatorios.MAX_AVISOS_POR_TURNO) {
+        return res.status(409).json({
+          message: "Ya hay avisos activados en varios dispositivos para este turno",
+        });
+      }
+
+      const aviso = await RecordatorioPush.findOneAndUpdate(
+        { turno: turno._id, endpoint: suscripcion.endpoint },
+        {
+          $set: {
+            keys: { p256dh: keys.p256dh, auth: keys.auth },
+            reserva: Recordatorios.huellaDeReserva(turno.editToken),
+            minutosAntes,
+            estado: "pendiente",
+            intentos: 0,
+          },
+          $unset: { motivo: 1, enviadoEn: 1 },
+        },
+        { upsert: true, new: true, setDefaultsOnInsert: true },
+      );
+
+      const avisoA = Recordatorios.momentoDelTurno(turno)
+        .subtract(minutosAntes, "minutes")
+        .toISOString();
+      res.status(201).json({ minutosAntes, avisoA, id: aviso._id });
+    } catch (error) {
+      console.error("Error al registrar el aviso push:", error);
+      res.status(500).json({ message: "No se pudo activar el aviso" });
+    }
+  },
   liberarMiTurno: async (req, res) => {
     try {
       const { id } = req.params;
@@ -1473,17 +1608,9 @@ module.exports = {
         });
       }
 
-      // ✅ Calcular límite de 12 horas desde ahora
-      const ahora = ParaguayDateUtil.now().toDate();
-      const docehoras = ParaguayDateUtil.now().add(12, "hours").toDate();
-
-      // Buscar turnos que estén en estados activos (no disponible ni pagado)
-      // Y que estén dentro de las próximas 12 horas
-      const turnoExistente = await AgendaModel.findOne({
-        numeroCliente: numeroCliente,
-        estado: { $in: ["reservado", "confirmado"] },
-        fecha: { $gte: ahora, $lte: docehoras },
-      }).populate("barbero", "nombre");
+      // Fecha + hora del turno, no el inicio del día: antes no veía los
+      // turnos de hoy (ver services/recordatorios.service.js).
+      const turnoExistente = await turnoAbiertoDelCelular(numeroCliente);
 
       if (turnoExistente) {
         // Formatear la fecha para mostrar

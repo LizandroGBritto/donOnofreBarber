@@ -116,6 +116,11 @@ AgendaRouter.post(
   "/liberar-mi-turno/:id",
   AgendaController.liberarMiTurno
 );
+// El cliente pide un aviso push antes de su turno (mismo token).
+AgendaRouter.post(
+  "/:id/recordatorio-push",
+  AgendaController.registrarRecordatorioPush
+);
 
 // Admin: (re)generar el token de edición de un turno (turnos viejos sin
 // token, o para invalidar un link ya compartido).

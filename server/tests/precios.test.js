@@ -6,6 +6,10 @@ const ServicioModel = require("../models/servicio.model");
 const PrecioBarberoModel = require("../models/precioBarbero.model");
 const PreciosService = require("../services/precios.service");
 const { usuarioConSesion } = require("./helpers/auth");
+const ParaguayDateUtil = require("../utils/paraguayDate");
+
+// La reserva rechaza turnos pasados: las pruebas reservan dentro de un mes.
+const FECHA_FUTURA = ParaguayDateUtil.now().add(30, "days").format("YYYY-MM-DD");
 
 const crearBarbero = (nombre) =>
   BarberoModel.create({
@@ -18,7 +22,7 @@ const crearServicio = (nombre, precio) =>
   ServicioModel.create({ nombre, precio, activo: true });
 
 /** Turno disponible listo para reservar. */
-const crearTurno = (barbero, { fecha = "2026-09-15", hora = "10:00" } = {}) =>
+const crearTurno = (barbero, { fecha = FECHA_FUTURA, hora = "10:00" } = {}) =>
   AgendaModel.create({
     fecha: new Date(`${fecha}T03:00:00.000Z`),
     hora,
@@ -344,7 +348,7 @@ describe("precios por barbero", () => {
       const respuesta = await request(app)
         .post("/api/agenda/reservar-con-barbero")
         .send({
-          fecha: "2026-09-15",
+          fecha: FECHA_FUTURA,
           hora: "10:00",
           barberoId: String(barbero._id),
           nombreCliente: "Cliente Tramposo",
@@ -380,7 +384,7 @@ describe("precios por barbero", () => {
       await request(app)
         .post("/api/agenda/reservar-con-barbero")
         .send({
-          fecha: "2026-09-15",
+          fecha: FECHA_FUTURA,
           hora: "10:00",
           barberoId: String(barbero._id),
           nombreCliente: "Cliente",
@@ -407,7 +411,7 @@ describe("precios por barbero", () => {
       const respuesta = await request(app)
         .post("/api/agenda/reservar-con-barbero")
         .send({
-          fecha: "2026-09-15",
+          fecha: FECHA_FUTURA,
           hora: "10:00",
           barberoId: String(barbero._id),
           nombreCliente: "Cliente",
@@ -427,7 +431,7 @@ describe("precios por barbero", () => {
       const respuesta = await request(app)
         .post("/api/agenda/reservar-con-barbero")
         .send({
-          fecha: "2026-09-15",
+          fecha: FECHA_FUTURA,
           hora: "10:00",
           barberoId: String(barbero._id),
           nombreCliente: "Cliente",
@@ -482,7 +486,7 @@ describe("precios por barbero", () => {
       await request(app)
         .post("/api/agenda/reservar-con-barbero")
         .send({
-          fecha: "2026-09-15",
+          fecha: FECHA_FUTURA,
           hora: "10:00",
           barberoId: String(barbero._id),
           nombreCliente: "Cliente",
