@@ -11,7 +11,6 @@ import { usePeticion } from "./datos/usePeticion";
 import { estadoApertura, resumirHorarios } from "./dominio/horariosLocal";
 import { estadoInicial, reservaReducer } from "./dominio/reserva";
 import { useAhora } from "./hooks/useAhora";
-import { useBarraVisible } from "./hooks/useBarraVisible";
 import { useMovimientoReducido } from "./hooks/useMovimientoReducido";
 import comunes from "./estilos/comunes.module.css";
 import "./estilos/tokens.css";
@@ -22,7 +21,6 @@ const Landing = () => {
   const reducido = useMovimientoReducido();
   const cortinaRef = useRef(null);
   const [reserva, despachar] = useReducer(reservaReducer, estadoInicial);
-  const barraVisible = useBarraVisible(cortinaRef);
 
   const barberos = usePeticion(listarBarberos, []);
   const horarios = usePeticion(listarHorariosDelLocal, []);
@@ -51,7 +49,7 @@ const Landing = () => {
         <a className={estilos.saltar} href="#reservar">
           Ir a reservar
         </a>
-        <Encabezado abierto={Boolean(apertura?.abierto)} visible={barraVisible} />
+        <Encabezado abierto={Boolean(apertura?.abierto)} />
 
         <Escenario cortinaRef={cortinaRef} />
 

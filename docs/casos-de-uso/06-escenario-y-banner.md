@@ -18,7 +18,6 @@ E-20 y E-21.
 | E-01 | Se abre la landing | Mascota, neón, "Creando tu estilo" y "Reservar turno" hacia `#reservar` | `test: Landing.test.jsx` |
 | E-04 | Local abierto ahora | El poste gira; cerrado, queda quieto | `manual` |
 | E-05 | Se desplaza hacia abajo | La cortina tapa el escenario, que se achica y se apaga | `manual` |
-| E-07 | Primera carga, o se vuelve arriba de todo | La barra del encabezado (poste y "Alonzo Style") no se ve, para no tapar el banner; aparece cuando la cortina llega arriba | `test: useBarraVisible.test.jsx` |
 | E-06 | Panel de admin | No aparece "Banners" en el menú | `test: navItems.test.js` |
 
 ## Errores

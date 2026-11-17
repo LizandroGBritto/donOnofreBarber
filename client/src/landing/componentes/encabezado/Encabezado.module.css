@@ -1,33 +1,10 @@
-/*
- * Flota sobre la página (no ocupa lugar) y se oculta mientras se ve el banner:
- * en la primera carga y al volver arriba tapaba la parte de arriba del
- * escenario. Aparece cuando la cortina llega arriba (useBarraVisible).
- */
 .barra {
-  position: fixed;
+  position: sticky;
   top: env(safe-area-inset-top, 0px);
-  left: 0;
-  right: 0;
   z-index: 20;
   background: var(--glass);
   -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
-  transition: transform 0.25s ease, opacity 0.25s ease, visibility 0s linear 0s;
-}
-
-.barra[data-visible="false"] {
-  transform: translateY(calc(-100% - env(safe-area-inset-top, 0px)));
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-  transition: transform 0.25s ease, opacity 0.25s ease, visibility 0s linear 0.25s;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .barra,
-  .barra[data-visible="false"] {
-    transition: none;
-  }
 }
 
 .interior {
