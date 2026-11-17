@@ -21,6 +21,7 @@ import MisHorarios from "./panel/MisHorarios";
 import VistaPreviaArchivo from "./panel/VistaPreviaArchivo";
 import { itemsParaRol, vistaInicialParaRol } from "./panel/navItems";
 import NotificationManager from "./NotificationManager";
+import notificationService from "../services/notificationService";
 import UserContext from "../context/UserContext";
 import {
   parsearCoordenadas,
@@ -49,6 +50,9 @@ const AdminDashboard = () => {
       .then((actual) => {
         if (cancelado) return;
         setIdentidad(actual);
+        // Con la sesión confirmada, la suscripción push de este navegador
+        // queda a nombre de este usuario (ver notificationService.sincronizar).
+        notificationService.sincronizar();
         // Se sincroniza el contexto y el localStorage para que el resto de la
         // app (y el próximo montaje) vean lo mismo que el servidor.
         setUser((previo) => ({ ...previo, ...actual }));

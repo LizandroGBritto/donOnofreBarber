@@ -48,18 +48,20 @@ las marcadas como corregidas.
 - ~~El servidor no validaba celular ni nombre~~: mismas reglas que el cliente (04, D-24 y D-25).
 - ~~Las notificaciones push abrían siempre `/admin`~~: `sw.js` leía `event.data`, que no existe
   en `notificationclick`; ahora usa la URL de la notificación (11, P-22).
+- ~~`/api/notifications/subscribe` era pública~~ y cada reserva iba a todas las suscripciones con
+  los datos del cliente: ahora pide sesión, valida el host y avisa solo a quien ve ese turno
+  (11, P-30).
+- ~~Los rate limits eran globales~~: detrás de Nginx faltaba `trust proxy` y todos tenían la IP
+  del proxy (07, I-29).
 
 ## Brechas abiertas, por prioridad
 
-1. `POST /api/notifications/subscribe` es pública y cada reserva nueva se manda a **todas**
-   las suscripciones con nombre, fecha y hora del cliente: cualquiera que se suscriba recibe
-   los datos de todos. Hay que exigir sesión del panel para suscribirse (11, P-30).
-2. `delete-and-create` recrea el turno **sin barbero**: el horario liberado no vuelve a la
+1. `delete-and-create` recrea el turno **sin barbero**: el horario liberado no vuelve a la
    agenda pública de ese barbero hasta que corre el generador (05, T-24).
-3. `GET /api/agenda/:id` es pública y devuelve el `editToken`, y la disponibilidad expone los
+2. `GET /api/agenda/:id` es pública y devuelve el `editToken`, y la disponibilidad expone los
    `_id`: cualquiera puede editar o liberar el turno de otro (05).
-4. `verificar-turno/:numeroCliente` es pública: con un número se sabe si esa persona tiene
+3. `verificar-turno/:numeroCliente` es pública: con un número se sabe si esa persona tiene
    turno, cuándo y con quién (04).
-5. El servidor acepta reservas sin ningún servicio y no limita la frecuencia de reservas (04).
-6. La copia diaria de Instagram la renueva el navegador de una visita con un `POST` público: se
+4. El servidor acepta reservas sin ningún servicio y no limita la frecuencia de reservas (04).
+5. La copia diaria de Instagram la renueva el navegador de una visita con un `POST` público: se
    valida que todo sea de Instagram, pero no que sea de esta cuenta (07, I-30).

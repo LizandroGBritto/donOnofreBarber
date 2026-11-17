@@ -54,10 +54,11 @@ Observado durante el relevamiento del 2026-11-17 (no es un veredicto de `/detecc
 - **S-09 · `POST /:id/generar-token` y `POST /delete-and-create/:id`** solo llevan
   `authenticate`: un barbero puede operar sobre turnos de otro barbero (falta
   `requireTurnoPropio` o `requireAdmin`).
-- **S-09 · `POST /api/notifications/subscribe` es pública** y `notificarNuevaReserva` (y
-  editado/liberado) se manda a todas las `Suscripcion` activas con nombre, fecha y hora del
-  cliente: cualquiera que se suscriba recibe los datos de todos. Además acepta cualquier
-  `endpoint`, al que el servidor hace POST (SSRF). Los avisos de clientes no usan esa ruta.
+- ~~S-09 · `/api/notifications/subscribe` pública~~ (corregido el 2026-11-17): pide sesión,
+  valida el host del `endpoint` y guarda la `Suscripcion` a nombre del usuario. Los avisos
+  de turno van a los admin y al usuario del barbero del turno
+  (`NotificationService.destinatarios`); las suscripciones viejas a nombre de `"admin"` no
+  reciben nada hasta que ese navegador abre el panel (`notificationService.sincronizar()`).
 - **S-19 · `authenticate` trata un usuario sin `rol` como admin** (`auth.middleware.js`).
   La bitácora del 2026-08-22 lo dejó pendiente de quitar; sigue ahí.
 - **S-12 · `docker-compose.evolution.yml` versiona la API key de Evolution y la clave de

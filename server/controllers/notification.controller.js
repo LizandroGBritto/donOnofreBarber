@@ -1,6 +1,7 @@
 const Suscripcion = require("../models/suscripcion.model");
 const { vapidKeys } = require("../config/webpush.config");
 const NotificationService = require("../services/notificationService");
+const { endpointPushValido } = require("../services/recordatorios.service");
 
 // Obtener clave pública VAPID
 const getVapidPublicKey = (req, res) => {
@@ -13,53 +14,42 @@ const getVapidPublicKey = (req, res) => {
 };
 
 // Suscribirse a notificaciones
+const claveValida = (v) => typeof v === "string" && v.length > 0 && v.length <= 200;
+
+// La suscripción queda a nombre del usuario logueado: el aviso de cada reserva
+// le llega solo a quien la puede ver (NotificationService.destinatarios).
 const suscribirse = async (req, res) => {
   try {
-    const { subscription, userId } = req.body;
+    const { subscription } = req.body;
+    const keys = subscription?.keys || {};
 
-    if (!subscription || !subscription.endpoint) {
-      console.log("❌ [NOTIFICATION] Datos de suscripción inválidos");
+    // El servidor hace un POST al endpoint: solo servicios de push (SSRF).
+    if (
+      !endpointPushValido(subscription?.endpoint) ||
+      !claveValida(keys.p256dh) ||
+      !claveValida(keys.auth)
+    ) {
       return res.status(400).json({ error: "Datos de suscripción inválidos" });
     }
 
-    // Usar un userId por defecto si no se proporciona
-    const finalUserId = userId || "admin";
-
-    // Verificar si ya existe la suscripción
-    const suscripcionExistente = await Suscripcion.findOne({
-      endpoint: subscription.endpoint,
-    });
-
-    if (suscripcionExistente) {
-      // Actualizar suscripción existente
-      suscripcionExistente.keys = subscription.keys;
-      suscripcionExistente.activa = true;
-      suscripcionExistente.userId = finalUserId;
-      suscripcionExistente.userAgent = req.headers["user-agent"];
-      await suscripcionExistente.save();
-
-      return res.json({
-        message: "Suscripción actualizada exitosamente",
-        suscripcionId: suscripcionExistente._id,
-      });
-    }
-
-    // Crear nueva suscripción
-    const nuevaSuscripcion = new Suscripcion({
-      endpoint: subscription.endpoint,
-      keys: subscription.keys,
-      userId: finalUserId,
-      dispositivo: req.headers["user-agent"]?.includes("Mobile")
-        ? "Móvil"
-        : "Escritorio",
-      userAgent: req.headers["user-agent"],
-    });
-
-    await nuevaSuscripcion.save();
+    const userAgent = String(req.headers["user-agent"] || "").slice(0, 300);
+    const suscripcion = await Suscripcion.findOneAndUpdate(
+      { endpoint: subscription.endpoint },
+      {
+        $set: {
+          keys: { p256dh: keys.p256dh, auth: keys.auth },
+          userId: String(req.user._id),
+          activa: true,
+          dispositivo: userAgent.includes("Mobile") ? "Móvil" : "Escritorio",
+          userAgent,
+        },
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
 
     res.status(201).json({
-      message: "Suscripción creada exitosamente",
-      suscripcionId: nuevaSuscripcion._id,
+      message: "Suscripción guardada",
+      suscripcionId: suscripcion._id,
     });
   } catch (error) {
     console.error("❌ [NOTIFICATION] Error al crear suscripción:", error);
@@ -67,17 +57,19 @@ const suscribirse = async (req, res) => {
   }
 };
 
-// Desuscribirse de notificaciones
+// Desuscribirse de notificaciones: cada uno las suyas; el admin, cualquiera.
 const desuscribirse = async (req, res) => {
   try {
     const { endpoint } = req.body;
 
-    if (!endpoint) {
+    if (typeof endpoint !== "string" || !endpoint) {
       return res.status(400).json({ error: "Endpoint requerido" });
     }
 
+    const filtro = { endpoint };
+    if (req.user.rol !== "admin") filtro.userId = String(req.user._id);
     const resultado = await Suscripcion.findOneAndUpdate(
-      { endpoint: endpoint },
+      filtro,
       { activa: false },
       { new: true }
     );
@@ -107,7 +99,8 @@ const enviarNotificacionPrueba = async (req, res) => {
       },
     };
 
-    await NotificationService.enviarNotificacionATodos(payload);
+    // Solo a los dispositivos de quien la pide.
+    await NotificationService.enviarNotificacionATodos(payload, { usuarioId: req.user._id });
 
     res.json({ message: "Notificación de prueba enviada" });
   } catch (error) {

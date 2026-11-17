@@ -224,6 +224,7 @@ class NotificationService {
         `${import.meta.env.VITE_API_URL}/api/notifications/subscribe`,
         {
           method: "POST",
+          credentials: "include",
           headers: {
             "Content-Type": "application/json",
           },
@@ -247,6 +248,23 @@ class NotificationService {
     }
   }
 
+  /**
+   * Si este navegador ya tiene una suscripción con el permiso concedido, la
+   * vuelve a mandar a nombre del usuario logueado. Migra sola las suscripciones
+   * viejas (anónimas, de cuando /subscribe era pública), que el servidor ya no
+   * usa. Se llama al montar el panel; si algo falla no molesta.
+   */
+  async sincronizar() {
+    try {
+      if (!this.isNotificationSupported() || Notification.permission !== "granted") return;
+      const registro = await navigator.serviceWorker.getRegistration();
+      const suscripcion = await registro?.pushManager.getSubscription();
+      if (suscripcion) await this.sendSubscriptionToServer(suscripcion);
+    } catch (error) {
+      console.warn("No se pudo sincronizar la suscripción push:", error);
+    }
+  }
+
   // Desuscribirse de notificaciones
   async unsubscribe() {
     try {
@@ -263,6 +281,7 @@ class NotificationService {
           `${import.meta.env.VITE_API_URL}/api/notifications/unsubscribe`,
           {
             method: "POST",
+            credentials: "include",
             headers: {
               "Content-Type": "application/json",
             },

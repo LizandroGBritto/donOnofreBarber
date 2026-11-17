@@ -1,14 +1,36 @@
 const { webpush } = require("../config/webpush.config");
 const Suscripcion = require("../models/suscripcion.model");
+const { UserModel } = require("../models/user.model");
 
 class NotificationService {
-  // Enviar notificación a todas las suscripciones activas
-  static async enviarNotificacionATodos(payload) {
+  /**
+   * Ids (string) de los usuarios del panel que reciben un aviso: los admin y,
+   * si el aviso es de un turno, el usuario de ese barbero. Un barbero no ve los
+   * turnos de otro en el panel, así que tampoco recibe sus avisos.
+   * `usuarioId` limita a un solo usuario (notificación de prueba).
+   */
+  static async destinatarios({ barberoId, usuarioId } = {}) {
+    if (usuarioId) return [String(usuarioId)];
+    // Sin `rol` cuenta como admin, igual que en authenticate (pendiente S-19).
+    const condiciones = [{ rol: "admin" }, { rol: { $exists: false } }];
+    if (barberoId) condiciones.push({ barbero: barberoId });
+    const usuarios = await UserModel.find({ $or: condiciones }).select("_id").lean();
+    return usuarios.map((u) => String(u._id));
+  }
+
+  // Enviar la notificación a las suscripciones activas de los destinatarios.
+  // Las suscripciones sin un usuario actual (las viejas a nombre de "admin",
+  // de cuando /subscribe era pública) ya no reciben nada.
+  static async enviarNotificacionATodos(payload, filtro = {}) {
     try {
       console.log(
         "🔔 [NOTIFICATION SERVICE] Buscando suscripciones activas...",
       );
-      const suscripciones = await Suscripcion.find({ activa: true });
+      const usuarios = await this.destinatarios(filtro);
+      const suscripciones = await Suscripcion.find({
+        activa: true,
+        userId: { $in: usuarios },
+      });
 
       if (suscripciones.length === 0) {
         console.log(
@@ -95,7 +117,7 @@ class NotificationService {
       requireInteraction: true,
     };
 
-    await this.enviarNotificacionATodos(payload);
+    await this.enviarNotificacionATodos(payload, { barberoId: turno.barbero?._id || turno.barbero });
   }
 
   // Enviar notificación para turnos editados
@@ -118,7 +140,7 @@ class NotificationService {
       ],
     };
 
-    await this.enviarNotificacionATodos(payload);
+    await this.enviarNotificacionATodos(payload, { barberoId: turno.barbero?._id || turno.barbero });
   }
 
   // Enviar notificación para turnos cancelados/liberados
@@ -141,7 +163,7 @@ class NotificationService {
       ],
     };
 
-    await this.enviarNotificacionATodos(payload);
+    await this.enviarNotificacionATodos(payload, { barberoId: turno.barbero?._id || turno.barbero });
   }
 
   // Enviar recordatorio de próximas citas

@@ -13,6 +13,13 @@ const config = require("./config/app.config");
 
 const app = express();
 
+// En producción Node está detrás de Nginx (un solo salto), que agrega la IP
+// real del cliente al final de X-Forwarded-For. Sin esto `req.ip` es la del
+// proxy para todos y los rate limits (login, /api/instagram) son globales,
+// no por IP. Con 1 se toma el último valor, el que puso Nginx: el cliente no
+// lo puede falsificar agregando el encabezado él mismo.
+app.set("trust proxy", 1);
+
 app.use(cookieParser());
 
 const corsOptions = config.cors;
