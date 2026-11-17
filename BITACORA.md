@@ -17,6 +17,10 @@ Registro histórico de auditorías, decisiones técnicas e incidentes del proyec
 **Verificado contra el dominio:** arriba de todo la barra está oculta y no está
 el atajo; en la reserva la barra aparece y las 3 tarjetas miden 182 px sin hueco.
 
+**Revertido a pedido del cliente (`acd0b48`):** la barra vuelve a ser la de antes
+(fija arriba, siempre visible). Se mantiene la quita del próximo horario libre.
+`dist` anterior en `client/dist.viejo10`.
+
 ---
 
 ## 2026-11-17 (tarde) — Correcciones: notificaciones del panel, mapa y tarjetas
