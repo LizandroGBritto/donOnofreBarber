@@ -4,6 +4,45 @@ Registro histórico de auditorías, decisiones técnicas e incidentes del proyec
 
 ---
 
+## 2026-11-17 (tarde) — Correcciones: notificaciones del panel, mapa y tarjetas
+
+**Commits desplegados:** `b763bc7`, `7d76b11` y `5ee1b97` (desde `6356952`). Sin
+cambios de dependencias. Server 272 tests y client 226 en verde.
+
+**Alcance:**
+- `/api/notifications/subscribe` y `/unsubscribe` piden sesión, validan el host
+  de push y guardan la suscripción a nombre del usuario. Los avisos de turno van
+  a los admin y al barbero del turno. `app.set("trust proxy", 1)`: los rate
+  limits pasan a ser por IP real (el aviso `ERR_ERL_UNEXPECTED_X_FORWARDED_FOR`
+  ya no aparece).
+- Campos de nombre y celular: el CSS global de Tailwind forms los dejaba
+  blancos con el texto claro. Se quitó el código `AS-…` del ticket.
+- Mapa: CARTO pasó a pedir API key; teselas de OpenStreetMap con filtro oscuro.
+- Tarjeta de barbero: con descripciones de distinto largo la foto bajaba y
+  dejaba un hueco arriba (el botón centraba el contenido).
+
+**Cambios de datos (sin código):**
+- `Ubicacion.coordenadas` = `-27.3393888, -55.8688279` (el mismo lugar que
+  `enlaceMaps`).
+- Elias Lugo: la foto y el logo eran capturas con una franja oscura a la
+  derecha y abajo. Se guardaron recortadas como `…-recorte.webp` y el barbero
+  apunta a ellas; los originales siguen en `uploads/`.
+
+**Despliegue:** `git pull` como root (árbol limpio), restart del servicio para el
+server; `dist` anterior en `client/dist.viejo7` y `client/dist.viejo8`.
+
+**Verificado contra el dominio:** `subscribe` y `unsubscribe` sin sesión → 401;
+campo de nombre oscuro con texto claro; mapa con 6 teselas de OSM; foto de la
+tarjeta sin hueco a 288, 328 y 358 px.
+
+**Pendiente:**
+- Las 2 suscripciones activas (dos iPhone, anónimas a nombre de `"admin"`) no
+  reciben avisos hasta que su dueño abre el panel en ese teléfono con su
+  usuario. Si es un barbero, recibe solo los turnos suyos.
+- Siguen abiertas las brechas 1 a 5 de `docs/casos-de-uso/README.md`.
+
+---
+
 ## 2026-11-17 — Despliegue: landing nueva, avisos push y copia diaria de Instagram
 
 **Commit desplegado:** `4bfe32b` (desde `a865826`). Casos de uso en
