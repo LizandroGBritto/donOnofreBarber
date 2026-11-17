@@ -4,6 +4,20 @@ Registro histórico de auditorías, decisiones técnicas e incidentes del proyec
 
 ---
 
+## 2026-11-17 (noche) — Panel: notificaciones para los barberos
+
+**Commit desplegado:** `fe3ea45` (cliente y server, con restart; `dist` anterior en
+`client/dist.viejo11`). Server 273 tests y client 221 en verde.
+
+El ítem Notificaciones del panel pasa a verse también con rol barbero, y
+`POST /api/notifications/test` deja de pedir admin (le llega solo a quien la
+pide). Cada barbero recibe solo los avisos de sus turnos.
+
+**Verificado:** servicio activo y conectado; `/test` sin sesión → 401. No se probó
+con un usuario barbero real en producción (no hay credenciales de prueba).
+
+---
+
 ## 2026-11-17 (noche) — Landing: tarjetas de servicio, sin «próximo libre», barra oculta arriba
 
 **Commits desplegados:** `92028b3` y `537702c` (solo cliente; `dist` anterior en
